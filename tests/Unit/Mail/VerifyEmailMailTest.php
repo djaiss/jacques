@@ -13,7 +13,7 @@ class VerifyEmailMailTest extends TestCase
     #[Test]
     public function it_has_a_subject(): void
     {
-        $mailable = new VerifyEmailMail(url: 'https://officelife.test/verify-email/1/abc');
+        $mailable = new VerifyEmailMail(url: 'https://jacques.test/verify-email/1/abc');
 
         $this->assertEquals('Confirm your email address', $mailable->envelope()->subject);
     }
@@ -21,8 +21,8 @@ class VerifyEmailMailTest extends TestCase
     #[Test]
     public function it_carries_the_link_to_confirm_the_address(): void
     {
-        $mailable = new VerifyEmailMail(url: 'https://officelife.test/verify-email/1/abc');
+        $mailable = new VerifyEmailMail(url: 'https://jacques.test/verify-email/1/abc');
 
-        $this->assertStringContainsString('https://officelife.test/verify-email/1/abc', $mailable->render());
+        $this->assertStringContainsString('https://jacques.test/verify-email/1/abc', $mailable->render());
     }
 }

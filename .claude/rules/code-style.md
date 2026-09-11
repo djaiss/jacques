@@ -234,7 +234,7 @@ short HTML comment naming it. That is a separate rule, and it lives in the
 
 ### Phrases that show a number
 
-Three rules, and `php artisan officelife:localize --check` fails on a breach of
+Three rules, and `php artisan jacques:localize --check` fails on a breach of
 any of them.
 
 - A phrase containing `:count` MUST be asked for with `trans_choice()`, never

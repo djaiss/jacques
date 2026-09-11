@@ -17,7 +17,7 @@ abstract class GuestViewModel
     /** @return array<int, array{code: string, label: string, region: string, flag: string}> */
     public function locales(): array
     {
-        return collect(config('officelife.locales'))
+        return collect(config('jacques.locales'))
             ->map(fn (array $locale, string $code): array => [...$locale, 'code' => $code])
             ->values()
             ->all();

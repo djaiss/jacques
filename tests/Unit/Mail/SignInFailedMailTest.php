@@ -13,10 +13,10 @@ class SignInFailedMailTest extends TestCase
     #[Test]
     public function it_has_a_subject(): void
     {
-        config(['app.name' => 'OfficeLife']);
+        config(['app.name' => 'Jacques']);
 
         $this->assertEquals(
-            'Failed sign-in attempt on your OfficeLife account',
+            'Failed sign-in attempt on your Jacques account',
             (new SignInFailedMail)->envelope()->subject,
         );
     }

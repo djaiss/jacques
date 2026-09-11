@@ -10,7 +10,7 @@
 
 ## 1. Context / Overview
 
-The company is the root object of OfficeLife. Creating an OfficeLife account does
+The company is the root object of Jacques. Creating an Jacques account does
 not create a user first and a company afterwards: it creates a company, and the
 person who signed up becomes both its first user and its first employee.
 
@@ -37,7 +37,7 @@ who is allowed to change it, which is specified in `04-permissions-and-roles`.
 
 ### Stories
 
-**As somebody starting with OfficeLife**, I sign up with my name, my email and
+**As somebody starting with Jacques**, I sign up with my name, my email and
 the name of my company, and I land in a working company where I am the owner, an
 administrator and the first employee, without a setup wizard.
 
@@ -49,7 +49,7 @@ size) as they change.
 the company once, so that neither I nor my colleagues have to answer the same
 question on every screen.
 
-**As an administrator of a self hosted instance**, I run OfficeLife without a
+**As an administrator of a self hosted instance**, I run Jacques without a
 plan, a trial or a billing email meaning anything, and nothing in the interface
 asks me to upgrade.
 

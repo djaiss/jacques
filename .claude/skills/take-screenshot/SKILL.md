@@ -70,13 +70,13 @@ Mint a signed link instead. It signs the user in and lands on the screen you wan
 1. Switch it on once, in `.env`:
 
 ```dotenv
-OFFICELIFE_SCREENSHOT_LINK_ENABLED=true
+JACQUES_SCREENSHOT_LINK_ENABLED=true
 ```
 
 2. Mint a link for the screen you want:
 
 ```bash
-php artisan officelife:screenshot-link michael.scott@dundermifflin.example --to=/settings/account/relationship-types
+php artisan jacques:screenshot-link michael.scott@dundermifflin.example --to=/settings/account/relationship-types
 ```
 
 3. Give the link to Iris, exactly as it was printed:

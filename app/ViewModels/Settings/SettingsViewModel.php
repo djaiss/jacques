@@ -127,13 +127,13 @@ class SettingsViewModel
     {
         $locale = app()->getLocale();
 
-        if (! array_key_exists($locale, config('officelife.locales'))) {
+        if (! array_key_exists($locale, config('jacques.locales'))) {
             $locale = config('app.locale');
         }
 
         $timeFormat = $this->user->time_format ?? TimeFormatEnum::TwentyFourHour;
 
-        return config('officelife.locales')[$locale]['label'].' · '.__($timeFormat->label());
+        return config('jacques.locales')[$locale]['label'].' · '.__($timeFormat->label());
     }
 
     private function rolesValue(): string

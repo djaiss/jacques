@@ -27,7 +27,7 @@ class PreferencesViewModelTest extends TestCase
 
         $locales = $viewModel->locales();
 
-        $this->assertCount(count(config('officelife.locales')), $locales);
+        $this->assertCount(count(config('jacques.locales')), $locales);
         $this->assertEquals('fr_FR', $viewModel->locale());
         $this->assertEquals('Français', $viewModel->localeLabel());
         $this->assertTrue(collect($locales)->firstWhere('value', 'fr_FR')['selected']);

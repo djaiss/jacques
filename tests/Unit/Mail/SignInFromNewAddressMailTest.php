@@ -13,12 +13,12 @@ class SignInFromNewAddressMailTest extends TestCase
     #[Test]
     public function it_has_a_subject(): void
     {
-        config(['app.name' => 'OfficeLife']);
+        config(['app.name' => 'Jacques']);
 
         $mailable = new SignInFromNewAddressMail(email: 'michael.scott@dundermifflin.com', ip: '10.0.0.1');
 
         $this->assertEquals(
-            'A sign-in from a new place on your OfficeLife account',
+            'A sign-in from a new place on your Jacques account',
             $mailable->envelope()->subject,
         );
     }

@@ -19,7 +19,7 @@ That is worth fixing before more of the asset module is specified.
 
 ## What the pillar is for
 
-The source document is unambiguous: this is what separates OfficeLife from a cold
+The source document is unambiguous: this is what separates Jacques from a cold
 HR system. Recurring use, weekly or monthly, by every employee and every manager
 rather than by a People team.
 

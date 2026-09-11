@@ -28,7 +28,7 @@ class SendEmailTest extends TestCase
     public function it_sends_the_email_the_traditional_way(): void
     {
         Config::set('app.use_resend', false);
-        Config::set('mail.from.address', 'noreply@officelife.test');
+        Config::set('mail.from.address', 'noreply@jacques.test');
         Mail::fake();
 
         $company = Company::factory()->create();
@@ -55,7 +55,7 @@ class SendEmailTest extends TestCase
         $this->assertEquals($user->id, $emailSent->user_id);
         $this->assertEquals(EmailTypeEnum::MagicLinkSignIn->value, $emailSent->email_type);
         $this->assertEquals('michael.scott@dundermifflin.com', $emailSent->email_address);
-        $this->assertEquals('A sign-in without a password on your OfficeLife account', $emailSent->subject);
+        $this->assertEquals('A sign-in without a password on your Jacques account', $emailSent->subject);
         $this->assertNull($emailSent->uuid);
         $this->assertNotNull($emailSent->sent_at);
     }
@@ -64,7 +64,7 @@ class SendEmailTest extends TestCase
     public function it_sends_the_email_with_resend(): void
     {
         Config::set('app.use_resend', true);
-        Config::set('mail.from.address', 'noreply@officelife.test');
+        Config::set('mail.from.address', 'noreply@jacques.test');
 
         $emailsMock = Mockery::mock(EmailService::class);
         $emailsMock
@@ -72,9 +72,9 @@ class SendEmailTest extends TestCase
             ->once()
             ->with(Mockery::on(
                 fn ($arguments): bool => (
-                    $arguments['from'] === 'noreply@officelife.test'
+                    $arguments['from'] === 'noreply@jacques.test'
                     && $arguments['to'] === ['michael.scott@dundermifflin.com']
-                    && $arguments['subject'] === 'A sign-in without a password on your OfficeLife account'
+                    && $arguments['subject'] === 'A sign-in without a password on your Jacques account'
                     && is_string($arguments['html'])
                     && mb_strlen($arguments['html']) > 0
                 ),

@@ -49,7 +49,7 @@ return [
     |
     */
 
-    'remember_duration_days' => env('OFFICELIFE_REMEMBER_DURATION_DAYS', 30),
+    'remember_duration_days' => env('JACQUES_REMEMBER_DURATION_DAYS', 30),
 
     /*
     |--------------------------------------------------------------------------
@@ -62,7 +62,7 @@ return [
     |
     */
 
-    'magic_link_duration_minutes' => env('OFFICELIFE_MAGIC_LINK_DURATION_MINUTES', 5),
+    'magic_link_duration_minutes' => env('JACQUES_MAGIC_LINK_DURATION_MINUTES', 5),
 
     /*
     |--------------------------------------------------------------------------
@@ -75,9 +75,9 @@ return [
     |
     */
 
-    'terms_url' => env('OFFICELIFE_TERMS_URL', 'https://officelife.io/terms'),
+    'terms_url' => env('JACQUES_TERMS_URL', 'https://jacques.io/terms'),
 
-    'privacy_url' => env('OFFICELIFE_PRIVACY_URL', 'https://officelife.io/privacy'),
+    'privacy_url' => env('JACQUES_PRIVACY_URL', 'https://jacques.io/privacy'),
 
     /*
     |--------------------------------------------------------------------------
@@ -90,8 +90,8 @@ return [
     |
     */
 
-    'seed_email' => env('OFFICELIFE_SEED_EMAIL', 'michael.scott@dundermifflin.com'),
+    'seed_email' => env('JACQUES_SEED_EMAIL', 'michael.scott@dundermifflin.com'),
 
-    'seed_password' => env('OFFICELIFE_SEED_PASSWORD', 'password'),
+    'seed_password' => env('JACQUES_SEED_PASSWORD', 'password'),
 
 ];

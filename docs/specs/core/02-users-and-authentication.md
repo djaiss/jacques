@@ -17,7 +17,7 @@ important modelling decision in the product.
 An employee can exist with no user. A user can exist without standing for any
 employee. That buys five things at once:
 
-1. Employees who have no access to OfficeLife at all.
+1. Employees who have no access to Jacques at all.
 2. An employee prepared before their first day, with a record but no account.
 3. History kept after somebody leaves, without keeping their account alive.
 4. Administrative accounts that do not stand for a person on the payroll.
@@ -35,7 +35,7 @@ do, which is `04-permissions-and-roles`.
 
 ### Stories
 
-**As somebody invited to OfficeLife**, I sign in with an email and a password, or
+**As somebody invited to Jacques**, I sign in with an email and a password, or
 with a link sent to my email, and I do not have to remember which of the two the
 company chose.
 
@@ -50,7 +50,7 @@ a 12 hour clock, independently of what the company chose.
 **As a user**, I read the log of the actions I performed and the emails the
 product sent me, so nothing happens on my account that I cannot account for.
 
-**As a user integrating OfficeLife with something else**, I create and revoke API
+**As a user integrating Jacques with something else**, I create and revoke API
 keys of my own.
 
 **As an administrator**, I suspend somebody without deleting them, and I see when

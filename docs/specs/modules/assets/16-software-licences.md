@@ -172,7 +172,7 @@ not grow into a place to keep credentials.
 - **Discovering installed software.** Nothing scans a machine. Everything here is
   recorded by a person. Device compliance and software inventory are IT module
   candidates, see `backlog/23-module-candidates`.
-- **Enforcing anything.** Revoking a seat in OfficeLife does not revoke access at
+- **Enforcing anything.** Revoking a seat in Jacques does not revoke access at
   the vendor. That would require an integration per vendor, which founding
   principle 6 says comes after the human step, not before.
 - **Usage tracking.** Which seats are actually used is a question this data cannot
