@@ -126,7 +126,7 @@
 
         <!-- notice about joining -->
         <x-notice>
-          {{ __('Joining a company that already uses OfficeLife? Ask an administrator to invite you, rather than creating a second account.') }}
+          {{ __('Joining a company that already uses Jacques? Ask an administrator to invite you, rather than creating a second account.') }}
         </x-notice>
 
         <!-- language picker -->

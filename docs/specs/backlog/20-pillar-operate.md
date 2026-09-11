@@ -21,7 +21,7 @@ folder under `modules/` like `assets/`, not a file here.
 
 The recurring administrative irritants a small company does not want to handle by
 hand. This is the least differentiated of the four pillars and the most expected:
-nobody chooses OfficeLife for its leave tracker, and everybody notices its
+nobody chooses Jacques for its leave tracker, and everybody notices its
 absence.
 
 ## What it contains

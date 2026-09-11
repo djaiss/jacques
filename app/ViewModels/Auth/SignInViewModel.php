@@ -12,6 +12,6 @@ class SignInViewModel extends GuestViewModel
             return null;
         }
 
-        return (string) config('officelife.seed_email');
+        return (string) config('jacques.seed_email');
     }
 }

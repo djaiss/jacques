@@ -120,7 +120,7 @@ Wellness challenges, benefits enrolment, employee assistance resources, ergonomi
 assessments.
 
 Benefits enrolment is the one entry on this page that contradicts the positioning
-in `constitution.md`. Benefits are named there as HR ground that OfficeLife does
+in `constitution.md`. Benefits are named there as HR ground that Jacques does
 not cover. Building it would mean revisiting the positioning, not just the
 roadmap.
 

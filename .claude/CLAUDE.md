@@ -110,7 +110,7 @@ instead.
 
 ## Checklist for each feature or change
 
-- You MUST run `php artisan officelife:localize` and translate what it reports
+- You MUST run `php artisan jacques:localize` and translate what it reports
   as missing, in every configured locale. You MUST NEVER edit `lang/*.json` keys
   by hand.
 - You MUST make sure what you wrote is covered by a test.

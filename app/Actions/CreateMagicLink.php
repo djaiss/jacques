@@ -87,6 +87,6 @@ class CreateMagicLink
 
     private function minutes(): int
     {
-        return (int) config('officelife.magic_link_duration_minutes');
+        return (int) config('jacques.magic_link_duration_minutes');
     }
 }

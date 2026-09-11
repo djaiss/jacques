@@ -36,13 +36,13 @@ listeners written in code, tying an event type to a playbook.
 
 ### Stories
 
-**As somebody configuring OfficeLife**, I say which playbook runs when somebody
+**As somebody configuring Jacques**, I say which playbook runs when somebody
 arrives, and I change my mind later without anybody deploying code.
 
 **As somebody debugging**, I read what actually happened and in what order, days
 after it happened.
 
-**As somebody integrating another tool**, I feed events from it into OfficeLife
+**As somebody integrating another tool**, I feed events from it into Jacques
 and they behave exactly like events raised inside the product.
 
 **As a developer**, I publish an event from an action without knowing or caring

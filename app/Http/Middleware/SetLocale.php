@@ -16,7 +16,7 @@ class SetLocale
     {
         $locale = $this->preferred($request);
 
-        if (array_key_exists($locale, config('officelife.locales'))) {
+        if (array_key_exists($locale, config('jacques.locales'))) {
             app()->setLocale($locale);
         }
 

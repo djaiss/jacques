@@ -18,7 +18,7 @@ class PreferencesViewModel
     {
         $current = $this->locale();
 
-        return collect(config('officelife.locales'))
+        return collect(config('jacques.locales'))
             ->map(fn (array $locale, string $code): array => [
                 'value' => $code,
                 'label' => $locale['label'],
@@ -31,7 +31,7 @@ class PreferencesViewModel
 
     public function localeLabel(): string
     {
-        return config('officelife.locales')[$this->locale()]['label'];
+        return config('jacques.locales')[$this->locale()]['label'];
     }
 
     /** @return array<int, array{value: string, label: string, hint: string, selected: bool}> */
@@ -61,7 +61,7 @@ class PreferencesViewModel
     {
         $locale = app()->getLocale();
 
-        return array_key_exists($locale, config('officelife.locales'))
+        return array_key_exists($locale, config('jacques.locales'))
             ? $locale
             : config('app.locale');
     }

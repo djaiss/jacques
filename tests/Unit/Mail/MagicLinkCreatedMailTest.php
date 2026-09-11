@@ -13,21 +13,21 @@ class MagicLinkCreatedMailTest extends TestCase
     #[Test]
     public function it_has_a_subject(): void
     {
-        config(['app.name' => 'OfficeLife']);
+        config(['app.name' => 'Jacques']);
 
-        $mailable = new MagicLinkCreatedMail(url: 'https://officelife.test/magic-link/abc', minutes: 5);
+        $mailable = new MagicLinkCreatedMail(url: 'https://jacques.test/magic-link/abc', minutes: 5);
 
-        $this->assertEquals('Your sign-in link for OfficeLife', $mailable->envelope()->subject);
+        $this->assertEquals('Your sign-in link for Jacques', $mailable->envelope()->subject);
     }
 
     #[Test]
     public function it_carries_the_link_and_how_long_it_lasts(): void
     {
-        $mailable = new MagicLinkCreatedMail(url: 'https://officelife.test/magic-link/abc', minutes: 5);
+        $mailable = new MagicLinkCreatedMail(url: 'https://jacques.test/magic-link/abc', minutes: 5);
 
         $rendered = $mailable->render();
 
-        $this->assertStringContainsString('https://officelife.test/magic-link/abc', $rendered);
+        $this->assertStringContainsString('https://jacques.test/magic-link/abc', $rendered);
         $this->assertStringContainsString('5 minutes', $rendered);
     }
 }

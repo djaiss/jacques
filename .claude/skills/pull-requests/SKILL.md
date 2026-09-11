@@ -40,7 +40,7 @@ description: Conventions for writing pull requests, including Conventional Commi
   like any other and still needs one.
 - You MUST take them with the
   [take-screenshot skill](../take-screenshot/SKILL.md), which uses Iris. The
-  application is served at `http://officelife.test`.
+  application is served at `http://jacques.test`.
 - A screen that already existed MUST show a before and an after, in that order,
   so a reviewer sees what changed rather than only the result. A screen that did
   not exist has no before, and carries the after alone.

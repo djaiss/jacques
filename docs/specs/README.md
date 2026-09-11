@@ -1,6 +1,6 @@
-# OfficeLife specifications
+# Jacques specifications
 
-This folder holds the OfficeLife product specification, split into modular files
+This folder holds the Jacques product specification, split into modular files
 following the [Spec-Kit](https://github.com/github/spec-kit) methodology. It replaces
 the single monolithic specification document that preceded it.
 

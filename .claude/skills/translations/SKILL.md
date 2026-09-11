@@ -1,6 +1,6 @@
 ---
 name: translations
-description: Keep the lang/*.json files in step with the code using the officelife:localize command. Use when UI copy changes, new strings are added, or locale files are out of sync. Trigger whenever translation keys, lang files, i18n, or __() / @lang() strings are mentioned.
+description: Keep the lang/*.json files in step with the code using the jacques:localize command. Use when UI copy changes, new strings are added, or locale files are out of sync. Trigger whenever translation keys, lang files, i18n, or __() / @lang() strings are mentioned.
 ---
 
 # Translations
@@ -9,7 +9,7 @@ The strings themselves are the keys, in one JSON file per locale under `lang/`.
 A key missing from a locale falls back to the key, which is the English
 sentence, so a missing translation reads as English rather than as a blank.
 
-`php artisan officelife:localize` is what keeps those files in step with the
+`php artisan jacques:localize` is what keeps those files in step with the
 code. You MUST NOT add, remove or reorder a key by hand.
 
 ## What the command does
@@ -30,11 +30,11 @@ code. You MUST NOT add, remove or reorder a key by hand.
 
 1. Write the string in the code as usual. A string in an enum belongs in
    `translationKeys()`, and the enum MUST implement `Translatable`.
-2. Run `php artisan officelife:localize`. Read what it says it added and
+2. Run `php artisan jacques:localize`. Read what it says it added and
    removed.
 3. Translate every string it reports as missing, in every locale of
-   `config('officelife.locales')`.
-4. Run `php artisan officelife:localize --check` and confirm it passes.
+   `config('jacques.locales')`.
+4. Run `php artisan jacques:localize --check` and confirm it passes.
 
 ## Writing a translation
 
@@ -45,7 +45,7 @@ code. You MUST NOT add, remove or reorder a key by hand.
 - You MUST follow that language's own conventions in
   [`.claude/rules/translations.md`](../../rules/translations.md), which says how
   it punctuates and how it addresses its reader. French is written there in
-  full. `officelife:localize --check` refuses a value that breaks one of them,
+  full. `jacques:localize --check` refuses a value that breaks one of them,
   so this is not advice.
 - You MUST NOT leave a value empty. An empty string is a real translation as far
   as Laravel is concerned, and renders as nothing at all. Leave the key out

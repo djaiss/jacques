@@ -75,7 +75,7 @@ class AttemptSignIn
         // The screen promises a number of days, not the five years Laravel
         // defaults to.
         if ($guard instanceof SessionGuard) {
-            $guard->setRememberDuration((int) config('officelife.remember_duration_days') * 24 * 60);
+            $guard->setRememberDuration((int) config('jacques.remember_duration_days') * 24 * 60);
         }
 
         $candidate = User::query()->where('email', $this->email)->first();

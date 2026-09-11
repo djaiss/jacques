@@ -16,8 +16,8 @@ class LocalSignInController extends Controller
         abort_unless(app()->environment('local'), 404);
 
         new AttemptSignIn(
-            email: (string) config('officelife.seed_email'),
-            password: (string) config('officelife.seed_password'),
+            email: (string) config('jacques.seed_email'),
+            password: (string) config('jacques.seed_password'),
             ip: $request->ip(),
         )->execute();
 

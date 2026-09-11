@@ -16,7 +16,7 @@ transfer between teams. Each step can reach into any of the four functional
 pillars.
 
 This is the orchestration layer, and it is what the product is actually for. The
-positioning in `constitution.md` is that OfficeLife turns employee operations into
+positioning in `constitution.md` is that Jacques turns employee operations into
 clear, repeatable playbooks. Everything else in the core exists so that playbooks
 have something to orchestrate.
 

@@ -18,7 +18,7 @@ Nothing is excluded forever. Everything that is not essential to the core become
 an optional module rather than a piece of the core.
 
 ```
-OfficeLife
+Jacques
 
 Core                          always active, never disabled
 ├── Employees

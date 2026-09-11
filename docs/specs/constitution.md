@@ -12,15 +12,15 @@ This document is not implementable and carries no acceptance criteria. It exists
 to settle the arguments that every other spec would otherwise reopen. When a spec
 and this document disagree, this document wins, and the spec is wrong.
 
-## 1. What OfficeLife is
+## 1. What Jacques is
 
-OfficeLife gives small companies one place to manage employees and automate the
+Jacques gives small companies one place to manage employees and automate the
 processes around them. It turns employee operations into clear, repeatable
 playbooks.
 
-Put another way: OfficeLife is the operating system of your company. Everything
+Put another way: Jacques is the operating system of your company. Everything
 about the employee life cycle, internal operations, and the processes that tie
-them together goes through OfficeLife.
+them together goes through Jacques.
 
 That analogy is not decoration. It maps onto the architecture. The operating
 system is the core (employees, teams, permissions, playbooks) and the modules are
@@ -54,9 +54,9 @@ The product has to be judged against that stack, not against a feature list.
 ## 4. Why "employee operations" and not "HR"
 
 HR means payroll, compliance, administrative files, insurance and benefits.
-OfficeLife does not cover that ground and should not be positioned as if it did.
+Jacques does not cover that ground and should not be positioned as if it did.
 
-OfficeLife is the daily orchestration between People, managers, IT and
+Jacques is the daily orchestration between People, managers, IT and
 Operations.
 
 ## 5. Founding principles
@@ -78,9 +78,9 @@ These constrain product and engineering decisions, not just marketing.
 Principle 6 is the one most likely to be violated by accident. Any spec that
 makes an integration a prerequisite for a feature working is violating it.
 
-## 6. What OfficeLife is not
+## 6. What Jacques is not
 
-OfficeLife does not try to replace tools that are already excellent on their own
+Jacques does not try to replace tools that are already excellent on their own
 ground. It is not an applicant tracking system, not a project management tool,
 not a wiki, and not an OKR tool. It orchestrates around those tools rather than
 competing with them.
