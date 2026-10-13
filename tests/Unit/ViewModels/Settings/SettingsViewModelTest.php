@@ -7,7 +7,7 @@ namespace Tests\Unit\ViewModels\Settings;
 use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Employee;
-use App\Models\Office;
+use App\Models\Location;
 use App\Models\User;
 use App\ViewModels\Settings\SettingsViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,18 +51,18 @@ class SettingsViewModelTest extends TestCase
     }
 
     #[Test]
-    public function it_counts_the_offices_of_the_company(): void
+    public function it_counts_the_locations_of_the_company(): void
     {
         $company = Company::factory()->create();
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id]),
             PermissionEnum::CompanyManage,
         );
-        Office::factory()->count(2)->create(['company_id' => $company->id]);
+        Location::factory()->count(2)->create(['company_id' => $company->id]);
 
         $viewModel = new SettingsViewModel(user: $user, employee: null);
 
-        $this->assertSame('2 offices', $viewModel->companyRows()[0]['value']);
+        $this->assertSame('2 locations', $viewModel->companyRows()[0]['value']);
     }
 
     #[Test]
@@ -86,13 +86,10 @@ class SettingsViewModelTest extends TestCase
     }
 
     #[Test]
-    public function it_names_the_title_and_the_role_of_somebody(): void
+    public function it_names_the_role_of_somebody(): void
     {
         $company = Company::factory()->create();
-        $employee = Employee::factory()->create([
-            'company_id' => $company->id,
-            'custom_title' => 'Regional manager',
-        ]);
+        $employee = Employee::factory()->create(['company_id' => $company->id]);
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id, 'employee_id' => $employee->id]),
             PermissionEnum::CompanyManage,
@@ -100,6 +97,6 @@ class SettingsViewModelTest extends TestCase
 
         $viewModel = new SettingsViewModel(user: $user, employee: $employee);
 
-        $this->assertStringStartsWith('Regional manager · ', $viewModel->role());
+        $this->assertSame('company.manage at company scope', $viewModel->role());
     }
 }

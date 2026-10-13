@@ -60,24 +60,11 @@ class PendingPermissionCheck
             return new PermissionDecision(false);
         }
 
-        // A module that is off denies ahead of the owner bypass: it does not
-        // exist for that company, and its owner is no exception.
-        if ($this->belongsToADisabledModule($company)) {
-            return new PermissionDecision(false);
-        }
-
         if ($this->ownsTheCompany()) {
             return new PermissionDecision(true);
         }
 
         return new PermissionDecision(in_array(ScopeEnum::Company, $this->grantedScopes(), true));
-    }
-
-    private function belongsToADisabledModule(Company $company): bool
-    {
-        $module = $this->permission->module();
-
-        return $module !== null && ! $company->hasModule($module);
     }
 
     private function ownsTheCompany(): bool

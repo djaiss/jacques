@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\ModuleEnum;
-use App\Enums\PlanEnum;
-use App\Enums\SizeRangeEnum;
-use App\Enums\WorkModeEnum;
 use Carbon\Carbon;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,15 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $legal_name
  * @property string|null $logo_path
  * @property string|null $website_url
- * @property string|null $industry
- * @property SizeRangeEnum|null $size_range
- * @property Carbon|null $founded_at
- * @property string $timezone
- * @property string $locale
  * @property string|null $currency
- * @property WorkModeEnum|null $work_mode
- * @property PlanEnum $plan
- * @property bool $is_self_hosted
  * @property string|null $billing_email
  * @property Carbon|null $trial_ends_at
  * @property int|null $owner_user_id
@@ -58,15 +46,7 @@ class Company extends Model
         'legal_name',
         'logo_path',
         'website_url',
-        'industry',
-        'size_range',
-        'founded_at',
-        'timezone',
-        'locale',
         'currency',
-        'work_mode',
-        'plan',
-        'is_self_hosted',
         'billing_email',
         'trial_ends_at',
         'owner_user_id',
@@ -81,12 +61,7 @@ class Company extends Model
     protected function casts(): array
     {
         return [
-            'size_range' => SizeRangeEnum::class,
-            'work_mode' => WorkModeEnum::class,
-            'plan' => PlanEnum::class,
-            'founded_at' => 'date',
             'trial_ends_at' => 'datetime',
-            'is_self_hosted' => 'boolean',
             'settings' => 'array',
         ];
     }
@@ -122,33 +97,13 @@ class Company extends Model
     }
 
     /**
-     * Get the offices of the company.
+     * Get the locations of the company.
      *
-     * @return HasMany<Office, $this>
+     * @return HasMany<Location, $this>
      */
-    public function offices(): HasMany
+    public function locations(): HasMany
     {
-        return $this->hasMany(Office::class);
-    }
-
-    /**
-     * Get the assets the company owns.
-     *
-     * @return HasMany<Asset, $this>
-     */
-    public function assets(): HasMany
-    {
-        return $this->hasMany(Asset::class);
-    }
-
-    /**
-     * Get the families the company files its equipment under.
-     *
-     * @return HasMany<AssetCategory, $this>
-     */
-    public function assetCategories(): HasMany
-    {
-        return $this->hasMany(AssetCategory::class);
+        return $this->hasMany(Location::class);
     }
 
     /**
@@ -157,15 +112,5 @@ class Company extends Model
     public function isOnTrial(): bool
     {
         return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
-    }
-
-    /**
-     * Get whether the company has turned a module on. A module nobody turned on
-     * is off: there is no module that is enabled by default, and the core is not
-     * a module.
-     */
-    public function hasModule(ModuleEnum $module): bool
-    {
-        return in_array($module->value, $this->settings['modules'] ?? [], true);
     }
 }

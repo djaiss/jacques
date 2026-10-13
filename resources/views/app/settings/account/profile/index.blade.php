@@ -98,7 +98,6 @@
       <div class="grid gap-10 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div class="space-y-2.5 text-[15px] leading-relaxed text-body">
           <p>{{ __('These details are shown on your profile. Everyone in your company can see them.') }}</p>
-          <p>{{ __('The details you keep private, such as your emergency contact, are never shown to your colleagues.') }}</p>
         </div>
 
         <x-form
@@ -143,72 +142,11 @@
             :error="$errors->get('work_email')"
           />
 
-          <div class="flex items-center gap-3">
-            <span id="last-saved" @class(['text-sm text-muted-soft', 'hidden' => ! $viewModel->lastSavedAt()])>
-              @if ($viewModel->lastSavedAt())
-                {{ __('Last saved :time', ['time' => $viewModel->lastSavedAt()]) }}
-              @endif
-            </span>
-
+          <div class="flex items-center">
             <x-button class="ml-auto">{{ __('Save') }}</x-button>
           </div>
         </x-form>
       </div>
     </x-section>
-
-    <!-- emergency contact -->
-    @if($viewModel->canSeePrivateInformation())
-      <x-section :title="__('Emergency contact')" icon="emergency-contact" :hue="80">
-        <x-slot:help>
-          <x-help :title="__('Emergency contact')">
-            {{ __('Leave it empty and there is nobody for us to call. It is worth a minute even if you never expect it to be read.') }}
-          </x-help>
-        </x-slot:help>
-
-        <div class="grid gap-10 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <div class="space-y-2.5 text-[15px] leading-relaxed text-body">
-            <p>{{ __('Who we should call if something happens to you at work.') }}</p>
-            <p>{{ __('Only you and your company administrators can see this.') }}</p>
-          </div>
-
-          <x-form
-            method="put"
-            :action="route('settings.emergencyContact.update')"
-            id="emergency-contact-form"
-            x-target="emergency-contact-form last-saved"
-            class="space-y-5 transition-opacity [&[aria-busy]]:opacity-60"
-          >
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <x-input
-                id="name"
-                :label="__('Name')"
-                :value="$viewModel->emergencyContact()['name']"
-                :placeholder="__('Full name')"
-                :error="$errors->get('name')"
-              />
-
-              <x-input
-                id="phone"
-                :label="__('Phone number')"
-                :value="$viewModel->emergencyContact()['phone']"
-                :error="$errors->get('phone')"
-              />
-            </div>
-
-            <x-input
-              id="relationship"
-              :label="__('Relationship')"
-              :value="$viewModel->emergencyContact()['relationship']"
-              :placeholder="__('Partner, parent, friend')"
-              :error="$errors->get('relationship')"
-            />
-
-            <div class="flex items-center">
-              <x-button class="ml-auto">{{ __('Save') }}</x-button>
-            </div>
-          </x-form>
-        </div>
-      </x-section>
-    @endif
   </div>
 </x-top-bar-layout>

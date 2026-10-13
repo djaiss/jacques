@@ -90,7 +90,6 @@ class CreateDefaultRolesTest extends TestCase
         $this->assertEquals(ScopeEnum::Self, $scopes[PermissionEnum::EmployeeUpdate->value]);
         $this->assertEquals(ScopeEnum::Self, $scopes[PermissionEnum::EmployeeViewPrivate->value]);
         $this->assertEquals(ScopeEnum::Self, $scopes[PermissionEnum::EmployeeUpdatePrivate->value]);
-        $this->assertEquals(ScopeEnum::Company, $scopes[PermissionEnum::AssetView->value]);
-        $this->assertCount(5, $role->permissions);
+        $this->assertCount(4, $role->permissions);
     }
 }

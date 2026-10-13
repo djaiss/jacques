@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\ViewModels\Settings\Account\Profile;
 
-use App\Enums\PermissionEnum;
 use App\Models\Employee;
 use App\Models\User;
 
@@ -24,36 +23,6 @@ class ProfileViewModel
             'display_name' => old('display_name', $this->employee?->display_name),
             'work_email' => old('work_email', $this->employee?->work_email),
         ];
-    }
-
-    /** @return array{name: string|null, phone: string|null, relationship: string|null} */
-    public function emergencyContact(): array
-    {
-        if (! $this->canSeePrivateInformation()) {
-            return [
-                'name' => null,
-                'phone' => null,
-                'relationship' => null,
-            ];
-        }
-
-        return [
-            'name' => old('name', $this->employee?->emergency_contact_name),
-            'phone' => old('phone', $this->employee?->emergency_contact_phone),
-            'relationship' => old('relationship', $this->employee?->emergency_contact_relationship),
-        ];
-    }
-
-    public function canSeePrivateInformation(): bool
-    {
-        if ($this->employee === null) {
-            return false;
-        }
-
-        return $this->user
-            ->permission(PermissionEnum::EmployeeViewPrivate)
-            ->forEmployee($this->employee)
-            ->allowed();
     }
 
     public function name(): string
@@ -79,10 +48,5 @@ class ProfileViewModel
     public function companyName(): string
     {
         return $this->user->company->name;
-    }
-
-    public function lastSavedAt(): ?string
-    {
-        return $this->employee?->last_saved_at?->diffForHumans();
     }
 }

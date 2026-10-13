@@ -6,9 +6,7 @@ namespace Tests\Unit\Actions;
 
 use App\Actions\UpdateCompany;
 use App\Enums\PermissionEnum;
-use App\Enums\SizeRangeEnum;
 use App\Enums\UserActionEnum;
-use App\Enums\WorkModeEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\User;
@@ -37,11 +35,6 @@ class UpdateCompanyTest extends TestCase
             name: 'Dunder Mifflin Paper Company',
             legalName: 'Dunder Mifflin Inc.',
             websiteUrl: 'https://dundermifflin.com',
-            industry: 'Paper',
-            sizeRange: SizeRangeEnum::FiftyOneToTwoHundred,
-            workMode: WorkModeEnum::Hybrid,
-            timezone: 'America/New_York',
-            locale: 'fr_FR',
             currency: 'EUR',
             billingEmail: 'accounting@dundermifflin.com',
         )->execute();
@@ -52,11 +45,6 @@ class UpdateCompanyTest extends TestCase
 
         $this->assertEquals('Dunder Mifflin Paper Company', $company->name);
         $this->assertEquals('Dunder Mifflin Inc.', $company->legal_name);
-        $this->assertEquals('Paper', $company->industry);
-        $this->assertEquals(SizeRangeEnum::FiftyOneToTwoHundred, $company->size_range);
-        $this->assertEquals(WorkModeEnum::Hybrid, $company->work_mode);
-        $this->assertEquals('America/New_York', $company->timezone);
-        $this->assertEquals('fr_FR', $company->locale);
         $this->assertEquals('EUR', $company->currency);
         $this->assertEquals('accounting@dundermifflin.com', $company->billing_email);
 

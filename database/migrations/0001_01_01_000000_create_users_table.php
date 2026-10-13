@@ -23,7 +23,7 @@ return new class extends Migration
             $table->datetime('password_changed_at')->nullable()->comment('when the user last changed or set their password, null when the user signs in through SSO');
             $table->string('sso_provider')->nullable()->comment('SSO provider the user signs in with');
             $table->boolean('is_active')->default(true)->comment('whether the user can sign in, so a user can be suspended without being deleted');
-            $table->string('locale', 5)->nullable()->comment('language of the interface, falls back to the company locale');
+            $table->string('locale', 5)->nullable()->comment('language of the interface, falls back to the application locale');
             $table->string('time_format', 2)->default('24')->comment('whether times are shown on a 24 hour or a 12 hour clock');
             $table->datetime('last_signed_in_at')->nullable()->comment('when the user last signed in');
             $table->string('last_sign_in_ip', 45)->nullable()->comment('ip address the user last signed in from, so a sign-in from somewhere new can be flagged');

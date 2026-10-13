@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\OccurrenceTypeEnum;
 use App\Enums\PermissionEnum;
-use App\Enums\SizeRangeEnum;
 use App\Enums\UserActionEnum;
-use App\Enums\WorkModeEnum;
 use App\Helpers\TextSanitizer;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
@@ -26,11 +23,6 @@ class UpdateCompany
         private string $name,
         private ?string $legalName = null,
         private ?string $websiteUrl = null,
-        private ?string $industry = null,
-        private readonly ?SizeRangeEnum $sizeRange = null,
-        private readonly ?WorkModeEnum $workMode = null,
-        private readonly string $timezone = 'UTC',
-        private readonly string $locale = 'en',
         private readonly ?string $currency = null,
         private ?string $billingEmail = null,
     ) {}
@@ -40,21 +32,9 @@ class UpdateCompany
         $this->authorize();
         $this->sanitize();
         $this->update();
-        $this->publish();
         $this->log();
 
         return $this->company;
-    }
-
-    private function publish(): void
-    {
-        new PublishOccurrence(
-            type: OccurrenceTypeEnum::CompanyUpdated,
-            company: $this->company,
-            subject: $this->company,
-            actor: $this->author,
-            payload: ['name' => $this->company->name],
-        )->execute();
     }
 
     private function authorize(): void
@@ -80,7 +60,6 @@ class UpdateCompany
         $this->name = TextSanitizer::plainText($this->name);
         $this->legalName = TextSanitizer::nullablePlainText($this->legalName);
         $this->websiteUrl = TextSanitizer::nullablePlainText($this->websiteUrl);
-        $this->industry = TextSanitizer::nullablePlainText($this->industry);
         $this->billingEmail = TextSanitizer::nullablePlainText($this->billingEmail);
     }
 
@@ -89,11 +68,6 @@ class UpdateCompany
         $this->company->name = $this->name;
         $this->company->legal_name = $this->legalName;
         $this->company->website_url = $this->websiteUrl;
-        $this->company->industry = $this->industry;
-        $this->company->size_range = $this->sizeRange;
-        $this->company->work_mode = $this->workMode;
-        $this->company->timezone = $this->timezone;
-        $this->company->locale = $this->locale;
         $this->company->currency = $this->currency;
         $this->company->billing_email = $this->billingEmail;
         $this->company->save();

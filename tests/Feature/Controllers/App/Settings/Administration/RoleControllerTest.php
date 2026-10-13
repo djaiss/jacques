@@ -38,7 +38,7 @@ class RoleControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('Regional manager');
         $response->assertSee('People');
-        $response->assertSee('1 of 10 permissions');
+        $response->assertSee('1 of 7 permissions');
     }
 
     #[Test]

@@ -6,7 +6,6 @@ namespace Tests\Unit\Actions;
 
 use App\Actions\CreateCompany;
 use App\Enums\PermissionEnum;
-use App\Enums\PlanEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
@@ -39,7 +38,6 @@ class CreateCompanyTest extends TestCase
             'id' => $company->id,
             'name' => 'Dunder Mifflin',
             'slug' => 'dunder-mifflin',
-            'plan' => PlanEnum::Free->value,
         ]);
         $this->assertDatabaseHas('users', [
             'company_id' => $company->id,
@@ -138,23 +136,6 @@ class CreateCompanyTest extends TestCase
         )->execute();
 
         $this->assertTrue($company->isOnTrial());
-    }
-
-    #[Test]
-    public function it_accepts_a_plan(): void
-    {
-        Queue::fake();
-
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-            plan: PlanEnum::Business,
-        )->execute();
-
-        $this->assertEquals(PlanEnum::Business, $company->plan);
     }
 
     #[Test]

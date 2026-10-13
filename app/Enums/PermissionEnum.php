@@ -15,9 +15,6 @@ enum PermissionEnum: string
     case EmployeeUpdatePrivate = 'employee.update_private';
     case RoleManage = 'role.manage';
     case CompanyManage = 'company.manage';
-    case AssetView = 'asset.view';
-    case AssetManage = 'asset.manage';
-    case AssetCheckout = 'asset.checkout';
 
     public function targetsEmployee(): bool
     {
@@ -28,26 +25,7 @@ enum PermissionEnum: string
             self::EmployeeUpdatePrivate => true,
             self::EmployeeCreate,
             self::RoleManage,
-            self::CompanyManage,
-            self::AssetView,
-            self::AssetManage,
-            self::AssetCheckout => false,
-        };
-    }
-
-    public function module(): ?ModuleEnum
-    {
-        return match ($this) {
-            self::AssetView,
-            self::AssetManage,
-            self::AssetCheckout => ModuleEnum::Assets,
-            self::EmployeeView,
-            self::EmployeeCreate,
-            self::EmployeeUpdate,
-            self::EmployeeViewPrivate,
-            self::EmployeeUpdatePrivate,
-            self::RoleManage,
-            self::CompanyManage => null,
+            self::CompanyManage => false,
         };
     }
 
@@ -71,9 +49,6 @@ enum PermissionEnum: string
             self::EmployeeUpdatePrivate => PermissionGroupEnum::SensitiveData,
             self::RoleManage,
             self::CompanyManage => PermissionGroupEnum::Administration,
-            self::AssetView,
-            self::AssetManage,
-            self::AssetCheckout => PermissionGroupEnum::Assets,
         };
     }
 
@@ -87,9 +62,6 @@ enum PermissionEnum: string
             self::EmployeeUpdatePrivate => 'Change the private details of a colleague',
             self::RoleManage => 'Administer the company, its roles and who holds them',
             self::CompanyManage => 'Change the settings of the company',
-            self::AssetView => 'See the assets the company owns',
-            self::AssetManage => 'Add, change and archive assets and their catalogue',
-            self::AssetCheckout => 'Hand assets out and take them back',
         };
     }
 }
