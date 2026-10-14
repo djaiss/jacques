@@ -73,7 +73,7 @@ class LocationsViewModel
         ], $this->filtered()->all()));
     }
 
-    /** @return array<int, array{id: int, name: string, country: string, city: string, address: string, timezone: string, isHeadquarters: bool, isArchived: bool, updateUrl: string, archiveUrl: string, restoreUrl: string, inheritNote: string}> */
+    /** @return array<int, array{id: int, name: string, country: string, region: string, city: string, postalCode: string, addressLine1: string, addressLine2: string, phone: string, email: string, timezone: string, isHeadquarters: bool, isArchived: bool, updateUrl: string, archiveUrl: string, restoreUrl: string, inheritNote: string}> */
     public function drawer(): array
     {
         $drawer = [];
@@ -83,8 +83,13 @@ class LocationsViewModel
                 'id' => $location->id,
                 'name' => $location->name,
                 'country' => $location->country ?? '',
+                'region' => $location->region ?? '',
                 'city' => $location->city ?? '',
-                'address' => $location->address ?? '',
+                'postalCode' => $location->postal_code ?? '',
+                'addressLine1' => $location->address_line_1 ?? '',
+                'addressLine2' => $location->address_line_2 ?? '',
+                'phone' => $location->phone ?? '',
+                'email' => $location->email ?? '',
                 'timezone' => $location->timezone ?? '',
                 'isHeadquarters' => $location->is_headquarters,
                 'isArchived' => $location->isArchived(),
@@ -105,14 +110,19 @@ class LocationsViewModel
         return $id === null ? null : (int) $id;
     }
 
-    /** @return array{name: string, country: string, city: string, address: string, timezone: string, isHeadquarters: bool} */
+    /** @return array{name: string, country: string, region: string, city: string, postalCode: string, addressLine1: string, addressLine2: string, phone: string, email: string, timezone: string, isHeadquarters: bool} */
     public function openLocationForm(): array
     {
         return [
             'name' => (string) old('name', ''),
             'country' => (string) old('country', ''),
+            'region' => (string) old('region', ''),
             'city' => (string) old('city', ''),
-            'address' => (string) old('address', ''),
+            'postalCode' => (string) old('postal_code', ''),
+            'addressLine1' => (string) old('address_line_1', ''),
+            'addressLine2' => (string) old('address_line_2', ''),
+            'phone' => (string) old('phone', ''),
+            'email' => (string) old('email', ''),
             'timezone' => (string) old('timezone', ''),
             'isHeadquarters' => old('is_headquarters') !== null,
         ];

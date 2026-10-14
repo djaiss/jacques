@@ -26,8 +26,13 @@ class CreateLocation
         private readonly Company $company,
         private string $name,
         private ?string $country = null,
+        private ?string $region = null,
         private ?string $city = null,
-        private ?string $address = null,
+        private ?string $postalCode = null,
+        private ?string $addressLine1 = null,
+        private ?string $addressLine2 = null,
+        private ?string $phone = null,
+        private ?string $email = null,
         private ?string $timezone = null,
     ) {}
 
@@ -53,8 +58,13 @@ class CreateLocation
     private function sanitize(): void
     {
         $this->name = TextSanitizer::plainText($this->name);
+        $this->region = TextSanitizer::nullablePlainText($this->region);
         $this->city = TextSanitizer::nullablePlainText($this->city);
-        $this->address = TextSanitizer::nullablePlainText($this->address);
+        $this->postalCode = TextSanitizer::nullablePlainText($this->postalCode);
+        $this->addressLine1 = TextSanitizer::nullablePlainText($this->addressLine1);
+        $this->addressLine2 = TextSanitizer::nullablePlainText($this->addressLine2);
+        $this->phone = TextSanitizer::nullablePlainText($this->phone);
+        $this->email = TextSanitizer::nullablePlainText($this->email);
         $this->timezone = TextSanitizer::nullablePlainText($this->timezone);
 
         $country = TextSanitizer::nullablePlainText($this->country);
@@ -83,8 +93,13 @@ class CreateLocation
             'company_id' => $this->company->id,
             'name' => $this->name,
             'country' => $this->country,
+            'region' => $this->region,
             'city' => $this->city,
-            'address' => $this->address,
+            'postal_code' => $this->postalCode,
+            'address_line_1' => $this->addressLine1,
+            'address_line_2' => $this->addressLine2,
+            'phone' => $this->phone,
+            'email' => $this->email,
             'timezone' => $this->timezone,
         ]);
     }

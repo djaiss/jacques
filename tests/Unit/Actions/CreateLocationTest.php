@@ -35,8 +35,13 @@ class CreateLocationTest extends TestCase
             company: $company,
             name: 'Scranton branch',
             country: 'US',
+            region: 'Pennsylvania',
             city: 'Scranton',
-            address: '1725 Slough Avenue',
+            postalCode: '18505',
+            addressLine1: '1725 Slough Avenue',
+            addressLine2: 'Suite 200',
+            phone: '570-555-0100',
+            email: 'scranton@dundermifflin.com',
             timezone: 'America/New_York',
         )->execute();
 
@@ -46,8 +51,13 @@ class CreateLocationTest extends TestCase
             'company_id' => $company->id,
             'name' => 'Scranton branch',
             'country' => 'US',
+            'region' => 'Pennsylvania',
             'city' => 'Scranton',
-            'address' => '1725 Slough Avenue',
+            'postal_code' => '18505',
+            'address_line_1' => '1725 Slough Avenue',
+            'address_line_2' => 'Suite 200',
+            'phone' => '570-555-0100',
+            'email' => 'scranton@dundermifflin.com',
             'timezone' => 'America/New_York',
         ]);
 
@@ -75,8 +85,13 @@ class CreateLocationTest extends TestCase
             'id' => $location->id,
             'name' => 'Utica branch',
             'country' => null,
+            'region' => null,
             'city' => null,
-            'address' => null,
+            'postal_code' => null,
+            'address_line_1' => null,
+            'address_line_2' => null,
+            'phone' => null,
+            'email' => null,
             'timezone' => null,
         ]);
     }

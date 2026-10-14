@@ -188,7 +188,12 @@ class LocationControllerTest extends TestCase
                 'name' => 'Scranton business park',
                 'city' => 'Scranton',
                 'country' => 'US',
-                'address' => '1725 Slough Avenue',
+                'region' => 'Pennsylvania',
+                'postal_code' => '18505',
+                'address_line_1' => '1725 Slough Avenue',
+                'address_line_2' => 'Suite 200',
+                'phone' => '570-555-0100',
+                'email' => 'scranton@dundermifflin.com',
                 'timezone' => 'America/New_York',
                 'is_headquarters' => '1',
             ]);
@@ -199,6 +204,9 @@ class LocationControllerTest extends TestCase
         $location->refresh();
 
         $this->assertEquals('Scranton business park', $location->name);
+        $this->assertEquals('1725 Slough Avenue', $location->address_line_1);
+        $this->assertEquals('Suite 200', $location->address_line_2);
+        $this->assertEquals('scranton@dundermifflin.com', $location->email);
         $this->assertEquals('America/New_York', $location->timezone);
         $this->assertTrue($location->is_headquarters);
     }
@@ -231,6 +239,22 @@ class LocationControllerTest extends TestCase
             ]);
 
         $response->assertSessionHasErrors(['timezone']);
+    }
+
+    #[Test]
+    public function it_turns_away_an_email_that_is_not_an_address(): void
+    {
+        $user = $this->administrator();
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+
+        $response = $this->actingAs($user)
+            ->from(route('settings.locations.index'))
+            ->put(route('settings.locations.update', $location->id), [
+                'name' => 'Scranton branch',
+                'email' => 'dwight at schrute farms',
+            ]);
+
+        $response->assertSessionHasErrors(['email']);
     }
 
     #[Test]

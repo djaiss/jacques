@@ -36,8 +36,13 @@ class UpdateLocationTest extends TestCase
             location: $location,
             name: 'Scranton business park',
             country: 'us',
+            region: 'Pennsylvania',
             city: 'Scranton',
-            address: '1725 Slough Avenue',
+            postalCode: '18505',
+            addressLine1: '1725 Slough Avenue',
+            addressLine2: 'Suite 200',
+            phone: '570-555-0100',
+            email: 'scranton@dundermifflin.com',
             timezone: 'America/New_York',
         )->execute();
 
@@ -46,7 +51,12 @@ class UpdateLocationTest extends TestCase
         $this->assertEquals('Scranton business park', $location->name);
         $this->assertEquals('US', $location->country);
         $this->assertEquals('Scranton', $location->city);
-        $this->assertEquals('1725 Slough Avenue', $location->address);
+        $this->assertEquals('Pennsylvania', $location->region);
+        $this->assertEquals('18505', $location->postal_code);
+        $this->assertEquals('1725 Slough Avenue', $location->address_line_1);
+        $this->assertEquals('Suite 200', $location->address_line_2);
+        $this->assertEquals('570-555-0100', $location->phone);
+        $this->assertEquals('scranton@dundermifflin.com', $location->email);
         $this->assertEquals('America/New_York', $location->timezone);
 
         Queue::assertPushedOn(
@@ -74,7 +84,12 @@ class UpdateLocationTest extends TestCase
 
         $this->assertNull($location->country);
         $this->assertNull($location->city);
-        $this->assertNull($location->address);
+        $this->assertNull($location->region);
+        $this->assertNull($location->postal_code);
+        $this->assertNull($location->address_line_1);
+        $this->assertNull($location->address_line_2);
+        $this->assertNull($location->phone);
+        $this->assertNull($location->email);
         $this->assertNull($location->timezone);
     }
 
