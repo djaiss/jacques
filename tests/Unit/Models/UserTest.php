@@ -7,6 +7,8 @@ namespace Tests\Unit\Models;
 use App\Models\Company;
 use App\Models\EmailSent;
 use App\Models\Employee;
+use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,6 +41,29 @@ class UserTest extends TestCase
 
         $this->assertTrue($user->employee()->exists());
         $this->assertEquals('Michael Scott', $user->employee->name);
+    }
+
+    #[Test]
+    public function it_has_many_locations(): void
+    {
+        $user = User::factory()->create();
+        $location = Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton']);
+        $user->locations()->attach($location);
+
+        $this->assertTrue($user->locations()->exists());
+        $this->assertEquals('Scranton', $user->locations->first()->name);
+    }
+
+    #[Test]
+    public function it_knows_whether_it_holds_the_owner_role(): void
+    {
+        $michael = User::factory()->create();
+        $dwight = User::factory()->create(['company_id' => $michael->company_id]);
+        $owner = Role::factory()->create(['company_id' => $michael->company_id, 'slug' => Role::OWNER]);
+        $michael->roles()->attach($owner);
+
+        $this->assertTrue($michael->isOwner());
+        $this->assertFalse($dwight->isOwner());
     }
 
     #[Test]

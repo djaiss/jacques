@@ -27,7 +27,7 @@ class DestroyLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
         new DestroyLocation(author: $author, location: $location)->execute();
@@ -61,7 +61,7 @@ class DestroyLocationTest extends TestCase
     {
         $this->expectException(ModelNotFoundException::class);
 
-        $author = $this->grant(User::factory()->create(), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
         $location = Location::factory()->create();
 
         new DestroyLocation(author: $author, location: $location)->execute();

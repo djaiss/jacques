@@ -33,8 +33,8 @@ class ArchiveLocation
     private function authorize(): void
     {
         $this->author
-            ->permission(PermissionEnum::CompanyManage)
-            ->forCompany($this->location->company)
+            ->permission(PermissionEnum::LocationManage)
+            ->forLocation($this->location)
             ->authorize();
     }
 

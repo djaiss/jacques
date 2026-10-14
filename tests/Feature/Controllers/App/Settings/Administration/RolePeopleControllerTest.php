@@ -102,7 +102,7 @@ class RolePeopleControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $colleague = User::factory()->create(['company_id' => $company->id]);
         $role = Role::factory()->create(['company_id' => $company->id]);

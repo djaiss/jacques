@@ -7,6 +7,7 @@ namespace Tests\Feature\Controllers\App\Settings\Administration;
 use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -68,7 +69,7 @@ class LocationArchiveControllerTest extends TestCase
     public function it_stops_somebody_who_may_not_administer_the_company_from_archiving_an_location(): void
     {
         $company = Company::factory()->create();
-        $user = $this->makeMember(User::factory()->create(['company_id' => $company->id]));
+        $user = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::STAFF);
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         $this->actingAs($user)
@@ -96,6 +97,6 @@ class LocationArchiveControllerTest extends TestCase
     {
         $company = Company::factory()->create();
 
-        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
     }
 }

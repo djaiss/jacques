@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
- * Delete a company. Only its owner may do so.
+ * Delete a company. Only one of its owners may do so.
  */
 class DestroyCompany
 {
@@ -26,7 +26,11 @@ class DestroyCompany
 
     private function validate(): void
     {
-        if ($this->company->owner_user_id !== $this->user->id) {
+        if ($this->user->company_id !== $this->company->id) {
+            throw new ModelNotFoundException('Company not found');
+        }
+
+        if (! $this->user->isOwner()) {
             throw new ModelNotFoundException('Company not found');
         }
     }

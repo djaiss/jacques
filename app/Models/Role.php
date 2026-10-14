@@ -18,12 +18,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * A named bundle of permissions inside one company. Users are given permissions
  * through roles and in no other way.
  *
- * Owner is not one of these. It is derived from companies.owner_user_id alone,
- * so it can neither be given away nor taken.
+ * Every company starts with four of them: Owner, Manager, Staff and
+ * Receptionist. Owner grants everything and is locked, so it can be handed out
+ * but never changed or deleted.
  *
  * @property int $id
  * @property int $company_id
  * @property string $name
+ * @property string|null $description
  * @property string $slug
  * @property bool $is_default
  * @property bool $is_editable
@@ -36,17 +38,16 @@ class Role extends Model
     use HasFactory;
 
     /**
-     * The slug of the role the first user of a company is given. It is the only
-     * default role the application looks up by name, which is why the slug is
-     * written down here rather than typed out where it is needed.
+     * The slug of the role the first user of a company is given, and the one
+     * the application looks up to tell who owns the company.
      */
-    public const string ADMINISTRATOR = 'administrator';
+    public const string OWNER = 'owner';
 
-    public const string PEOPLE_ADMINISTRATOR = 'people-administrator';
+    public const string MANAGER = 'manager';
 
-    public const string MEMBER = 'member';
+    public const string STAFF = 'staff';
 
-    public const string IT_ADMINISTRATOR = 'it-administrator';
+    public const string RECEPTIONIST = 'receptionist';
 
     protected $table = 'roles';
 
@@ -58,6 +59,7 @@ class Role extends Model
     protected $fillable = [
         'company_id',
         'name',
+        'description',
         'slug',
         'is_default',
         'is_editable',

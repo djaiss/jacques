@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -39,10 +40,10 @@ class SettingsControllerTest extends TestCase
             'company_id' => $company->id,
             'display_name' => 'Michael Scott',
         ]);
-        $user = $this->makeMember(User::factory()->create([
+        $user = $this->giveDefaultRole(User::factory()->create([
             'company_id' => $company->id,
             'employee_id' => $employee->id,
-        ]));
+        ]), Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.index'));
 
@@ -67,7 +68,7 @@ class SettingsControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id]),
-            PermissionEnum::CompanyManage,
+            PermissionEnum::LocationManage,
         );
         Location::factory()->count(3)->create(['company_id' => $company->id]);
 
@@ -102,7 +103,7 @@ class SettingsControllerTest extends TestCase
     {
         $company = Company::factory()->create();
 
-        return $this->makeMember(User::factory()->create(['company_id' => $company->id]));
+        return $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::STAFF);
     }
 
     #[Test]

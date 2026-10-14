@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('currency', 3)->nullable()->comment('default currency of the company');
             $table->string('billing_email')->nullable()->comment('email address the invoices are sent to');
             $table->datetime('trial_ends_at')->nullable()->comment('when the trial ends');
-            $table->unsignedBigInteger('owner_user_id')->nullable()->comment('user who owns the company, set right after the first user is created');
             $table->json('settings')->nullable()->comment('configuration that does not deserve a column of its own, starting with the modules the company has turned on');
             $table->timestamps();
         });

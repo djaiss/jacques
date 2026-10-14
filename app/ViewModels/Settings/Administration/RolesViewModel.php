@@ -43,10 +43,10 @@ class RolesViewModel
                 'id' => $role->id,
                 'name' => $role->name,
                 'url' => route('settings.roles.show', $role->id),
-                'summary' => $this->summary($role),
+                'summary' => $role->description ?? $this->summary($role),
                 /* The noun agrees with the total rather than with the count, and
-                   there are ten permissions to grant, so the wording never
-                   changes with the number in front of it. */
+                   there are always many permissions to grant, so the wording
+                   never changes with the number in front of it. */
                 'permissions' => trans_choice('[0,*]:count of :total permissions', $role->permissions_count, [
                     'total' => count(PermissionEnum::cases()),
                 ]),
@@ -57,7 +57,7 @@ class RolesViewModel
             ->all();
     }
 
-    /** @return array{id: int, name: string, slug: string, isEditable: bool, badges: array<int, array{label: string, tone: string}>, hue: int, updateUrl: string, destroyUrl: string, duplicateUrl: string, assignUrl: string}|null */
+    /** @return array{id: int, name: string, description: string, slug: string, isEditable: bool, badges: array<int, array{label: string, tone: string}>, hue: int, updateUrl: string, destroyUrl: string, duplicateUrl: string, assignUrl: string}|null */
     public function role(): ?array
     {
         if ($this->role === null) {
@@ -67,6 +67,7 @@ class RolesViewModel
         return [
             'id' => $this->role->id,
             'name' => old('name', $this->role->name),
+            'description' => old('description', $this->role->description ?? ''),
             'slug' => $this->role->slug,
             'isEditable' => $this->role->is_editable,
             'badges' => $this->badges($this->role),
@@ -106,7 +107,7 @@ class RolesViewModel
         return $this->onPeopleTab;
     }
 
-    /** @return array<int, array{title: string, note: string, count: string, counts: array<int, string>, width: string, tone: string, permissions: array<int, array{value: string, label: string, granted: bool, scope: string, targetsEmployee: bool, scopes: array<string, string>}>}> */
+    /** @return array<int, array{title: string, note: string, count: string, counts: array<int, string>, width: string, tone: string, permissions: array<int, array{value: string, label: string, granted: bool, scope: string, scopes: array<string, string>}>}> */
     public function groups(): array
     {
         $groups = [];
@@ -182,7 +183,7 @@ class RolesViewModel
         return array_key_exists(PermissionEnum::RoleManage->value, $this->grants());
     }
 
-    /** @return array<int, array{id: int, name: string, email: string, employee: Employee|null, since: string, removeUrl: string}> */
+    /** @return array<int, array{id: int, name: string, email: string, employee: Employee|null, since: string, removeUrl: string, isRemovable: bool}> */
     public function people(): array
     {
         if ($this->role === null) {
@@ -190,6 +191,8 @@ class RolesViewModel
         }
 
         $heldSince = $this->heldSince($this->role);
+        $isLastOwner = $this->role->slug === Role::OWNER
+            && $this->role->users()->where('is_active', true)->count() === 1;
 
         return $this->role->users()
             ->with('employee')
@@ -201,6 +204,7 @@ class RolesViewModel
                 'employee' => $user->employee,
                 'since' => __('Holds it since :date', ['date' => $heldSince[$user->id]->isoFormat('MMM YYYY')]),
                 'removeUrl' => route('settings.rolePeople.destroy', [$this->role->id, $user->id]),
+                'isRemovable' => ! ($isLastOwner && $user->is_active),
             ])
             ->all();
     }
@@ -272,7 +276,7 @@ class RolesViewModel
             ->all();
     }
 
-    /** @return array{value: string, label: string, granted: bool, scope: string, targetsEmployee: bool, scopes: array<string, string>} */
+    /** @return array{value: string, label: string, granted: bool, scope: string, scopes: array<string, string>} */
     private function permission(PermissionEnum $permission): array
     {
         $submitted = old('permissions');
@@ -297,8 +301,7 @@ class RolesViewModel
             'label' => __($permission->label()),
             'granted' => $granted,
             'scope' => $scope,
-            'targetsEmployee' => $permission->targetsEmployee(),
-            'scopes' => $permission->targetsEmployee() ? $scopes : [],
+            'scopes' => count($scopes) > 1 ? $scopes : [],
         ];
     }
 

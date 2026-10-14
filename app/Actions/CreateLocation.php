@@ -50,7 +50,7 @@ class CreateLocation
     private function authorize(): void
     {
         $this->author
-            ->permission(PermissionEnum::CompanyManage)
+            ->permission(PermissionEnum::LocationManage)
             ->forCompany($this->company)
             ->authorize();
     }

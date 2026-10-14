@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
- * Rename a role and say afresh what it is allowed to do. What is passed in
- * replaces what the role had, so a permission left out is a permission taken
- * away.
+ * Rename a role, describe it and say afresh what it is allowed to do. What is
+ * passed in replaces what the role had, so a permission left out is a
+ * permission taken away.
  */
 class UpdateRole
 {
@@ -29,6 +29,7 @@ class UpdateRole
         private readonly Role $role,
         private string $name,
         private readonly array $grants = [],
+        private ?string $description = null,
     ) {}
 
     public function execute(): Role
@@ -79,11 +80,13 @@ class UpdateRole
     private function sanitize(): void
     {
         $this->name = TextSanitizer::plainText($this->name);
+        $this->description = TextSanitizer::nullablePlainText($this->description);
     }
 
     private function update(): void
     {
         $this->role->name = $this->name;
+        $this->role->description = $this->description;
         $this->role->save();
     }
 

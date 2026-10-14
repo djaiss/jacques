@@ -38,7 +38,9 @@ class CreateRoleTest extends TestCase
             grants: [
                 ['permission' => PermissionEnum::EmployeeView, 'scope' => ScopeEnum::Company],
                 ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Self],
+                ['permission' => PermissionEnum::ReportView, 'scope' => ScopeEnum::Location],
             ],
+            description: 'Runs the Scranton branch.',
         )->execute();
 
         $this->assertInstanceOf(Role::class, $role);
@@ -46,6 +48,7 @@ class CreateRoleTest extends TestCase
             'id' => $role->id,
             'company_id' => $company->id,
             'name' => 'Regional manager',
+            'description' => 'Runs the Scranton branch.',
             'slug' => 'regional-manager',
             'is_default' => false,
             'is_editable' => true,
@@ -60,6 +63,11 @@ class CreateRoleTest extends TestCase
             'permission' => PermissionEnum::EmployeeUpdate->value,
             'scope' => ScopeEnum::Self->value,
         ]);
+        $this->assertDatabaseHas('role_permissions', [
+            'role_id' => $role->id,
+            'permission' => PermissionEnum::ReportView->value,
+            'scope' => ScopeEnum::Location->value,
+        ]);
 
         Queue::assertPushedOn(
             queue: 'low',
@@ -69,7 +77,7 @@ class CreateRoleTest extends TestCase
                 && $job->user->id === $author->id
                 && $job->parameters === [
                     'name' => 'Regional manager',
-                    'permissions' => 'employee.view:company, employee.update:self',
+                    'permissions' => 'employee.view:company, employee.update:self, report.view:location',
                 ],
         );
     }

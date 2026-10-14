@@ -6,6 +6,7 @@ namespace Tests\Feature\Controllers\App\Settings\Account\Profile;
 
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -29,7 +30,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.profile.index'));
 
@@ -48,7 +49,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)
             ->withSession([
@@ -72,7 +73,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.profile.index'));
 
@@ -91,7 +92,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.profile.index'));
 
@@ -118,7 +119,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->put(route('settings.profile.update'), [
             'first_name' => 'Michael',
@@ -148,7 +149,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->put(route('settings.profile.update'), [
             'first_name' => '',
@@ -167,7 +168,7 @@ class ProfileControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->put(route('settings.profile.update'), [
             'first_name' => 'Angela',

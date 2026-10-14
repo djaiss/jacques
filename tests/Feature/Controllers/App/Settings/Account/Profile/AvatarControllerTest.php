@@ -7,6 +7,7 @@ namespace Tests\Feature\Controllers\App\Settings\Account\Profile;
 use App\Actions\UpdateEmployeeAvatar;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -31,7 +32,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('dwight.jpg', 400, 400),
@@ -61,7 +62,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -86,7 +87,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
             'avatar' => UploadedFile::fake()->create('beets.pdf', 10, 'application/pdf'),
@@ -104,7 +105,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('creed.jpg')->size(6 * 1024),
@@ -133,7 +134,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -160,7 +161,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -168,7 +169,7 @@ class AvatarControllerTest extends TestCase
             file: UploadedFile::fake()->image('holly.jpg', 400, 400),
         )->execute();
 
-        $stranger = $this->makeMember(User::factory()->create());
+        $stranger = $this->giveDefaultRole(User::factory()->create(), Role::STAFF);
 
         $response = $this->actingAs($stranger)
             ->get(route('settings.avatar.show', ['employee' => $employee, 'size' => 96]));
@@ -188,7 +189,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -216,7 +217,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -246,7 +247,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         new UpdateEmployeeAvatar(
             author: $user,
@@ -275,7 +276,7 @@ class AvatarControllerTest extends TestCase
             'company_id' => $company->id,
             'employee_id' => $employee->id,
         ]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.profile.index'));
 

@@ -17,15 +17,11 @@ class EmployeeScope
     public static function for(User $user, PermissionEnum $permission): Builder
     {
         if (! $permission->targetsEmployee()) {
-            throw new InvalidArgumentException($permission->value.' covers the whole company and has no list of employees to narrow down');
+            throw new InvalidArgumentException($permission->value.' is not about one employee and has no list of employees to narrow down');
         }
 
         // Every employee query starts inside the company of whoever is asking.
         $query = Employee::query()->where('company_id', $user->company_id);
-
-        if ($user->company->owner_user_id === $user->id) {
-            return $query;
-        }
 
         $scopes = $user->grants()[$permission->value] ?? [];
 
@@ -33,10 +29,25 @@ class EmployeeScope
             return $query;
         }
 
-        if (in_array(ScopeEnum::Self, $scopes, true) && $user->employee_id !== null) {
-            return $query->where('id', $user->employee_id);
+        $locationIds = $user->locations()->pluck('locations.id');
+        $grantsLocation = in_array(ScopeEnum::Location, $scopes, true) && $locationIds->isNotEmpty();
+        $grantsSelf = in_array(ScopeEnum::Self, $scopes, true) && $user->employee_id !== null;
+
+        if (! $grantsLocation && ! $grantsSelf) {
+            return $query->whereIn('id', []);
         }
 
-        return $query->whereIn('id', []);
+        return $query->where(function (Builder $query) use ($user, $locationIds, $grantsLocation, $grantsSelf): void {
+            if ($grantsLocation) {
+                $query->orWhereIn('id', User::query()
+                    ->select('employee_id')
+                    ->whereNotNull('employee_id')
+                    ->whereHas('locations', fn (Builder $locations) => $locations->whereIn('locations.id', $locationIds)));
+            }
+
+            if ($grantsSelf) {
+                $query->orWhere('id', $user->employee_id);
+            }
+        });
     }
 }

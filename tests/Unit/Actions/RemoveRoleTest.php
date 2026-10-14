@@ -163,4 +163,45 @@ class RemoveRoleTest extends TestCase
 
         new RemoveRole(author: $author, user: $dwight, role: $role)->execute();
     }
+
+    #[Test]
+    public function it_takes_the_owner_role_away_when_another_owner_remains(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $jan = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $owner = $company->roles()->where('slug', Role::OWNER)->firstOrFail();
+
+        new RemoveRole(author: $michael, user: $michael, role: $owner)->execute();
+
+        $this->assertFalse($michael->isOwner());
+        $this->assertTrue($jan->isOwner());
+    }
+
+    #[Test]
+    public function it_throws_when_the_last_owner_would_lose_the_role(): void
+    {
+        $this->expectException(ModelNotFoundException::class);
+
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $owner = $company->roles()->where('slug', Role::OWNER)->firstOrFail();
+
+        new RemoveRole(author: $michael, user: $michael, role: $owner)->execute();
+    }
+
+    #[Test]
+    public function it_does_not_count_an_owner_who_has_been_deactivated(): void
+    {
+        $this->expectException(ModelNotFoundException::class);
+
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id, 'is_active' => false]), Role::OWNER);
+        $owner = $company->roles()->where('slug', Role::OWNER)->firstOrFail();
+
+        new RemoveRole(author: $michael, user: $michael, role: $owner)->execute();
+    }
 }

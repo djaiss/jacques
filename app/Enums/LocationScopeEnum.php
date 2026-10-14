@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum LocationScopeEnum: string
+use App\Interfaces\Translatable;
+
+enum LocationScopeEnum: string implements Translatable
 {
     case Active = 'active';
     case Archived = 'archived';
@@ -35,5 +37,11 @@ enum LocationScopeEnum: string
             'all' => self::All,
             default => self::Active,
         };
+    }
+
+    /** @return list<string> */
+    public function translationKeys(): array
+    {
+        return [$this->label()];
     }
 }

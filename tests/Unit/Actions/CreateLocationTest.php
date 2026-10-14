@@ -10,6 +10,7 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +29,7 @@ class CreateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
 
         $location = new CreateLocation(
             author: $author,
@@ -77,7 +78,7 @@ class CreateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
 
         $location = new CreateLocation(author: $author, company: $company, name: 'Utica branch')->execute();
 
@@ -102,7 +103,7 @@ class CreateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
 
         $location = new CreateLocation(
             author: $author,
@@ -121,7 +122,7 @@ class CreateLocationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
 
         new CreateLocation(author: $author, company: $company, name: '  ')->execute();
     }
@@ -132,7 +133,7 @@ class CreateLocationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
         new CreateLocation(author: $author, company: $company, name: 'Scranton branch')->execute();
@@ -144,7 +145,7 @@ class CreateLocationTest extends TestCase
         Queue::fake();
 
         $dunderMifflin = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::LocationManage);
         Location::factory()->create(['company_id' => Company::factory()->create()->id, 'name' => 'Scranton branch']);
 
         $location = new CreateLocation(author: $author, company: $dunderMifflin, name: 'Scranton branch')->execute();
@@ -161,5 +162,16 @@ class CreateLocationTest extends TestCase
         $author = User::factory()->create(['company_id' => $company->id]);
 
         new CreateLocation(author: $author, company: $company, name: 'Scranton branch')->execute();
+    }
+
+    #[Test]
+    public function it_throws_when_a_manager_adds_a_location(): void
+    {
+        $this->expectException(ModelNotFoundException::class);
+
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+
+        new CreateLocation(author: $michael, company: $company, name: 'Scranton branch')->execute();
     }
 }

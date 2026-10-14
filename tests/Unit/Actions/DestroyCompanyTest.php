@@ -6,6 +6,7 @@ namespace Tests\Unit\Actions;
 
 use App\Actions\DestroyCompany;
 use App\Models\Company;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,9 +21,7 @@ class DestroyCompanyTest extends TestCase
     public function it_destroys_the_company(): void
     {
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         new DestroyCompany(
             user: $owner,
@@ -38,9 +37,7 @@ class DestroyCompanyTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $member = User::factory()->create(['company_id' => $company->id]);
 

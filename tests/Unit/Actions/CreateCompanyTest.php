@@ -44,15 +44,16 @@ class CreateCompanyTest extends TestCase
             'email' => 'michael.scott@dundermifflin.com',
         ]);
 
-        $this->assertEquals($company->users()->first()->id, $company->owner_user_id);
-        $this->assertTrue(Hash::check('thatswhatshesaid', $company->owner->password_hash));
+        $owner = $company->users()->firstOrFail();
+
+        $this->assertTrue(Hash::check('thatswhatshesaid', $owner->password_hash));
 
         Queue::assertPushedOn(
             queue: 'low',
             job: LogUserAction::class,
             callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::CompanyCreated
                 && $job->company->id === $company->id
-                && $job->user->id === $company->owner_user_id,
+                && $job->user->id === $owner->id,
         );
     }
 
@@ -76,7 +77,7 @@ class CreateCompanyTest extends TestCase
             'work_email' => 'michael.scott@dundermifflin.com',
         ]);
 
-        $owner = $company->owner;
+        $owner = $company->users()->firstOrFail();
 
         $this->assertNotNull($owner->employee_id);
         $this->assertEquals('Michael Scott', $owner->employee->name);
@@ -96,13 +97,13 @@ class CreateCompanyTest extends TestCase
         )->execute();
 
         $this->assertEquals(
-            [Role::ADMINISTRATOR, Role::IT_ADMINISTRATOR, Role::MEMBER, Role::PEOPLE_ADMINISTRATOR],
+            [Role::MANAGER, Role::OWNER, Role::RECEPTIONIST, Role::STAFF],
             $company->roles()->pluck('slug')->sort()->values()->all(),
         );
     }
 
     #[Test]
-    public function it_makes_the_first_user_an_administrator(): void
+    public function it_gives_the_first_user_the_owner_role(): void
     {
         Queue::fake();
 
@@ -114,11 +115,11 @@ class CreateCompanyTest extends TestCase
             password: 'thatswhatshesaid',
         )->execute();
 
-        $owner = $company->owner;
+        $owner = $company->users()->firstOrFail();
 
-        $this->assertEquals([Role::ADMINISTRATOR], $owner->roles->pluck('slug')->all());
+        $this->assertEquals([Role::OWNER], $owner->roles->pluck('slug')->all());
         $this->assertTrue(
-            $owner->permission(PermissionEnum::RoleManage)->forCompany($company)->allowed(),
+            $owner->permission(PermissionEnum::BillingManage)->forCompany($company)->allowed(),
         );
     }
 

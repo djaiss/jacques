@@ -10,8 +10,8 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
- * Delete a user. Only the owner of the company may do so, and the owner cannot
- * delete themselves, since a company always needs an owner.
+ * Delete a user. Only an owner of the company may do so, and an owner cannot
+ * delete themselves, so the company always keeps at least one owner.
  */
 class DestroyUser
 {
@@ -43,7 +43,7 @@ class DestroyUser
             throw new ModelNotFoundException('User not found');
         }
 
-        if ($this->user->company->owner_user_id !== $this->author->id) {
+        if (! $this->author->isOwner()) {
             throw new ModelNotFoundException('User not found');
         }
 

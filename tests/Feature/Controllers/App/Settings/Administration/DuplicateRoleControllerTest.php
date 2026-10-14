@@ -28,7 +28,7 @@ class DuplicateRoleControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $this->grant($user, PermissionEnum::RoleManage);
 
-        $original = Role::factory()->create(['company_id' => $company->id, 'name' => 'Branch manager']);
+        $original = Role::factory()->create(['company_id' => $company->id, 'name' => 'Branch manager', 'description' => 'Runs Scranton.']);
         RolePermission::factory()->create([
             'role_id' => $original->id,
             'permission' => PermissionEnum::EmployeeUpdate,
@@ -43,6 +43,7 @@ class DuplicateRoleControllerTest extends TestCase
         $response->assertSessionHas('status', 'The role is copied.');
 
         $this->assertEquals('branch-manager-copy', $copy->slug);
+        $this->assertEquals('Runs Scranton.', $copy->description);
         $this->assertEquals(0, $copy->users()->count());
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $copy->id,
@@ -92,7 +93,7 @@ class DuplicateRoleControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $role = Role::factory()->create(['company_id' => $company->id]);
 

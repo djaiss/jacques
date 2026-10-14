@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use App\ViewModels\Settings\SettingsViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,7 +57,7 @@ class SettingsViewModelTest extends TestCase
         $company = Company::factory()->create();
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id]),
-            PermissionEnum::CompanyManage,
+            PermissionEnum::LocationManage,
         );
         Location::factory()->count(2)->create(['company_id' => $company->id]);
 
@@ -76,6 +77,16 @@ class SettingsViewModelTest extends TestCase
     }
 
     #[Test]
+    public function it_offers_the_locations_but_not_the_roles_to_a_manager(): void
+    {
+        $user = $this->giveDefaultRole(User::factory()->create(), Role::MANAGER);
+
+        $viewModel = new SettingsViewModel(user: $user, employee: null);
+
+        $this->assertEquals(['Locations'], array_column($viewModel->companyRows(), 'title'));
+    }
+
+    #[Test]
     public function it_falls_back_to_the_email_address_when_nobody_works_here(): void
     {
         $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.example']);
@@ -92,11 +103,11 @@ class SettingsViewModelTest extends TestCase
         $employee = Employee::factory()->create(['company_id' => $company->id]);
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id, 'employee_id' => $employee->id]),
-            PermissionEnum::CompanyManage,
+            PermissionEnum::LocationManage,
         );
 
         $viewModel = new SettingsViewModel(user: $user, employee: $employee);
 
-        $this->assertSame('company.manage at company scope', $viewModel->role());
+        $this->assertSame('location.manage at company scope', $viewModel->role());
     }
 }

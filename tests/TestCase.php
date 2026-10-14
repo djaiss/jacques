@@ -36,7 +36,7 @@ abstract class TestCase extends BaseTestCase
         return $user;
     }
 
-    protected function makeMember(User $user): User
+    protected function giveDefaultRole(User $user, string $slug): User
     {
         $company = $user->company;
 
@@ -44,9 +44,10 @@ abstract class TestCase extends BaseTestCase
             new CreateDefaultRoles(company: $company)->execute();
         }
 
-        $member = $company->roles()->where('slug', Role::MEMBER)->firstOrFail();
+        $role = $company->roles()->where('slug', $slug)->firstOrFail();
 
-        $user->roles()->attach($member->id);
+        $user->roles()->attach($role->id);
+        $user->forgetGrants();
 
         return $user;
     }

@@ -24,6 +24,7 @@ class DuplicateRoleController extends Controller
                 ->get()
                 ->map(fn (RolePermission $grant): array => ['permission' => $grant->permission, 'scope' => $grant->scope])
                 ->all(),
+            description: $original->description,
         )->execute();
 
         return redirect()->route('settings.roles.show', $copy->id)

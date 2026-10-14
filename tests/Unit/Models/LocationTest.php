@@ -6,6 +6,7 @@ namespace Tests\Unit\Models;
 
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,6 +24,17 @@ class LocationTest extends TestCase
 
         $this->assertTrue($location->company()->exists());
         $this->assertEquals($company->id, $location->company->id);
+    }
+
+    #[Test]
+    public function it_has_many_users(): void
+    {
+        $location = Location::factory()->create();
+        $user = User::factory()->create(['company_id' => $location->company_id]);
+        $location->users()->attach($user);
+
+        $this->assertTrue($location->users()->exists());
+        $this->assertEquals($user->id, $location->users->first()->id);
     }
 
     #[Test]
