@@ -18,10 +18,6 @@ the skills: [actions](../skills/actions/SKILL.md),
 [middlewares](../skills/middlewares/SKILL.md). Tests have their own rules in
 [testing.md](testing.md).
 
-When a rule here disagrees with the `laravel-best-practices` skill or with the
-Laravel Boost guidelines, this file wins. The precedence order is in
-`CLAUDE.md`.
-
 ## General PHP
 
 - You MUST declare one class, interface, trait or enum per file. This has no
