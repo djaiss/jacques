@@ -98,8 +98,8 @@ class LocationController extends Controller
     private function authorize(Request $request): void
     {
         $request->user()
-            ->permission(PermissionEnum::CompanyManage)
-            ->forCompany($request->user()->company)
+            ->permission(PermissionEnum::LocationManage)
+            ->anywhere()
             ->authorize();
     }
 

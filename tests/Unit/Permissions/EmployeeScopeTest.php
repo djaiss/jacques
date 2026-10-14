@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Location;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
@@ -83,15 +84,27 @@ class EmployeeScopeTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_everybody_in_the_company_for_the_owner(): void
+    public function it_returns_everybody_in_the_company_for_the_owner_role(): void
     {
         $company = Company::factory()->create();
         Employee::factory()->count(3)->create(['company_id' => $company->id]);
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $this->assertEquals(3, EmployeeScope::for($owner, PermissionEnum::EmployeeView)->count());
+    }
+
+    #[Test]
+    public function it_returns_the_colleagues_of_their_locations_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $dwight = Employee::factory()->create(['company_id' => $company->id]);
+        Employee::factory()->create(['company_id' => $company->id]);
+        User::factory()->create(['company_id' => $company->id, 'employee_id' => $dwight->id])->locations()->attach($scranton);
+        $michael = $this->userWith($company, PermissionEnum::EmployeeView, ScopeEnum::Location);
+        $michael->locations()->attach($scranton);
+
+        $this->assertEquals([$dwight->id], EmployeeScope::for($michael, PermissionEnum::EmployeeView)->pluck('id')->all());
     }
 
     #[Test]
@@ -112,13 +125,20 @@ class EmployeeScopeTest extends TestCase
         $michaelScottPaperCompany = Company::factory()->create();
 
         $pam = Employee::factory()->create(['company_id' => $dunderMifflin->id]);
-        Employee::factory()->count(3)->create(['company_id' => $dunderMifflin->id]);
+        $scranton = Location::factory()->create(['company_id' => $dunderMifflin->id]);
+        Employee::factory()->count(3)->create(['company_id' => $dunderMifflin->id])
+            ->take(2)
+            ->each(fn (Employee $employee) => User::factory()
+                ->create(['company_id' => $dunderMifflin->id, 'employee_id' => $employee->id])
+                ->locations()
+                ->attach($scranton));
         Employee::factory()->count(3)->create(['company_id' => $michaelScottPaperCompany->id]);
 
         $everybody = Employee::query()->get();
 
-        foreach ([ScopeEnum::Self, ScopeEnum::Company] as $scope) {
+        foreach (ScopeEnum::cases() as $scope) {
             $user = $this->userWith($dunderMifflin, PermissionEnum::EmployeeUpdate, $scope, $pam);
+            $user->locations()->attach($scranton);
             $allowed = EmployeeScope::for($user, PermissionEnum::EmployeeUpdate)->pluck('id')->all();
 
             foreach ($everybody as $employee) {

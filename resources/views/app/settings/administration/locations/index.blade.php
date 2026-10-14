@@ -15,6 +15,7 @@
       form: {$form},
       creating: {$creating},
       archiving: false,
+      unassigning: null,
       refresh() {
         this.locations = JSON.parse(document.getElementById('locations-data').textContent)
       },
@@ -26,6 +27,7 @@
 
         this.open = id
         this.archiving = false
+        this.unassigning = null
         this.form = {
           name: location.name,
           country: location.country,
@@ -43,6 +45,7 @@
       close() {
         this.open = null
         this.archiving = false
+        this.unassigning = null
       },
     }
     JS;
@@ -64,7 +67,9 @@
         <h1 class="mb-2 text-4xl leading-tight font-bold tracking-tight text-ink">{{ __('Locations') }}</h1>
       </div>
 
-      <x-button type="button" x-on:click="creating = true" class="max-sm:w-full">{{ __('Add a location') }}</x-button>
+      @if ($viewModel->canAddLocations())
+        <x-button type="button" x-on:click="creating = true" class="max-sm:w-full">{{ __('Add a location') }}</x-button>
+      @endif
     </div>
 
     @include('app.settings.administration.locations._statistics', ['viewModel' => $viewModel])
@@ -84,6 +89,12 @@
 
     @include('app.settings.administration.locations._archive-location')
 
-    @include('app.settings.administration.locations._create-location', ['viewModel' => $viewModel])
+    @if ($viewModel->canAssignPeople())
+      @include('app.settings.administration.locations._unassign-person')
+    @endif
+
+    @if ($viewModel->canAddLocations())
+      @include('app.settings.administration.locations._create-location', ['viewModel' => $viewModel])
+    @endif
   </div>
 </x-top-bar-layout>

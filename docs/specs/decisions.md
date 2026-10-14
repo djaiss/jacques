@@ -32,20 +32,22 @@ idée ou l'accompagne.
 
 ## Le salon visé
 
-Un salon indépendant de trois à huit personnes, sur une seule adresse.
+Un salon indépendant de trois à huit personnes, sur une ou plusieurs adresses.
 
 Assez grand pour que l'agenda soit un vrai problème et que les rôles servent.
-Assez petit pour que les ressources, le plan de charge et le multi-établissement
-ne manquent à personne. C'est ce profil qui justifie les coupes ci dessous, et
+Assez petit pour que les ressources et le plan de charge ne manquent à
+personne. C'est ce profil qui justifie les coupes ci dessous, et
 c'est à lui qu'il faut revenir quand une décision hésite.
 
 ## Structure du salon
 
-### D1. Un seul établissement en v1
+### D1. Un salon peut avoir plusieurs établissements
 
-Le salon a une adresse, des horaires d'ouverture et des jours de fermeture.
+Chaque établissement a son adresse, ses horaires d'ouverture et ses jours de
+fermeture.
 
-Le multi-établissement attend un vrai client qui en exploite deux.
+Une personne est affectée à un ou plusieurs établissements. Un responsable
+n'agit que sur les établissements auxquels il est affecté (D4).
 
 ### D2. Le salon déclare sa langue, son fuseau horaire et sa devise
 
@@ -64,19 +66,17 @@ crée son accès.
 Conséquence : une personne qui quitte le salon est désactivée, jamais supprimée,
 sinon l'historique des rendez-vous perd son auteur.
 
-### D4. Les rôles sont fixes et cumulables
+### D4. Quatre rôles par défaut, modifiables et cumulables
 
-Quatre rôles définis par Jacques : propriétaire, responsable, réceptionniste,
-coiffeur. Le salon ne les modifie pas et n'en crée pas.
+Chaque salon démarre avec quatre rôles : propriétaire, responsable, personnel,
+réceptionniste. Le salon peut les modifier et en créer d'autres depuis l'écran
+d'administration des droits, qui reste en place.
 
 Une personne en porte plusieurs. Dans un salon de trois à huit personnes, la
-propriétaire coiffe, et la réceptionniste prend les rendez-vous autant qu'elle
-tient la caisse.
+propriétaire coiffe, et la réceptionniste prend les rendez-vous.
 
-Conséquence : aucun écran d'administration des droits. Les tables `Role`,
-`RolePermission` et `UserRole` déjà présentes dans le code sont soit conservées
-préremplies, soit remplacées par une énumération. À trancher au moment du
-codage, pas ici.
+Le rôle propriétaire donne tous les droits et seul lui distribue les rôles. Un
+salon garde toujours au moins un propriétaire actif.
 
 ## Prestations
 
@@ -424,6 +424,13 @@ Annulées le 12 septembre 2026 après relecture.
 - Coiffeuse habituelle reproposée sur la page publique, impossible puisque la
   cliente n'y est pas identifiée avant de voir les disponibilités.
 - Survie du lien sécurisé quelques jours après le rendez-vous.
+
+Annulées le 14 octobre 2026, à la définition des rôles par défaut.
+
+- Un seul établissement en v1 (ancienne D1), remplacée parce qu'un responsable
+  est affecté à des établissements précis.
+- Rôles fixes et sans écran d'administration des droits (ancienne D4),
+  remplacée parce que l'éditeur de rôles existant est conservé.
 
 ## Questions encore ouvertes
 

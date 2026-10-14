@@ -76,7 +76,7 @@ class RegistrationControllerTest extends TestCase
 
         $this->assertEquals(1, Company::query()->count());
         $this->assertEquals('Dunder Mifflin', $user->company->name);
-        $this->assertEquals($user->id, $user->company->owner_user_id);
+        $this->assertTrue($user->isOwner());
         $this->assertEquals(1, Employee::query()->count());
         $this->assertEquals('Michael Scott', $user->employee->name);
     }

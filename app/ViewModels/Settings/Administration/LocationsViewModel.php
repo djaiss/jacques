@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ViewModels\Settings\Administration;
 
 use App\Enums\LocationScopeEnum;
+use App\Enums\PermissionEnum;
 use App\Models\Location;
 use App\Models\User;
 use DateTimeZone;
@@ -14,6 +15,9 @@ class LocationsViewModel
 {
     /** @var Collection<int, Location>|null */
     private ?Collection $locations = null;
+
+    /** @var Collection<int, User>|null */
+    private ?Collection $people = null;
 
     public function __construct(
         private readonly User $user,
@@ -73,7 +77,7 @@ class LocationsViewModel
         ], $this->filtered()->all()));
     }
 
-    /** @return array<int, array{id: int, name: string, country: string, region: string, city: string, postalCode: string, addressLine1: string, addressLine2: string, phone: string, email: string, timezone: string, isHeadquarters: bool, isArchived: bool, updateUrl: string, archiveUrl: string, restoreUrl: string, inheritNote: string}> */
+    /** @return array<int, array{id: int, name: string, country: string, region: string, city: string, postalCode: string, addressLine1: string, addressLine2: string, phone: string, email: string, timezone: string, isHeadquarters: bool, isArchived: bool, updateUrl: string, archiveUrl: string, restoreUrl: string, inheritNote: string, assignUrl: string, people: array<int, array{id: int, name: string, removeUrl: string}>, assignable: array<int, array{id: int, name: string}>}> */
     public function drawer(): array
     {
         $drawer = [];
@@ -97,6 +101,9 @@ class LocationsViewModel
                 'archiveUrl' => route('settings.locationArchives.create', $location->id),
                 'restoreUrl' => route('settings.locationArchives.destroy', $location->id),
                 'inheritNote' => $this->inheritNote($location),
+                'assignUrl' => route('settings.locationPeople.create', $location->id),
+                'people' => $this->peopleOf($location),
+                'assignable' => $this->assignableTo($location),
             ];
         }
 
@@ -164,9 +171,70 @@ class LocationsViewModel
         return route('settings.locations.create');
     }
 
+    public function canAssignPeople(): bool
+    {
+        return $this->user
+            ->permission(PermissionEnum::RoleManage)
+            ->forCompany($this->user->company)
+            ->allowed();
+    }
+
+    public function canAddLocations(): bool
+    {
+        return $this->user
+            ->permission(PermissionEnum::LocationManage)
+            ->forCompany($this->user->company)
+            ->allowed();
+    }
+
     public function companyHasNoLocation(): bool
     {
         return $this->locations()->isEmpty();
+    }
+
+    /** @return array<int, array{id: int, name: string, removeUrl: string}> */
+    private function peopleOf(Location $location): array
+    {
+        if (! $this->canAssignPeople()) {
+            return [];
+        }
+
+        return $this->people()
+            ->filter(fn (User $user): bool => $user->locations->contains('id', $location->id))
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->employee->name ?? $user->email,
+                'removeUrl' => route('settings.locationPeople.destroy', [$location->id, $user->id]),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array{id: int, name: string}> */
+    private function assignableTo(Location $location): array
+    {
+        if (! $this->canAssignPeople()) {
+            return [];
+        }
+
+        return $this->people()
+            ->reject(fn (User $user): bool => $user->locations->contains('id', $location->id))
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->employee->name ?? $user->email,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** @return Collection<int, User> */
+    private function people(): Collection
+    {
+        return $this->people ??= $this->user->company->users()
+            ->with(['employee', 'locations'])
+            ->get()
+            ->sortBy(fn (User $user): string => mb_strtolower($user->employee->name ?? $user->email))
+            ->values();
     }
 
     private function badge(Location $location): string
@@ -242,6 +310,12 @@ class LocationsViewModel
     /** @return Collection<int, Location> */
     private function locations(): Collection
     {
-        return $this->locations ??= $this->user->company->locations()->get();
+        if ($this->locations !== null) {
+            return $this->locations;
+        }
+
+        return $this->locations = $this->canAddLocations()
+            ? $this->user->company->locations()->get()
+            : $this->user->locations()->where('company_id', $this->user->company_id)->get();
     }
 }

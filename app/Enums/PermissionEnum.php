@@ -4,64 +4,122 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum PermissionEnum: string
+use App\Interfaces\Translatable;
+
+enum PermissionEnum: string implements Translatable
 {
     // There is no permissions table: a role stores the value of the case it
     // grants, so renaming one orphans every role that already grants it.
+    case BillingManage = 'billing.manage';
+    case CompanyManage = 'company.manage';
+    case RoleManage = 'role.manage';
+    case LocationManage = 'location.manage';
+    case ScheduleView = 'schedule.view';
+    case ScheduleManage = 'schedule.manage';
     case EmployeeView = 'employee.view';
     case EmployeeCreate = 'employee.create';
     case EmployeeUpdate = 'employee.update';
-    case EmployeeViewPrivate = 'employee.view_private';
-    case EmployeeUpdatePrivate = 'employee.update_private';
-    case RoleManage = 'role.manage';
-    case CompanyManage = 'company.manage';
+    case ServiceView = 'service.view';
+    case ServiceManage = 'service.manage';
+    case ClientView = 'client.view';
+    case ClientManage = 'client.manage';
+    case AppointmentView = 'appointment.view';
+    case AppointmentManage = 'appointment.manage';
+    case ReportView = 'report.view';
 
     public function targetsEmployee(): bool
     {
         return match ($this) {
+            self::ScheduleView,
+            self::ScheduleManage,
             self::EmployeeView,
-            self::EmployeeUpdate,
-            self::EmployeeViewPrivate,
-            self::EmployeeUpdatePrivate => true,
+            self::EmployeeUpdate => true,
+            default => false,
+        };
+    }
+
+    public function targetsLocation(): bool
+    {
+        return match ($this) {
+            self::LocationManage,
             self::EmployeeCreate,
-            self::RoleManage,
-            self::CompanyManage => false,
+            self::ServiceView,
+            self::ServiceManage,
+            self::ReportView => true,
+            default => false,
         };
     }
 
     /** @return list<ScopeEnum> */
     public function scopes(): array
     {
-        if (! $this->targetsEmployee()) {
-            return [ScopeEnum::Company];
-        }
-
-        return [ScopeEnum::Self, ScopeEnum::Company];
+        return match ($this) {
+            self::BillingManage,
+            self::CompanyManage,
+            self::RoleManage => [ScopeEnum::Company],
+            self::LocationManage,
+            self::EmployeeCreate,
+            self::ServiceView,
+            self::ServiceManage,
+            self::ReportView => [ScopeEnum::Location, ScopeEnum::Company],
+            self::ClientView,
+            self::ClientManage => [ScopeEnum::Self, ScopeEnum::Company],
+            self::ScheduleView,
+            self::ScheduleManage,
+            self::EmployeeView,
+            self::EmployeeUpdate,
+            self::AppointmentView,
+            self::AppointmentManage => [ScopeEnum::Self, ScopeEnum::Location, ScopeEnum::Company],
+        };
     }
 
     public function group(): PermissionGroupEnum
     {
         return match ($this) {
+            self::BillingManage,
+            self::CompanyManage,
+            self::RoleManage => PermissionGroupEnum::Administration,
+            self::LocationManage,
+            self::ScheduleView,
+            self::ScheduleManage => PermissionGroupEnum::Locations,
             self::EmployeeView,
             self::EmployeeCreate,
-            self::EmployeeUpdate => PermissionGroupEnum::People,
-            self::EmployeeViewPrivate,
-            self::EmployeeUpdatePrivate => PermissionGroupEnum::SensitiveData,
-            self::RoleManage,
-            self::CompanyManage => PermissionGroupEnum::Administration,
+            self::EmployeeUpdate => PermissionGroupEnum::Team,
+            self::ServiceView,
+            self::ServiceManage => PermissionGroupEnum::Services,
+            self::ClientView,
+            self::ClientManage => PermissionGroupEnum::Clients,
+            self::AppointmentView,
+            self::AppointmentManage => PermissionGroupEnum::Appointments,
+            self::ReportView => PermissionGroupEnum::Reports,
         };
     }
 
     public function label(): string
     {
         return match ($this) {
-            self::EmployeeView => 'See the profile of a colleague',
-            self::EmployeeCreate => 'Add somebody to the company',
-            self::EmployeeUpdate => 'Change the profile of a colleague',
-            self::EmployeeViewPrivate => 'See the private details of a colleague',
-            self::EmployeeUpdatePrivate => 'Change the private details of a colleague',
-            self::RoleManage => 'Administer the company, its roles and who holds them',
+            self::BillingManage => 'Manage the Jacques subscription and its invoices',
             self::CompanyManage => 'Change the settings of the company',
+            self::RoleManage => 'Hand out roles and decide who works where',
+            self::LocationManage => 'Change a location and its opening hours',
+            self::ScheduleView => 'See the schedule of a colleague',
+            self::ScheduleManage => 'Change the schedule of a colleague',
+            self::EmployeeView => 'See the profile of a colleague',
+            self::EmployeeCreate => 'Add somebody to the team',
+            self::EmployeeUpdate => 'Change the profile of a colleague',
+            self::ServiceView => 'See the services',
+            self::ServiceManage => 'Change the services',
+            self::ClientView => 'See a client',
+            self::ClientManage => 'Add and change clients',
+            self::AppointmentView => 'See the appointments',
+            self::AppointmentManage => 'Book and change appointments',
+            self::ReportView => 'See the reports',
         };
+    }
+
+    /** @return list<string> */
+    public function translationKeys(): array
+    {
+        return [$this->label()];
     }
 }

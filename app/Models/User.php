@@ -150,6 +150,26 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the locations the user is assigned to, which is what a permission
+     * granted at location scope reaches.
+     *
+     * @return BelongsToMany<Location, $this>
+     */
+    public function locations(): BelongsToMany
+    {
+        return $this->belongsToMany(Location::class, 'user_locations')->withTimestamps();
+    }
+
+    /**
+     * Get whether the user holds the Owner role, which grants everything and
+     * which a company never runs out of.
+     */
+    public function isOwner(): bool
+    {
+        return $this->roles()->where('slug', Role::OWNER)->exists();
+    }
+
+    /**
      * Get the magic links issued for the user.
      *
      * @return HasMany<MagicLink, $this>

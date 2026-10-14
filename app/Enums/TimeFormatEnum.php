@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Interfaces\Translatable;
 use Carbon\CarbonInterface;
 
-enum TimeFormatEnum: string
+enum TimeFormatEnum: string implements Translatable
 {
     case TwentyFourHour = '24';
     case TwelveHour = '12';
@@ -30,5 +31,11 @@ enum TimeFormatEnum: string
             self::TwentyFourHour => $time->format('H:i'),
             self::TwelveHour => $time->format('g:i A'),
         };
+    }
+
+    /** @return list<string> */
+    public function translationKeys(): array
+    {
+        return [$this->label()];
     }
 }

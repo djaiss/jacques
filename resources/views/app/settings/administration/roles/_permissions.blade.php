@@ -113,7 +113,6 @@
 
         @foreach ($group['permissions'] as $permission)
           <div
-            x-data="{ scope: @js($permission['scope']), scopes: @js($permission['scopes']) }"
             x-show="open(@js($group['title'])) && matches(@js($permission['value']))"
             class="grid gap-x-3.5 gap-y-1.5 rounded-xl py-2.5 pr-3 pl-8.5 transition-colors hover:bg-hover sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
           >
@@ -140,20 +139,29 @@
               <span class="min-w-0 text-base leading-snug font-medium text-ink">{{ $permission['label'] }}</span>
             </label>
 
-            @if ($permission['targetsEmployee'])
-              <button
-                type="button"
+            @if ($permission['scopes'] !== [])
+              <fieldset
                 x-cloak
                 x-show="granted[@js($permission['value'])]"
-                x-on:click="scope = scope === 'self' ? 'company' : 'self'"
-                @disabled(! $role['isEditable'])
-                class="cursor-pointer rounded-md text-sm font-semibold whitespace-nowrap text-muted underline decoration-hairline-strong underline-offset-4 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none disabled:cursor-not-allowed max-sm:justify-self-start max-sm:pl-9"
+                class="flex flex-wrap gap-1 rounded-[10px] bg-sunken p-0.75 max-sm:ml-9 max-sm:justify-self-start"
               >
-                <span class="sr-only">{{ __('Scope of :permission', ['permission' => $permission['label']]) }}:</span>
-                <span aria-live="polite" x-text="scopes[scope]"></span>
-              </button>
+                <legend class="sr-only">{{ __('Scope of :permission', ['permission' => $permission['label']]) }}</legend>
 
-              <input type="hidden" name="permissions[{{ $permission['value'] }}][scope]" :value="scope" />
+                @foreach ($permission['scopes'] as $value => $label)
+                  <label class="cursor-pointer">
+                    <input
+                      type="radio"
+                      name="permissions[{{ $permission['value'] }}][scope]"
+                      value="{{ $value }}"
+                      @checked($permission['scope'] === $value)
+                      @disabled(! $role['isEditable'])
+                      class="peer sr-only"
+                    />
+
+                    <span class="block rounded-[7px] px-2.5 py-1 text-sm font-semibold whitespace-nowrap text-muted transition-colors peer-checked:bg-canvas peer-checked:text-ink peer-checked:shadow-sm peer-checked:ring-1 peer-checked:ring-hairline peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring peer-disabled:cursor-not-allowed hover:text-ink">{{ $label }}</span>
+                  </label>
+                @endforeach
+              </fieldset>
             @else
               <p x-cloak x-show="granted[@js($permission['value'])]" class="text-sm font-semibold whitespace-nowrap text-muted-soft max-sm:pl-9">{{ __('Everybody in the company, always') }}</p>
             @endif
@@ -167,6 +175,6 @@
 
   <!-- note about scopes -->
   <p class="mt-3 text-sm leading-relaxed text-pretty text-muted">
-    {{ __('The words on the right say who a permission reaches. Click them to switch. A few permissions cannot be narrowed and always cover the whole company.') }}
+    {{ __('The choice on the right says who a permission reaches: the person themselves, the locations they are assigned to, or the whole company. A few permissions cannot be narrowed and always cover the whole company.') }}
   </p>
 </div>

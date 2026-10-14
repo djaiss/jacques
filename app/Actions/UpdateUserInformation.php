@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Update the information of a user. A user may only be updated by themselves
- * or by the owner of their company.
+ * or by an owner of their company.
  */
 class UpdateUserInformation
 {
@@ -50,7 +50,7 @@ class UpdateUserInformation
         }
 
         $isSelf = $this->author->id === $this->user->id;
-        $isOwner = $this->user->company->owner_user_id === $this->author->id;
+        $isOwner = $this->author->isOwner();
 
         if (! $isSelf && ! $isOwner) {
             throw new ModelNotFoundException('User not found');

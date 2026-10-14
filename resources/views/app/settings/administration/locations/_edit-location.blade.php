@@ -195,4 +195,8 @@
       </x-button.secondary>
     </template>
   </div>
+
+  @if ($viewModel->canAssignPeople())
+    @include('app.settings.administration.locations._location-people')
+  @endif
 </x-side-modal>

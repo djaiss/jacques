@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Take a role away from somebody. Taking away a role they never held changes
- * nothing.
+ * nothing, and the Owner role is never taken from the last active person
+ * holding it, so a company always keeps somebody who can do everything.
  */
 class RemoveRole
 {
@@ -50,6 +51,19 @@ class RemoveRole
     {
         if ($this->user->company_id !== $this->role->company_id) {
             throw new ModelNotFoundException('User not found');
+        }
+
+        if ($this->role->slug !== Role::OWNER) {
+            return;
+        }
+
+        $otherActiveOwners = $this->role->users()
+            ->where('users.id', '!=', $this->user->id)
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $otherActiveOwners) {
+            throw new ModelNotFoundException('Role not found');
         }
     }
 

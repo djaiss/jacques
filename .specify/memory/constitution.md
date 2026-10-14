@@ -1,13 +1,19 @@
 <!--
 Sync Impact Report
-Version change: none -> 1.0.0
+Version change: 1.1.0 -> 1.2.0
+Rationale: `app/Console/Commands` joins the allowed folders for `jacques:localize`, which now exists.
+
+Previous report (1.0.0 -> 1.1.0)
+Rationale: decisions.md D1 now allows several locations per salon, so multiple locations leave
+the list of excluded features. D4 now keeps the role editor.
+
+Previous report (none -> 1.0.0)
 Rationale: first constitution of Jacques, adapted from the Monica constitution 2.5.1. Principles
 that only made sense for a personal relationship manager (frozen structure versions, configurable
 templates, the module system, record snapshots, reminders) are removed. The product invariants now
 come from docs/specs/decisions.md.
 
 Follow-up owed:
-- `php artisan jacques:localize` is required below but the command does not exist in the code.
 - All 14 migrations still define `down()`, which principle IV forbids.
 - `lang/de_DE.json` ships, while decision D29 names French, English and Spanish only.
 -->
@@ -121,7 +127,7 @@ first to go stale.
 These come from `docs/specs/decisions.md`. A change MUST NOT bend them. Reversing one is a change to
 that file first, then an amendment here.
 
-- Jacques builds less. A feature `decisions.md` excludes (multiple locations, resources, recurring
+- Jacques builds less. A feature `decisions.md` excludes (resources, recurring
   appointments, waiting list, products and stock, import and export, audit log) is not built until
   that file changes.
 - Jacques never touches money: no payment, no deposit, no till, no record of what was paid (D22).
@@ -145,7 +151,7 @@ that file first, then an amendment here.
   Alpine.js, Alpine Ajax, Turbo and instant.page. A single page application framework is out of
   scope.
 - New code goes into an existing folder. A new top level folder under `app/` requires an amendment.
-  - `app/`: `Actions`, `Enums`, `Helpers`, `Http` (`Controllers`, `Middleware`), `Interfaces`,
+  - `app/`: `Actions`, `Console/Commands`, `Enums`, `Helpers`, `Http` (`Controllers`, `Middleware`), `Interfaces`,
     `Jobs`, `Mail` (one class per email the product sends), `Models`, `Permissions`, `Providers`,
     `Rules`, `View/Components` and `ViewModels`. `Http/Controllers/Api`, `Http/Resources` and the
     MCP folder arrive with the public API (D27).
@@ -197,4 +203,4 @@ new principle or materially expanded guidance, PATCH for wording that changes no
 A reviewer MUST be able to point at the action, the test and the translations for the change under
 review, and say which principles it had to satisfy.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-14
+**Version**: 1.2.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-14

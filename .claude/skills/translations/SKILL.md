@@ -17,14 +17,17 @@ code. You MUST NOT add, remove or reorder a key by hand.
 - Reads every `__()`, `trans()`, `trans_choice()` and `@lang()` in `app/` and
   `resources/views/`, with comments taken out first.
 - Reads every case of every enum in `app/Enums` implementing
-  `App\Contracts\Translatable`, since those strings are wrapped only where they
+  `App\Interfaces\Translatable`, since those strings are wrapped only where they
   are read.
 - Writes `lang/en.json` with every string found, each its own value.
 - Leaves every other locale holding only what has been translated, dropping any
   key the code no longer asks for and reporting what it dropped.
-- `--check` writes nothing and fails when a string is missing or stale. A test
-  runs it against the shipped files, so the suite fails when this has not been
-  run.
+- Refuses a phrase that breaks the rules about numbers in
+  `.claude/rules/code-style.md` (`trans_choice()`, `:count` in every wording,
+  pinned wordings kept away from zero).
+- `--check` writes nothing and fails when a string is missing or stale.
+  `LocalizeCommandTest` runs it against the shipped files, so the suite fails
+  when this has not been run.
 
 ## When you change or add copy
 
@@ -42,11 +45,9 @@ code. You MUST NOT add, remove or reorder a key by hand.
 - You MUST preserve any HTML or Markdown, identically across locales.
 - You MUST match the tense, tone and terminology already used in that locale's
   file. The English is plain and calm, and the translations are too.
-- You MUST follow that language's own conventions in
-  [`.claude/rules/translations.md`](../../rules/translations.md), which says how
-  it punctuates and how it addresses its reader. French is written there in
-  full. `jacques:localize --check` refuses a value that breaks one of them,
-  so this is not advice.
+- You MUST follow the conventions the locale file already uses. French says
+  "vous", writes a straight apostrophe and puts a space before `?` and `:`.
+  German says "Sie". Spanish says "tú".
 - You MUST NOT leave a value empty. An empty string is a real translation as far
   as Laravel is concerned, and renders as nothing at all. Leave the key out
   instead, which the command does for you.

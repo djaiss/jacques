@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Unit\ViewModels\Settings\Administration;
 
 use App\Enums\LocationScopeEnum;
+use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use App\ViewModels\Settings\Administration\LocationsViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -231,6 +233,64 @@ class LocationsViewModelTest extends TestCase
     {
         $company = Company::factory()->create();
 
-        return User::factory()->create(['company_id' => $company->id]);
+        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    }
+
+    #[Test]
+    public function it_lists_only_the_locations_a_manager_is_assigned_to(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+        Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+        $michael->locations()->attach($scranton);
+
+        $viewModel = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active);
+
+        $this->assertEquals(['Scranton branch'], array_column($viewModel->rows(), 'name'));
+        $this->assertFalse($viewModel->canAddLocations());
+    }
+
+    #[Test]
+    public function it_lets_somebody_who_manages_every_location_add_one(): void
+    {
+        $viewModel = new LocationsViewModel(user: $this->company(), scope: LocationScopeEnum::Active);
+
+        $this->assertTrue($viewModel->canAddLocations());
+    }
+
+    #[Test]
+    public function it_hands_the_panel_who_works_at_each_location_and_who_could(): void
+    {
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id, 'email' => 'michael@dundermifflin.com']), Role::OWNER);
+        $dwight = User::factory()->create(['company_id' => $company->id, 'email' => 'dwight@dundermifflin.com']);
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $dwight->locations()->attach($scranton);
+
+        $drawer = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active)->drawer();
+
+        $this->assertEquals([[
+            'id' => $dwight->id,
+            'name' => 'dwight@dundermifflin.com',
+            'removeUrl' => route('settings.locationPeople.destroy', [$scranton->id, $dwight->id]),
+        ]], $drawer[$scranton->id]['people']);
+        $this->assertEquals([['id' => $michael->id, 'name' => 'michael@dundermifflin.com']], $drawer[$scranton->id]['assignable']);
+        $this->assertEquals(route('settings.locationPeople.create', $scranton->id), $drawer[$scranton->id]['assignUrl']);
+    }
+
+    #[Test]
+    public function it_keeps_the_people_of_a_location_from_somebody_who_may_not_hand_out_roles(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+        $michael->locations()->attach($scranton);
+
+        $viewModel = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active);
+
+        $this->assertFalse($viewModel->canAssignPeople());
+        $this->assertSame([], $viewModel->drawer()[$scranton->id]['people']);
+        $this->assertSame([], $viewModel->drawer()[$scranton->id]['assignable']);
     }
 }

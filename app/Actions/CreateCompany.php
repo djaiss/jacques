@@ -15,11 +15,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Create a company, its first user, who becomes the owner of the company, and
- * the employee that user is. The company also gets the roles it starts life
- * with, and the first user is made an administrator: owning the company is
- * enough to do anything in it, but the person who signed up should show up as
- * an administrator like anybody else holding the role.
+ * Create a company, its first user and the employee that user is. The company
+ * gets the roles it starts life with, and the first user is given the Owner
+ * role, which is what owning the company means.
  */
 class CreateCompany
 {
@@ -44,9 +42,8 @@ class CreateCompany
         DB::transaction(function (): void {
             $this->createCompany();
             $this->createOwner();
-            $this->attachOwner();
             $this->createDefaultRoles();
-            $this->makeOwnerAnAdministrator();
+            $this->giveOwnerRole();
             $this->createEmployee();
             $this->attachEmployee();
         });
@@ -82,24 +79,19 @@ class CreateCompany
         )->execute();
     }
 
-    private function attachOwner(): void
-    {
-        $this->company->owner_user_id = $this->owner->id;
-        $this->company->save();
-    }
-
     private function createDefaultRoles(): void
     {
         new CreateDefaultRoles(company: $this->company)->execute();
     }
 
-    private function makeOwnerAnAdministrator(): void
+    private function giveOwnerRole(): void
     {
-        $administrator = $this->company->roles()
-            ->where('slug', Role::ADMINISTRATOR)
+        $owner = $this->company->roles()
+            ->where('slug', Role::OWNER)
             ->firstOrFail();
 
-        $this->owner->roles()->attach($administrator->id);
+        $this->owner->roles()->attach($owner->id);
+        $this->owner->forgetGrants();
     }
 
     private function createEmployee(): void

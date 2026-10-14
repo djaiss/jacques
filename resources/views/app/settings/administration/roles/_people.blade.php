@@ -30,12 +30,16 @@
           <p class="text-sm text-muted">{{ $person['since'] }}</p>
         </div>
 
-        <button
-          type="button"
-          x-on:click="removing = {{ $person['id'] }}"
-          aria-haspopup="dialog"
-          class="cursor-pointer rounded-md px-1.5 py-1 text-[15px] font-semibold text-muted transition-colors hover:text-error focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
-        >{{ __('Remove') }}<span class="sr-only"> {{ $person['name'] }}</span></button>
+        @if ($person['isRemovable'])
+          <button
+            type="button"
+            x-on:click="removing = {{ $person['id'] }}"
+            aria-haspopup="dialog"
+            class="cursor-pointer rounded-md px-1.5 py-1 text-[15px] font-semibold text-muted transition-colors hover:text-error focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+          >{{ __('Remove') }}<span class="sr-only"> {{ $person['name'] }}</span></button>
+        @else
+          <p class="text-sm text-muted">{{ __('The last owner keeps the role. Give it to somebody else first.') }}</p>
+        @endif
       </div>
     @empty
       <x-empty-state :title="__('Nobody holds this role yet')">
@@ -59,7 +63,7 @@
   @include('app.settings.administration.roles._assign-people', ['viewModel' => $viewModel, 'role' => $role, 'assignable' => $assignable])
 
   <!-- take the role back dialogs -->
-  @foreach ($people as $person)
+  @foreach (array_filter($people, fn (array $person): bool => $person['isRemovable']) as $person)
     <x-confirm-dialog
       show="removing === {{ $person['id'] }}"
       close="removing = null"

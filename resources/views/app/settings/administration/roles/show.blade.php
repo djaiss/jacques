@@ -62,6 +62,29 @@
           </div>
 
           <x-error :id="$errors->has('name') ? 'role-name-error' : null" :messages="$errors->get('name')" />
+
+          @if ($onPeopleTab)
+            @if ($role['description'] !== '')
+              <p class="text-[15px] text-pretty text-body">{{ $role['description'] }}</p>
+            @endif
+          @else
+            <label for="role-description" class="sr-only">{{ __('Description of the role') }}</label>
+
+            <input
+              type="text"
+              id="role-description"
+              name="description"
+              form="role-form"
+              value="{{ $role['description'] }}"
+              maxlength="1000"
+              placeholder="{{ __('What this role is for, in a sentence') }}"
+              @disabled(! $role['isEditable'])
+              @if ($errors->has('description')) aria-invalid="true" aria-describedby="role-description-error" @endif
+              class="-mx-2.5 w-full rounded-[10px] border-[1.5px] border-transparent bg-transparent px-2.5 py-1 text-[15px] text-body placeholder-placeholder transition-colors outline-none hover:border-hairline-strong focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring disabled:hover:border-transparent"
+            />
+
+            <x-error :id="$errors->has('description') ? 'role-description-error' : null" :messages="$errors->get('description')" />
+          @endif
         </div>
       </div>
 

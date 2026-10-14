@@ -29,8 +29,9 @@ class PermissionGroupEnumTest extends TestCase
     #[Test]
     public function it_calls_the_groups_what_the_screen_calls_them(): void
     {
-        $this->assertEquals('People', PermissionGroupEnum::People->label());
-        $this->assertEquals('Sensitive data', PermissionGroupEnum::SensitiveData->label());
         $this->assertEquals('Administration', PermissionGroupEnum::Administration->label());
+        $this->assertEquals('Locations', PermissionGroupEnum::Locations->label());
+        $this->assertEquals('Team', PermissionGroupEnum::Team->label());
+        $this->assertEquals('Appointments', PermissionGroupEnum::Appointments->label());
     }
 }

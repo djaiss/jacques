@@ -23,6 +23,7 @@ class ScopeEnumTest extends TestCase
     public function it_keeps_the_short_name_to_one_word(): void
     {
         $this->assertEquals('Self', ScopeEnum::Self->shortLabel());
+        $this->assertEquals('Locations', ScopeEnum::Location->shortLabel());
         $this->assertEquals('Company', ScopeEnum::Company->shortLabel());
     }
 }

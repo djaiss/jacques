@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Location;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
@@ -89,30 +90,29 @@ class PendingPermissionCheckTest extends TestCase
     }
 
     #[Test]
-    public function it_allows_the_owner_everything_inside_their_own_company(): void
+    public function it_allows_the_owner_role_everything_inside_their_own_company(): void
     {
         $company = Company::factory()->create();
         $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
-        $this->assertEmpty($owner->grants());
         $this->assertTrue(
-            $owner->permission(PermissionEnum::EmployeeUpdatePrivate)->forEmployee($dwight)->allowed(),
+            $owner->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
         );
         $this->assertTrue(
-            $owner->permission(PermissionEnum::RoleManage)->forCompany($company)->allowed(),
+            $owner->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
+        );
+        $this->assertTrue(
+            $owner->permission(PermissionEnum::BillingManage)->forCompany($company)->allowed(),
         );
     }
 
     #[Test]
-    public function it_denies_the_owner_outside_their_own_company(): void
+    public function it_denies_the_owner_role_outside_their_own_company(): void
     {
         $dunderMifflin = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $dunderMifflin->id]);
-        $dunderMifflin->owner_user_id = $owner->id;
-        $dunderMifflin->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $dunderMifflin->id]), Role::OWNER);
 
         $michaelScottPaperCompany = Company::factory()->create();
         $stranger = Employee::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
@@ -123,6 +123,91 @@ class PendingPermissionCheckTest extends TestCase
         $this->assertFalse(
             $owner->permission(PermissionEnum::CompanyManage)->forCompany($michaelScottPaperCompany)->allowed(),
         );
+    }
+
+    #[Test]
+    public function it_allows_a_location_the_user_is_assigned_to_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Location);
+        $user->locations()->attach($scranton);
+
+        $this->assertTrue(
+            $user->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
+        );
+        $this->assertFalse(
+            $user->permission(PermissionEnum::LocationManage)->forLocation($stamford)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_allows_every_location_of_the_company_at_company_scope(): void
+    {
+        $company = Company::factory()->create();
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Company);
+
+        $this->assertTrue(
+            $user->permission(PermissionEnum::LocationManage)->forLocation($stamford)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_denies_a_location_of_another_company(): void
+    {
+        $company = Company::factory()->create();
+        $nashua = Location::factory()->create();
+        $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Company);
+        $user->locations()->attach($nashua);
+
+        $this->assertFalse(
+            $user->permission(PermissionEnum::LocationManage)->forLocation($nashua)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_allows_a_colleague_who_shares_a_location_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $dwight = Employee::factory()->create(['company_id' => $company->id]);
+        $andy = Employee::factory()->create(['company_id' => $company->id]);
+        User::factory()->create(['company_id' => $company->id, 'employee_id' => $dwight->id])->locations()->attach($scranton);
+        User::factory()->create(['company_id' => $company->id, 'employee_id' => $andy->id])->locations()->attach($stamford);
+        $michael = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Location);
+        $michael->locations()->attach($scranton);
+
+        $this->assertTrue(
+            $michael->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
+        );
+        $this->assertFalse(
+            $michael->permission(PermissionEnum::EmployeeUpdate)->forEmployee($andy)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_refuses_to_check_a_permission_that_is_not_about_a_location_against_one(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::RoleManage, ScopeEnum::Company);
+
+        $user->permission(PermissionEnum::RoleManage)->forLocation($scranton);
+    }
+
+    #[Test]
+    public function it_says_whether_a_permission_is_held_at_any_scope(): void
+    {
+        $company = Company::factory()->create();
+        $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Location);
+
+        $this->assertTrue($user->permission(PermissionEnum::LocationManage)->anywhere()->allowed());
+        $this->assertFalse($user->permission(PermissionEnum::ReportView)->anywhere()->allowed());
     }
 
     #[Test]
@@ -244,7 +329,7 @@ class PendingPermissionCheckTest extends TestCase
             $user->permission(PermissionEnum::EmployeeView)->forEmployee($employee)->allowed();
         }
 
-        $this->assertEquals(2, $queries);
+        $this->assertEquals(1, $queries);
     }
 
     private function userWith(Company $company, PermissionEnum $permission, ScopeEnum $scope, ?Employee $employee = null): User

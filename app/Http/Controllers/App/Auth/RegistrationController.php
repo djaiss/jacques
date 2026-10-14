@@ -52,7 +52,7 @@ class RegistrationController extends Controller
             password: $validated['password'],
         )->execute();
 
-        $user = $company->owner;
+        $user = $company->users()->firstOrFail();
 
         new SendEmailVerification(user: $user)->execute();
 

@@ -31,6 +31,7 @@ class CreateRole
         private readonly Company $company,
         private string $name,
         private readonly array $grants = [],
+        private ?string $description = null,
     ) {}
 
     public function execute(): Role
@@ -77,6 +78,7 @@ class CreateRole
     private function sanitize(): void
     {
         $this->name = TextSanitizer::plainText($this->name);
+        $this->description = TextSanitizer::nullablePlainText($this->description);
     }
 
     private function create(): void
@@ -84,6 +86,7 @@ class CreateRole
         $this->role = Role::query()->create([
             'company_id' => $this->company->id,
             'name' => $this->name,
+            'description' => $this->description,
             'slug' => $this->slug(),
             'is_default' => false,
             'is_editable' => true,

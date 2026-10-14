@@ -8,6 +8,7 @@ use App\Actions\DestroyUser;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,9 +26,7 @@ class DestroyUserTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $member = User::factory()->create(['company_id' => $company->id]);
 
@@ -54,9 +53,7 @@ class DestroyUserTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $member = User::factory()->create(['company_id' => $company->id]);
         $otherMember = User::factory()->create(['company_id' => $company->id]);
@@ -73,9 +70,7 @@ class DestroyUserTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         new DestroyUser(
             author: $owner,
@@ -89,9 +84,7 @@ class DestroyUserTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
-        $owner = User::factory()->create(['company_id' => $company->id]);
-        $company->owner_user_id = $owner->id;
-        $company->save();
+        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $stranger = User::factory()->create();
 

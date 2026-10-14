@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum UserActionEnum: string
+use App\Interfaces\Translatable;
+
+enum UserActionEnum: string implements Translatable
 {
     case CompanyCreated = 'company_created';
     case CompanyUpdated = 'company_updated';
@@ -21,6 +23,8 @@ enum UserActionEnum: string
     case LocationDeleted = 'location_deleted';
     case LocationArchived = 'location_archived';
     case LocationRestored = 'location_restored';
+    case UserAssignedToLocation = 'user_assigned_to_location';
+    case UserRemovedFromLocation = 'user_removed_from_location';
     case RoleCreated = 'role_created';
     case RoleUpdated = 'role_updated';
     case RoleDeleted = 'role_deleted';
@@ -53,6 +57,8 @@ enum UserActionEnum: string
             self::LocationDeleted => 'Deleted the location called :name',
             self::LocationArchived => 'Archived the location called :name',
             self::LocationRestored => 'Reopened the location called :name',
+            self::UserAssignedToLocation => 'Assigned :email to the location called :name',
+            self::UserRemovedFromLocation => 'Took :email off the location called :name',
             self::RoleCreated => 'Created the role called :name',
             self::RoleUpdated => 'Changed the role called :name',
             self::RoleDeleted => 'Deleted the role called :name',
@@ -67,5 +73,11 @@ enum UserActionEnum: string
             self::ApiKeyCreated => 'Created the API key called :name',
             self::ApiKeyDeleted => 'Revoked the API key called :name',
         };
+    }
+
+    /** @return list<string> */
+    public function translationKeys(): array
+    {
+        return [$this->description()];
     }
 }

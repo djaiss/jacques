@@ -69,6 +69,7 @@ class RoleController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'permissions' => ['nullable', 'array'],
             'permissions.*.granted' => ['nullable'],
             'permissions.*.scope' => ['nullable', 'string', Rule::enum(ScopeEnum::class)],
@@ -83,11 +84,11 @@ class RoleController extends Controller
                 continue;
             }
 
+            $scope = ScopeEnum::tryFrom($submitted['scope'] ?? '');
+
             $grants[] = [
                 'permission' => $permission,
-                'scope' => $permission->targetsEmployee()
-                    ? ScopeEnum::from($submitted['scope'] ?? ScopeEnum::Company->value)
-                    : ScopeEnum::Company,
+                'scope' => in_array($scope, $permission->scopes(), true) ? $scope : ScopeEnum::Company,
             ];
         }
 
@@ -96,6 +97,7 @@ class RoleController extends Controller
             role: $this->roles($request)->findOrFail($role),
             name: $validated['name'],
             grants: $grants,
+            description: $validated['description'] ?? null,
         )->execute();
 
         return redirect()->route('settings.roles.show', $role)

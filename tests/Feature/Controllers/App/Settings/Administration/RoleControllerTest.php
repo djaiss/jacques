@@ -37,8 +37,8 @@ class RoleControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Regional manager');
-        $response->assertSee('People');
-        $response->assertSee('1 of 7 permissions');
+        $response->assertSee('Team');
+        $response->assertSee('1 of 16 permissions');
     }
 
     #[Test]
@@ -78,7 +78,7 @@ class RoleControllerTest extends TestCase
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $response = $this->actingAs($user)->get(route('settings.roles.index'));
 
@@ -117,8 +117,10 @@ class RoleControllerTest extends TestCase
 
         $response = $this->actingAs($user)->put(route('settings.roles.update', $role->id), [
             'name' => 'Sales representative',
+            'description' => 'Sells paper.',
             'permissions' => [
                 PermissionEnum::EmployeeView->value => ['granted' => '1', 'scope' => ScopeEnum::Self->value],
+                PermissionEnum::AppointmentManage->value => ['granted' => '1', 'scope' => ScopeEnum::Location->value],
             ],
         ]);
 
@@ -128,7 +130,13 @@ class RoleControllerTest extends TestCase
         $role->refresh();
 
         $this->assertEquals('Sales representative', $role->name);
-        $this->assertEquals(1, $role->permissions()->count());
+        $this->assertEquals('Sells paper.', $role->description);
+        $this->assertEquals(2, $role->permissions()->count());
+        $this->assertDatabaseHas('role_permissions', [
+            'role_id' => $role->id,
+            'permission' => PermissionEnum::AppointmentManage->value,
+            'scope' => ScopeEnum::Location->value,
+        ]);
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $role->id,
             'permission' => PermissionEnum::EmployeeView->value,
@@ -157,6 +165,31 @@ class RoleControllerTest extends TestCase
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $role->id,
             'permission' => PermissionEnum::CompanyManage->value,
+            'scope' => ScopeEnum::Company->value,
+        ]);
+    }
+
+    #[Test]
+    public function it_falls_back_to_the_company_for_a_scope_the_permission_does_not_offer(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($user, PermissionEnum::RoleManage);
+
+        $role = Role::factory()->create(['company_id' => $company->id]);
+
+        $this->actingAs($user)->put(route('settings.roles.update', $role->id), [
+            'name' => 'Reception',
+            'permissions' => [
+                PermissionEnum::ClientView->value => ['granted' => '1', 'scope' => ScopeEnum::Location->value],
+            ],
+        ]);
+
+        $this->assertDatabaseHas('role_permissions', [
+            'role_id' => $role->id,
+            'permission' => PermissionEnum::ClientView->value,
             'scope' => ScopeEnum::Company->value,
         ]);
     }
@@ -323,7 +356,7 @@ class RoleControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $this->makeMember($user);
+        $this->giveDefaultRole($user, Role::STAFF);
 
         $role = Role::factory()->create(['company_id' => $company->id]);
 

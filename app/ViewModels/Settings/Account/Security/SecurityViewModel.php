@@ -62,10 +62,6 @@ class SecurityViewModel
             return __('Active · no API keys');
         }
 
-        if ($count === 1) {
-            return __('Active · 1 API key');
-        }
-
-        return __('Active · :count API keys', ['count' => $count]);
+        return trans_choice('Active · :count API key|Active · :count API keys', $count);
     }
 }

@@ -38,10 +38,6 @@ return new class extends Migration
             $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
         });
 
-        Schema::table('companies', function (Blueprint $table): void {
-            $table->foreign('owner_user_id')->references('id')->on('users')->nullOnDelete();
-        });
-
         Schema::create('password_reset_tokens', function (Blueprint $table): void {
             $table->string('email')->primary()->comment('email address of the user');
             $table->string('token')->comment('password reset token');
@@ -63,10 +59,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('companies', function (Blueprint $table): void {
-            $table->dropForeign(['owner_user_id']);
-        });
-
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');

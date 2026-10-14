@@ -37,8 +37,8 @@ class RolesViewModelTest extends TestCase
 
         $this->assertCount(2, $rows);
         $this->assertEquals('Regional manager', $rows[0]['name']);
-        $this->assertEquals('People and Administration', $rows[0]['summary']);
-        $this->assertEquals('2 of 7 permissions', $rows[0]['permissions']);
+        $this->assertEquals('Administration and Team', $rows[0]['summary']);
+        $this->assertEquals('2 of 16 permissions', $rows[0]['permissions']);
         $this->assertEquals('1 person', $rows[0]['holders']);
         $this->assertEquals('Temp', $rows[1]['name']);
         $this->assertEquals('Nothing yet. Tick what it is allowed to do.', $rows[1]['summary']);
@@ -134,8 +134,20 @@ class RolesViewModelTest extends TestCase
         $permissions = collect($groups)->pluck('permissions')->flatten(1)->keyBy('value');
 
         $this->assertEquals([], $permissions[PermissionEnum::CompanyManage->value]['scopes']);
-        $this->assertFalse($permissions[PermissionEnum::CompanyManage->value]['targetsEmployee']);
-        $this->assertCount(2, $permissions[PermissionEnum::EmployeeView->value]['scopes']);
+        $this->assertCount(3, $permissions[PermissionEnum::EmployeeView->value]['scopes']);
+        $this->assertCount(2, $permissions[PermissionEnum::ClientView->value]['scopes']);
+    }
+
+    #[Test]
+    public function it_shows_the_description_of_a_role_in_place_of_its_summary(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        Role::factory()->create(['company_id' => $company->id, 'description' => 'Answers the phone at Dunder Mifflin.']);
+
+        $rows = new RolesViewModel(user: $user)->rows();
+
+        $this->assertEquals('Answers the phone at Dunder Mifflin.', $rows[0]['summary']);
     }
 
     #[Test]
@@ -292,7 +304,27 @@ class RolesViewModelTest extends TestCase
 
         $this->assertEquals([
             ScopeEnum::Self->value => 'Themselves only',
+            ScopeEnum::Location->value => 'Their locations',
             ScopeEnum::Company->value => 'Everybody in the company',
         ], $permissions[PermissionEnum::EmployeeView->value]['scopes']);
+    }
+
+    #[Test]
+    public function it_keeps_the_last_owner_from_being_taken_off_the_owner_role(): void
+    {
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $owner = $company->roles()->where('slug', Role::OWNER)->firstOrFail();
+
+        $people = new RolesViewModel(user: $michael, role: $owner)->people();
+
+        $this->assertFalse($people[0]['isRemovable']);
+
+        $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+
+        $people = new RolesViewModel(user: $michael, role: $owner)->people();
+
+        $this->assertTrue($people[0]['isRemovable']);
+        $this->assertTrue($people[1]['isRemovable']);
     }
 }

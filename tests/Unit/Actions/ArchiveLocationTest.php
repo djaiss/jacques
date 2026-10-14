@@ -10,6 +10,7 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +28,7 @@ class ArchiveLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
 
         $archived = new ArchiveLocation(author: $author, location: $location)->execute();
@@ -54,7 +55,7 @@ class ArchiveLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->primary()->create(['company_id' => $company->id]);
 
         new ArchiveLocation(author: $author, location: $location)->execute();
@@ -81,9 +82,29 @@ class ArchiveLocationTest extends TestCase
     {
         $this->expectException(ModelNotFoundException::class);
 
-        $author = $this->grant(User::factory()->create(), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
         $location = Location::factory()->create();
 
         new ArchiveLocation(author: $author, location: $location)->execute();
+    }
+
+    #[Test]
+    public function it_lets_a_manager_archive_only_the_locations_they_are_assigned_to(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+        $michael->locations()->attach($scranton);
+
+        new ArchiveLocation(author: $michael, location: $scranton)->execute();
+
+        $this->assertTrue($scranton->refresh()->isArchived());
+
+        $this->expectException(ModelNotFoundException::class);
+
+        new ArchiveLocation(author: $michael, location: $stamford)->execute();
     }
 }

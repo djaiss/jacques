@@ -80,7 +80,7 @@ class SettingsViewModel
     {
         $rows = [];
 
-        if ($this->canManageCompany()) {
+        if ($this->canManageLocations()) {
             $rows[] = [
                 'title' => __('Locations'),
                 'description' => __('The locations your company works from, and who sits where.'),
@@ -105,11 +105,11 @@ class SettingsViewModel
         return $rows;
     }
 
-    public function canManageCompany(): bool
+    public function canManageLocations(): bool
     {
         return $this->user
-            ->permission(PermissionEnum::CompanyManage)
-            ->forCompany($this->user->company)
+            ->permission(PermissionEnum::LocationManage)
+            ->anywhere()
             ->allowed();
     }
 

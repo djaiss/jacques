@@ -7,6 +7,7 @@ namespace Tests\Feature\Controllers\App\Settings\Administration;
 use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -278,18 +279,60 @@ class LocationControllerTest extends TestCase
             ->assertNotFound();
     }
 
+    #[Test]
+    public function it_shows_a_manager_only_their_locations_and_no_way_to_add_one(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+        Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+        $michael->locations()->attach($scranton);
+
+        $response = $this->actingAs($michael)->get(route('settings.locations.index'));
+
+        $response->assertOk();
+        $response->assertSee('Scranton branch');
+        $response->assertDontSee('Stamford branch');
+        $response->assertDontSee('Add a location');
+        $response->assertDontSee('People who work here');
+    }
+
+    #[Test]
+    public function it_does_not_find_a_location_a_manager_is_not_assigned_to(): void
+    {
+        $company = Company::factory()->create();
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+
+        $this->actingAs($michael)
+            ->put(route('settings.locations.update', $stamford->id), ['name' => 'Stamford branch'])
+            ->assertNotFound();
+    }
+
+    #[Test]
+    public function it_offers_the_owner_a_way_to_assign_people_to_a_location(): void
+    {
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+
+        $response = $this->actingAs($michael)->get(route('settings.locations.index'));
+
+        $response->assertSee('People who work here');
+        $response->assertSee('Take this person off the location?');
+    }
+
     private function administrator(): User
     {
         $company = Company::factory()->create();
 
-        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
     }
 
     private function member(): User
     {
         $company = Company::factory()->create();
 
-        return $this->makeMember(User::factory()->create(['company_id' => $company->id]));
+        return $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::STAFF);
     }
 
     #[Test]

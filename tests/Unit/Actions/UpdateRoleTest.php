@@ -45,6 +45,7 @@ class UpdateRoleTest extends TestCase
             grants: [
                 ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Self],
             ],
+            description: 'Assistant to the regional manager, really.',
         )->execute();
 
         $this->assertInstanceOf(Role::class, $result);
@@ -52,6 +53,7 @@ class UpdateRoleTest extends TestCase
         $role->refresh();
 
         $this->assertEquals('Assistant regional manager', $role->name);
+        $this->assertEquals('Assistant to the regional manager, really.', $role->description);
         $this->assertEquals('salesman', $role->slug);
         $this->assertCount(1, $role->permissions);
         $this->assertEquals(PermissionEnum::EmployeeUpdate, $role->permissions->first()->permission);

@@ -32,7 +32,7 @@ class DestroyLocation
     private function authorize(): void
     {
         $this->author
-            ->permission(PermissionEnum::CompanyManage)
+            ->permission(PermissionEnum::LocationManage)
             ->forCompany($this->location->company)
             ->authorize();
     }

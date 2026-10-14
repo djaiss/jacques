@@ -10,6 +10,7 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +29,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
         new UpdateLocation(
@@ -75,7 +76,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         new UpdateLocation(author: $author, location: $location, name: 'Utica branch')->execute();
@@ -99,7 +100,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
         new UpdateLocation(author: $author, location: $location, name: 'Scranton branch', city: 'Scranton')->execute();
@@ -116,7 +117,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $scranton = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
         $utica = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
 
@@ -132,7 +133,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
         $elsewhere = Location::factory()->primary()->create();
 
@@ -147,7 +148,7 @@ class UpdateLocationTest extends TestCase
         Queue::fake();
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
         new UpdateLocation(author: $author, location: $location, name: 'Scranton business park')->execute();
@@ -161,7 +162,7 @@ class UpdateLocationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->archived()->create(['company_id' => $company->id, 'name' => 'Nashua branch']);
 
         new UpdateLocation(author: $author, location: $location, name: 'Nashua branch', isHeadquarters: true)->execute();
@@ -173,7 +174,7 @@ class UpdateLocationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
         $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
@@ -186,7 +187,7 @@ class UpdateLocationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::CompanyManage);
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         new UpdateLocation(author: $author, location: $location, name: '  ')->execute();
@@ -202,5 +203,25 @@ class UpdateLocationTest extends TestCase
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         new UpdateLocation(author: $author, location: $location, name: 'Scranton branch')->execute();
+    }
+
+    #[Test]
+    public function it_lets_a_manager_update_only_the_locations_they_are_assigned_to(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
+        $stamford = Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford']);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+        $michael->locations()->attach($scranton);
+
+        new UpdateLocation(author: $michael, location: $scranton, name: 'Scranton branch')->execute();
+
+        $this->assertEquals('Scranton branch', $scranton->refresh()->name);
+
+        $this->expectException(ModelNotFoundException::class);
+
+        new UpdateLocation(author: $michael, location: $stamford, name: 'Stamford branch')->execute();
     }
 }
