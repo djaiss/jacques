@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\OccurrenceTypeEnum;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
 use App\Helpers\TextSanitizer;
@@ -12,11 +11,9 @@ use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
-use Carbon\Carbon;
 
 /**
- * Create an employee of a company. The information the employee keeps private
- * is not set here, as they fill it in themselves once they have an account.
+ * Create an employee of a company.
  */
 class CreateEmployee
 {
@@ -30,10 +27,6 @@ class CreateEmployee
         private ?string $employeeNumber = null,
         private ?string $displayName = null,
         private ?string $workEmail = null,
-        private ?string $customTitle = null,
-        private ?string $country = null,
-        private ?string $timezone = null,
-        private readonly ?Carbon $hiredAt = null,
     ) {}
 
     public function execute(): Employee
@@ -41,21 +34,9 @@ class CreateEmployee
         $this->authorize();
         $this->sanitize();
         $this->create();
-        $this->publish();
         $this->log();
 
         return $this->employee;
-    }
-
-    private function publish(): void
-    {
-        new PublishOccurrence(
-            type: OccurrenceTypeEnum::EmployeeCreated,
-            company: $this->company,
-            subject: $this->employee,
-            actor: $this->author,
-            payload: ['name' => $this->employee->name],
-        )->execute();
     }
 
     private function authorize(): void
@@ -72,14 +53,9 @@ class CreateEmployee
         $this->lastName = TextSanitizer::plainText($this->lastName);
         $this->employeeNumber = TextSanitizer::nullablePlainText($this->employeeNumber);
         $this->displayName = TextSanitizer::nullablePlainText($this->displayName);
-        $this->customTitle = TextSanitizer::nullablePlainText($this->customTitle);
-        $this->timezone = TextSanitizer::nullablePlainText($this->timezone);
 
         $workEmail = TextSanitizer::nullablePlainText($this->workEmail);
         $this->workEmail = $workEmail === null ? null : mb_strtolower($workEmail);
-
-        $country = TextSanitizer::nullablePlainText($this->country);
-        $this->country = $country === null ? null : mb_strtoupper($country);
     }
 
     private function create(): void
@@ -91,10 +67,6 @@ class CreateEmployee
             'last_name' => $this->lastName,
             'display_name' => $this->displayName,
             'work_email' => $this->workEmail,
-            'custom_title' => $this->customTitle,
-            'country' => $this->country,
-            'timezone' => $this->timezone,
-            'hired_at' => $this->hiredAt,
         ]);
     }
 

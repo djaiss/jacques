@@ -7,7 +7,6 @@ namespace Tests\Unit\Models;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -74,46 +73,6 @@ class EmployeeTest extends TestCase
         ]);
 
         $this->assertEquals('Pam Beesly', $employee->full_name);
-    }
-
-    #[Test]
-    public function it_is_employed_when_the_employee_has_no_departure_date(): void
-    {
-        $employee = Employee::factory()->create(['departed_at' => null]);
-
-        $this->assertTrue($employee->isEmployed());
-    }
-
-    #[Test]
-    public function it_is_still_employed_when_the_employee_serves_their_notice_period(): void
-    {
-        $employee = Employee::factory()->create(['departed_at' => Carbon::now()->addMonth()]);
-
-        $this->assertTrue($employee->isEmployed());
-    }
-
-    #[Test]
-    public function it_is_not_employed_anymore_when_the_employee_already_left(): void
-    {
-        $employee = Employee::factory()->departed()->create();
-
-        $this->assertFalse($employee->isEmployed());
-    }
-
-    #[Test]
-    public function it_casts_the_date_the_record_was_last_saved(): void
-    {
-        $employee = Employee::factory()->create(['last_saved_at' => '2026-07-31 09:30:00']);
-
-        $this->assertInstanceOf(Carbon::class, $employee->last_saved_at);
-    }
-
-    #[Test]
-    public function it_has_never_been_saved_by_default(): void
-    {
-        $employee = Employee::factory()->create();
-
-        $this->assertNull($employee->last_saved_at);
     }
 
     #[Test]

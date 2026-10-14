@@ -11,7 +11,6 @@ use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -39,10 +38,6 @@ class CreateEmployeeTest extends TestCase
             employeeNumber: 'EMP-0001',
             displayName: 'The World Best Boss',
             workEmail: 'michael.scott@dundermifflin.com',
-            customTitle: 'Regional Manager',
-            country: 'us',
-            timezone: 'America/New_York',
-            hiredAt: Carbon::parse('2005-03-24'),
         )->execute();
 
         $this->assertInstanceOf(Employee::class, $employee);
@@ -54,11 +49,7 @@ class CreateEmployeeTest extends TestCase
             'last_name' => 'Scott',
             'display_name' => 'The World Best Boss',
             'work_email' => 'michael.scott@dundermifflin.com',
-            'custom_title' => 'Regional Manager',
-            'country' => 'US',
-            'timezone' => 'America/New_York',
         ]);
-        $this->assertEquals('2005-03-24', $employee->hired_at->toDateString());
 
         Queue::assertPushedOn(
             queue: 'low',

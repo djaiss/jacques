@@ -53,12 +53,7 @@
       <path d="M9 8.5h6M9 12.5h6M9 16.5h4"></path>
       @break
 
-    @case('emergency-contact')
-      <rect x="7" y="2.5" width="10" height="19" rx="2.4"></rect>
-      <path d="M10.5 5.5h3M12 18.5h.01"></path>
-      @break
-
-    @case('offices')
+    @case('locations')
       <rect x="4.5" y="4" width="15" height="16" rx="2"></rect>
       <path d="M8.5 8h2M13.5 8h2M8.5 12h2M13.5 12h2M8.5 16h2M13.5 16h2"></path>
       @break

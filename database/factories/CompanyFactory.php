@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ModuleEnum;
-use App\Enums\PlanEnum;
-use App\Enums\SizeRangeEnum;
-use App\Enums\WorkModeEnum;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -31,25 +27,8 @@ class CompanyFactory extends Factory
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 100000),
             'legal_name' => $name.' Inc.',
             'website_url' => fake()->url(),
-            'industry' => 'Paper',
-            'size_range' => SizeRangeEnum::ElevenToFifty,
-            'timezone' => 'UTC',
-            'locale' => 'en',
             'currency' => 'USD',
-            'work_mode' => WorkModeEnum::OfficeBased,
-            'plan' => PlanEnum::Free,
-            'is_self_hosted' => false,
         ];
-    }
-
-    /**
-     * Indicate that the company runs a self hosted instance.
-     */
-    public function selfHosted(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'is_self_hosted' => true,
-        ]);
     }
 
     /**
@@ -59,17 +38,6 @@ class CompanyFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'trial_ends_at' => now()->addDays(30),
-        ]);
-    }
-
-    /**
-     * A company that has turned a module on. Every test about a module needs
-     * this, since the permissions of a module deny until it is on.
-     */
-    public function withModule(ModuleEnum $module): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'settings' => ['modules' => [$module->value]],
         ]);
     }
 }

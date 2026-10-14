@@ -7,7 +7,7 @@ namespace Tests\Feature\Controllers\App\Settings;
 use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Employee;
-use App\Models\Office;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,7 +38,6 @@ class SettingsControllerTest extends TestCase
         $employee = Employee::factory()->create([
             'company_id' => $company->id,
             'display_name' => 'Michael Scott',
-            'custom_title' => 'Regional manager',
         ]);
         $user = $this->makeMember(User::factory()->create([
             'company_id' => $company->id,
@@ -49,7 +48,6 @@ class SettingsControllerTest extends TestCase
 
         $response->assertSee('Dunder Mifflin');
         $response->assertSee('Michael Scott');
-        $response->assertSee('Regional manager');
     }
 
     #[Test]
@@ -64,19 +62,19 @@ class SettingsControllerTest extends TestCase
     }
 
     #[Test]
-    public function it_shows_the_offices_to_somebody_who_looks_after_the_company(): void
+    public function it_shows_the_locations_to_somebody_who_looks_after_the_company(): void
     {
         $company = Company::factory()->create();
         $user = $this->grant(
             User::factory()->create(['company_id' => $company->id]),
             PermissionEnum::CompanyManage,
         );
-        Office::factory()->count(3)->create(['company_id' => $company->id]);
+        Location::factory()->count(3)->create(['company_id' => $company->id]);
 
         $response = $this->actingAs($user)->get(route('settings.index'));
 
         $response->assertSee('This company');
-        $response->assertSee('3 offices');
+        $response->assertSee('3 locations');
     }
 
     #[Test]

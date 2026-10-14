@@ -27,7 +27,7 @@ class RolesViewModelTest extends TestCase
 
         $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Regional manager']);
         RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::EmployeeView]);
-        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::AssetView]);
+        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::CompanyManage]);
         $user->roles()->attach($role->id);
 
         Role::factory()->create(['company_id' => $company->id, 'name' => 'Temp']);
@@ -37,8 +37,8 @@ class RolesViewModelTest extends TestCase
 
         $this->assertCount(2, $rows);
         $this->assertEquals('Regional manager', $rows[0]['name']);
-        $this->assertEquals('People and Assets', $rows[0]['summary']);
-        $this->assertEquals('2 of 10 permissions', $rows[0]['permissions']);
+        $this->assertEquals('People and Administration', $rows[0]['summary']);
+        $this->assertEquals('2 of 7 permissions', $rows[0]['permissions']);
         $this->assertEquals('1 person', $rows[0]['holders']);
         $this->assertEquals('Temp', $rows[1]['name']);
         $this->assertEquals('Nothing yet. Tick what it is allowed to do.', $rows[1]['summary']);

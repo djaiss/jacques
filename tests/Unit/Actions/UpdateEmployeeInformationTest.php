@@ -87,36 +87,6 @@ class UpdateEmployeeInformationTest extends TestCase
     }
 
     #[Test]
-    public function it_stamps_when_the_record_was_last_saved(): void
-    {
-        Queue::fake();
-
-        $company = Company::factory()->create();
-        $employee = Employee::factory()->create([
-            'company_id' => $company->id,
-            'last_saved_at' => null,
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
-        ]);
-        $this->grant($user, PermissionEnum::EmployeeUpdate, ScopeEnum::Self);
-
-        new UpdateEmployeeInformation(
-            author: $user,
-            employee: $employee,
-            firstName: 'Michael',
-            lastName: 'Scott',
-        )->execute();
-
-        $this->assertEqualsWithDelta(
-            now()->timestamp,
-            $employee->refresh()->last_saved_at?->timestamp,
-            2,
-        );
-    }
-
-    #[Test]
     public function it_clears_the_optional_fields_when_they_are_not_given(): void
     {
         Queue::fake();

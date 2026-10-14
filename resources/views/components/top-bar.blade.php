@@ -22,7 +22,7 @@
     ['label' => __('Software'), 'shortcut' => '^3', 'url' => null, 'glyph' => 'width:17px;height:17px;border-radius:3px;transform:rotate(45deg);background:oklch(0.8 0.15 150)'],
     ['label' => __('Licences'), 'shortcut' => '^4', 'url' => null, 'glyph' => 'width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 4px oklch(0.8 0.14 310)'],
     ['label' => __('Reports'), 'shortcut' => '^5', 'url' => null, 'glyph' => 'width:20px;height:20px;border-radius:999px;background:conic-gradient(oklch(0.85 0.15 85) 0 62%, oklch(0.85 0.15 85 / 0.3) 62% 100%)'],
-    ['label' => __('Offices'), 'shortcut' => '^6', 'url' => route('settings.offices.index'), 'glyph' => 'width:18px;height:18px;clip-path:polygon(50% 0,100% 100%,0 100%);background:oklch(0.8 0.13 20)'],
+    ['label' => __('Locations'), 'shortcut' => '^6', 'url' => route('settings.locations.index'), 'glyph' => 'width:18px;height:18px;clip-path:polygon(50% 0,100% 100%,0 100%);background:oklch(0.8 0.13 20)'],
   ];
 
   $yours = [

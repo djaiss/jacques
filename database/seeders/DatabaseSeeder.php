@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             'company_id' => $company->id,
         ]);
 
-        Employee::factory()->count(10)->withPrivateInformation()->create([
+        Employee::factory()->count(10)->create([
             'company_id' => $company->id,
         ]);
     }

@@ -33,7 +33,6 @@ class DestroyEmployeeAvatar
         }
 
         $this->employee->avatar_path = null;
-        $this->employee->last_saved_at = now();
         $this->employee->save();
 
         // The files go last: deleting one cannot be undone, and a record that

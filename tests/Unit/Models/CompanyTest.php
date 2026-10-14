@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Models;
 
 use App\Models\Company;
-use App\Models\Office;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,13 +26,13 @@ class CompanyTest extends TestCase
     }
 
     #[Test]
-    public function it_has_many_offices(): void
+    public function it_has_many_locations(): void
     {
         $company = Company::factory()->create();
-        Office::factory()->count(2)->create(['company_id' => $company->id]);
+        Location::factory()->count(2)->create(['company_id' => $company->id]);
 
-        $this->assertTrue($company->offices()->exists());
-        $this->assertCount(2, $company->offices()->get());
+        $this->assertTrue($company->locations()->exists());
+        $this->assertCount(2, $company->locations()->get());
     }
 
     #[Test]

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\OccurrenceTypeEnum;
-use App\Enums\PlanEnum;
 use App\Enums\UserActionEnum;
 use App\Helpers\TextSanitizer;
 use App\Jobs\LogUserAction;
@@ -37,7 +35,6 @@ class CreateCompany
         private string $lastName,
         private string $email,
         private readonly string $password,
-        private readonly PlanEnum $plan = PlanEnum::Free,
     ) {}
 
     public function execute(): Company
@@ -54,7 +51,6 @@ class CreateCompany
             $this->attachEmployee();
         });
 
-        $this->publish();
         $this->log();
 
         return $this->company;
@@ -73,10 +69,6 @@ class CreateCompany
         $this->company = Company::query()->create([
             'name' => $this->name,
             'slug' => $this->slug(),
-            'plan' => $this->plan,
-            'timezone' => 'UTC',
-            'locale' => 'en',
-            'is_self_hosted' => false,
             'trial_ends_at' => now()->addDays(30),
         ]);
     }
@@ -125,17 +117,6 @@ class CreateCompany
     {
         $this->owner->employee_id = $this->employee->id;
         $this->owner->save();
-    }
-
-    private function publish(): void
-    {
-        new PublishOccurrence(
-            type: OccurrenceTypeEnum::CompanyCreated,
-            company: $this->company,
-            subject: $this->company,
-            actor: $this->owner,
-            payload: ['name' => $this->company->name],
-        )->execute();
     }
 
     private function log(): void

@@ -55,9 +55,6 @@ class CreateDefaultRoles
                     ['permission' => PermissionEnum::EmployeeUpdatePrivate, 'scope' => ScopeEnum::Company],
                     ['permission' => PermissionEnum::RoleManage, 'scope' => ScopeEnum::Company],
                     ['permission' => PermissionEnum::CompanyManage, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetView, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetManage, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetCheckout, 'scope' => ScopeEnum::Company],
                 ],
             ],
             [
@@ -76,9 +73,6 @@ class CreateDefaultRoles
                 'slug' => Role::IT_ADMINISTRATOR,
                 'grants' => [
                     ['permission' => PermissionEnum::EmployeeView, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetView, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetManage, 'scope' => ScopeEnum::Company],
-                    ['permission' => PermissionEnum::AssetCheckout, 'scope' => ScopeEnum::Company],
                 ],
             ],
             [
@@ -89,7 +83,6 @@ class CreateDefaultRoles
                     ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Self],
                     ['permission' => PermissionEnum::EmployeeViewPrivate, 'scope' => ScopeEnum::Self],
                     ['permission' => PermissionEnum::EmployeeUpdatePrivate, 'scope' => ScopeEnum::Self],
-                    ['permission' => PermissionEnum::AssetView, 'scope' => ScopeEnum::Company],
                 ],
             ],
         ];

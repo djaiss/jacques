@@ -95,7 +95,6 @@ class UpdateEmployeeAvatar
     private function save(): void
     {
         $this->employee->avatar_path = $this->path;
-        $this->employee->last_saved_at = now();
         $this->employee->save();
     }
 

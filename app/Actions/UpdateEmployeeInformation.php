@@ -61,7 +61,6 @@ class UpdateEmployeeInformation
         $this->employee->last_name = $this->lastName;
         $this->employee->display_name = $this->displayName;
         $this->employee->work_email = $this->workEmail;
-        $this->employee->last_saved_at = now();
         $this->employee->save();
     }
 

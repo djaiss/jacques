@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * Class Employee
@@ -28,19 +27,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property string|null $display_name
  * @property string|null $avatar_path
  * @property string|null $work_email
- * @property string|null $custom_title
- * @property string|null $country
- * @property string|null $timezone
- * @property Carbon|null $hired_at
- * @property Carbon|null $departed_at
- * @property string|null $personal_email
- * @property string|null $personal_phone
- * @property Carbon|null $date_of_birth
- * @property string|null $emergency_contact_name
- * @property string|null $emergency_contact_phone
- * @property string|null $emergency_contact_relationship
- * @property string|null $home_address
- * @property Carbon|null $last_saved_at
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
  */
@@ -72,35 +58,7 @@ class Employee extends Model
         'display_name',
         'avatar_path',
         'work_email',
-        'custom_title',
-        'country',
-        'timezone',
-        'hired_at',
-        'departed_at',
-        'personal_email',
-        'personal_phone',
-        'date_of_birth',
-        'emergency_contact_name',
-        'emergency_contact_phone',
-        'emergency_contact_relationship',
-        'home_address',
-        'last_saved_at',
     ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'hired_at' => 'date',
-            'departed_at' => 'date',
-            'date_of_birth' => 'date',
-            'last_saved_at' => 'datetime',
-        ];
-    }
 
     /**
      * Get the company the employee works for.
@@ -120,17 +78,6 @@ class Employee extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
-    }
-
-    /**
-     * Get every piece of equipment the employee has held, and everything they
-     * hold now. An assignment with no return date is one they still have.
-     *
-     * @return MorphMany<AssetAssignment, $this>
-     */
-    public function assetAssignments(): MorphMany
-    {
-        return $this->morphMany(AssetAssignment::class, 'assignee');
     }
 
     /**
@@ -156,16 +103,6 @@ class Employee extends Model
         return Attribute::make(
             get: fn (): string => $this->first_name.' '.$this->last_name,
         );
-    }
-
-    /**
-     * Get whether the employee still works for the company. Somebody who serves
-     * their notice period has a departure date in the future, and still works
-     * there until that date.
-     */
-    public function isEmployed(): bool
-    {
-        return $this->departed_at === null || $this->departed_at->isFuture();
     }
 
     /**

@@ -33,9 +33,7 @@ class SettingsViewModel
 
     public function role(): string
     {
-        return collect([$this->employee?->custom_title, $this->user->roles->first()?->name])
-            ->filter()
-            ->implode(' · ');
+        return $this->user->roles->first()->name ?? '';
     }
 
     /** @return array<int, array{title: string, description: string, value: string, url: string, hue: int, icon: string}> */
@@ -44,7 +42,7 @@ class SettingsViewModel
         return [
             [
                 'title' => __('Profile'),
-                'description' => __('Your name, avatar, work email and emergency contact.'),
+                'description' => __('Your name, avatar and work email.'),
                 'value' => '',
                 'url' => route('settings.profile.index'),
                 'hue' => 30,
@@ -84,12 +82,12 @@ class SettingsViewModel
 
         if ($this->canManageCompany()) {
             $rows[] = [
-                'title' => __('Offices'),
-                'description' => __('The offices your company works from, and who sits where.'),
-                'value' => trans_choice(':count office|:count offices', $this->user->company->offices()->count()),
-                'url' => route('settings.offices.index'),
+                'title' => __('Locations'),
+                'description' => __('The locations your company works from, and who sits where.'),
+                'value' => trans_choice(':count location|:count locations', $this->user->company->locations()->count()),
+                'url' => route('settings.locations.index'),
                 'hue' => 80,
-                'icon' => 'offices',
+                'icon' => 'locations',
             ];
         }
 

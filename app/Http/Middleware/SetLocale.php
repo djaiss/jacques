@@ -37,6 +37,6 @@ class SetLocale
             return config('app.locale');
         }
 
-        return $user->locale ?? $user->company->locale ?? config('app.locale');
+        return $user->locale ?? config('app.locale');
     }
 }
