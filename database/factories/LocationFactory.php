@@ -24,8 +24,13 @@ class LocationFactory extends Factory
             'company_id' => Company::factory(),
             'name' => fake()->unique()->city().' location',
             'country' => fake()->countryCode(),
+            'region' => fake()->state(),
             'city' => fake()->city(),
-            'address' => fake()->streetAddress(),
+            'postal_code' => fake()->postcode(),
+            'address_line_1' => fake()->streetAddress(),
+            'address_line_2' => fake()->secondaryAddress(),
+            'phone' => fake()->phoneNumber(),
+            'email' => fake()->companyEmail(),
             'timezone' => 'UTC',
         ];
     }

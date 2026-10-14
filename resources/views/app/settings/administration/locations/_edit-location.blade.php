@@ -37,11 +37,44 @@
       required
     />
 
+    <x-input
+      id="address_line_1"
+      x-model="form.addressLine1"
+      :label="__('Address')"
+      :placeholder="__('Street and number')"
+      maxlength="255"
+    />
+
+    <x-input
+      id="address_line_2"
+      x-model="form.addressLine2"
+      :label="__('Address line 2')"
+      :placeholder="__('Building, floor or suite')"
+      maxlength="255"
+    />
+
     <div class="grid gap-4.5 sm:grid-cols-2">
+      <x-input
+        id="postal_code"
+        x-model="form.postalCode"
+        :label="__('Postal code')"
+        maxlength="20"
+      />
+
       <x-input
         id="city"
         x-model="form.city"
         :label="__('City')"
+        maxlength="255"
+      />
+    </div>
+
+    <div class="grid gap-4.5 sm:grid-cols-2">
+      <x-input
+        id="region"
+        x-model="form.region"
+        :label="__('Region')"
+        :help="__('State, province or county')"
         maxlength="255"
       />
 
@@ -56,14 +89,25 @@
       />
     </div>
 
-    <x-input
-      id="address"
-      x-model="form.address"
-      :label="__('Address')"
-      :placeholder="__('Street and postal code')"
-      :help="__('One line is enough. Optional.')"
-      maxlength="500"
-    />
+    <div class="grid gap-4.5 sm:grid-cols-2">
+      <x-input
+        id="phone"
+        type="tel"
+        x-model="form.phone"
+        :label="__('Phone')"
+        autocomplete="tel"
+        maxlength="50"
+      />
+
+      <x-input
+        id="email"
+        type="email"
+        x-model="form.email"
+        :label="__('Email address')"
+        autocomplete="email"
+        maxlength="255"
+      />
+    </div>
 
     <div class="space-y-1.5">
       <x-label for="timezone" :value="__('Time zone')" />

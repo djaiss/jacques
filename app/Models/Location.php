@@ -23,8 +23,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $company_id
  * @property string $name
  * @property string|null $country
+ * @property string|null $region
  * @property string|null $city
- * @property string|null $address
+ * @property string|null $postal_code
+ * @property string|null $address_line_1
+ * @property string|null $address_line_2
+ * @property string|null $phone
+ * @property string|null $email
  * @property string|null $timezone
  * @property Carbon|null $archived_at
  * @property bool $is_headquarters
@@ -47,8 +52,13 @@ class Location extends Model
         'company_id',
         'name',
         'country',
+        'region',
         'city',
-        'address',
+        'postal_code',
+        'address_line_1',
+        'address_line_2',
+        'phone',
+        'email',
         'timezone',
         'archived_at',
         'is_headquarters',

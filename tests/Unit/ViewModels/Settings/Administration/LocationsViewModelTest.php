@@ -160,7 +160,7 @@ class LocationsViewModelTest extends TestCase
         Location::factory()->create([
             'company_id' => $user->company_id,
             'name' => 'Somewhere',
-            'address' => null,
+            'address_line_1' => null,
             'country' => null,
             'city' => null,
             'timezone' => null,
@@ -176,12 +176,27 @@ class LocationsViewModelTest extends TestCase
     public function it_hands_the_panel_everything_it_needs_to_edit_an_location(): void
     {
         $user = $this->company();
-        $location = Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+        $location = Location::factory()->create([
+            'company_id' => $user->company_id,
+            'name' => 'Scranton branch',
+            'region' => 'Pennsylvania',
+            'postal_code' => '18505',
+            'address_line_1' => '1725 Slough Avenue',
+            'address_line_2' => 'Suite 200',
+            'phone' => '570-555-0100',
+            'email' => 'scranton@dundermifflin.com',
+        ]);
 
         $drawer = new LocationsViewModel(user: $user, scope: LocationScopeEnum::Active)->drawer();
 
         $this->assertArrayHasKey($location->id, $drawer);
         $this->assertEquals('Scranton branch', $drawer[$location->id]['name']);
+        $this->assertEquals('Pennsylvania', $drawer[$location->id]['region']);
+        $this->assertEquals('18505', $drawer[$location->id]['postalCode']);
+        $this->assertEquals('1725 Slough Avenue', $drawer[$location->id]['addressLine1']);
+        $this->assertEquals('Suite 200', $drawer[$location->id]['addressLine2']);
+        $this->assertEquals('570-555-0100', $drawer[$location->id]['phone']);
+        $this->assertEquals('scranton@dundermifflin.com', $drawer[$location->id]['email']);
         $this->assertEquals(route('settings.locations.update', $location->id), $drawer[$location->id]['updateUrl']);
         $this->assertEquals(route('settings.locationArchives.create', $location->id), $drawer[$location->id]['archiveUrl']);
         $this->assertEquals(route('settings.locationArchives.destroy', $location->id), $drawer[$location->id]['restoreUrl']);

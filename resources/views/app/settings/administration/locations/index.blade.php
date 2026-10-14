@@ -29,8 +29,13 @@
         this.form = {
           name: location.name,
           country: location.country,
+          region: location.region,
           city: location.city,
-          address: location.address,
+          postalCode: location.postalCode,
+          addressLine1: location.addressLine1,
+          addressLine2: location.addressLine2,
+          phone: location.phone,
+          email: location.email,
           timezone: location.timezone,
           isHeadquarters: location.isHeadquarters,
         }
@@ -57,10 +62,6 @@
     <div class="mb-9 grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
       <div>
         <h1 class="mb-2 text-4xl leading-tight font-bold tracking-tight text-ink">{{ __('Locations') }}</h1>
-
-        <p class="text-lg leading-normal text-pretty text-body">
-          {{ __('The company owns its locations, and an employee only points at one. Somebody fully remote has no location at all: their country and their time zone live on their own record.') }}
-        </p>
       </div>
 
       <x-button type="button" x-on:click="creating = true" class="max-sm:w-full">{{ __('Add a location') }}</x-button>
