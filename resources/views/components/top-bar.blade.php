@@ -69,6 +69,7 @@
       x-cloak
       x-show="menuOpen"
       x-transition.opacity.duration.150ms
+      x-trap="menuOpen"
       id="top-bar-menu"
       class="absolute top-11.5 left-1/2 z-40 w-130 max-w-[88vw] -translate-x-1/2 rounded-[20px] bg-menu p-4.5 shadow-2xl"
     >
@@ -82,7 +83,7 @@
         type="text"
         aria-label="{{ __('Search') }}"
         placeholder="{{ __('Type to go to a person, an asset, or a label…') }}"
-        class="mb-3.5 w-full rounded-xl bg-white px-3.75 py-3 text-[15px] text-ink outline-none placeholder:text-placeholder focus:ring-[3px] focus:ring-accent-soft"
+        class="mb-3.5 w-full rounded-xl bg-white px-3.75 py-3 text-[15px] text-ink outline-none placeholder:text-placeholder focus:ring-2 focus:ring-focus-ring"
       />
 
       <div class="grid grid-cols-3 gap-2">

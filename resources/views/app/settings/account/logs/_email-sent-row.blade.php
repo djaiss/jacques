@@ -16,10 +16,9 @@
     type="button"
     @click="open = ! open"
     :aria-expanded="open ? 'true' : 'false'"
-    class="flex w-full cursor-pointer items-start gap-x-3 px-4.5 py-3.5 text-left focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
+    class="flex w-full cursor-pointer items-start gap-x-3 px-4.5 py-3.5 text-left focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
   >
     <span class="mt-1.5 size-2 shrink-0 rounded-full {{ $delivery }}" aria-hidden="true"></span>
-    <span class="sr-only">{{ $deliveryLabel }}</span>
 
     <span class="min-w-0 flex-1 text-sm leading-relaxed">
       <span class="block wrap-anywhere text-muted">{{ __('To:') }} {{ $emailSent->email_address }}</span>
@@ -31,6 +30,8 @@
     </span>
 
     <span class="flex shrink-0 items-center gap-2 text-xs text-muted">
+      <span class="font-semibold text-body">{{ $deliveryLabel }}</span>
+
       @if ($sentAt)
         <time datetime="{{ $sentAt->toIso8601String() }}" title="{{ $sentAt->toDayDateTimeString() }}" class="whitespace-nowrap max-sm:hidden">{{ $sentAtLabel }}</time>
       @endif
@@ -41,7 +42,7 @@
     </span>
   </button>
 
-  <div x-cloak x-show="open" x-transition class="rounded-b-[inherit] border-t border-hairline-soft bg-card px-4.5 py-3.5">
+  <div x-cloak x-show="open" x-transition.opacity class="rounded-b-[inherit] border-t border-hairline-soft bg-card px-4.5 py-3.5">
     <p class="text-center text-xs text-muted italic">{{ __('We remove the links from this copy, since they have probably expired.') }}</p>
 
     <div class="mt-3 space-y-2 text-sm leading-relaxed text-body">{!! $emailSent->body !!}</div>

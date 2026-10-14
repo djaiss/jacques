@@ -291,4 +291,18 @@ class LocationControllerTest extends TestCase
 
         return $this->makeMember(User::factory()->create(['company_id' => $company->id]));
     }
+
+    #[Test]
+    public function it_gives_the_fields_of_the_panel_and_of_the_dialog_different_ids(): void
+    {
+        $user = $this->administrator();
+
+        Location::factory()->create(['company_id' => $user->company_id]);
+
+        $response = $this->actingAs($user)->get(route('settings.locations.index'));
+
+        $this->assertSame(1, substr_count($response->getContent(), 'id="name"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'id="location_name"'));
+        $response->assertSee('name="name"', escape: false);
+    }
 }

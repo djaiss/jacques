@@ -12,7 +12,7 @@
 
   <!-- the key just made -->
   @if (session('apiKey'))
-    <div class="space-y-2 rounded-xl bg-sunken px-4 py-3.5 ring-[1.5px] ring-hairline">
+    <div tabindex="-1" x-autofocus class="space-y-2 rounded-xl bg-sunken px-4 py-3.5 ring-[1.5px] ring-hairline focus:outline-none">
       <p class="text-[15px] font-semibold text-ink">{{ __('Your new API key') }}</p>
 
       <p class="text-sm text-muted">{{ __('This is the only time we can show it to you. Copy it somewhere safe before you leave this screen.') }}</p>
@@ -31,6 +31,7 @@
 
       <x-button.secondary
         type="button"
+        x-ref="createButton"
         x-show="! creating"
         @click="creating = true; $nextTick(() => $refs.name.focus())"
         class="max-sm:w-full"
@@ -51,7 +52,7 @@
         />
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <x-button.secondary type="button" @click="creating = false">{{ __('Cancel') }}</x-button.secondary>
+          <x-button.secondary type="button" @click="creating = false; $nextTick(() => $refs.createButton.focus())">{{ __('Cancel') }}</x-button.secondary>
 
           <x-button>{{ __('Create key') }}</x-button>
         </div>
@@ -70,7 +71,7 @@
           </span>
 
           <div class="min-w-0 space-y-0.5">
-            <p class="truncate text-sm font-semibold text-ink">{{ $apiKey['name'] }}</p>
+            <p class="text-sm font-semibold wrap-anywhere text-ink">{{ $apiKey['name'] }}</p>
 
             <p class="text-sm text-muted">
               @if ($apiKey['lastUsedAt'])
@@ -82,7 +83,7 @@
           </div>
         </div>
 
-        <x-button.secondary type="button" @click="revoking = {{ $apiKey['id'] }}" class="max-sm:w-full">{{ __('Revoke') }}</x-button.secondary>
+        <x-button.secondary type="button" @click="revoking = {{ $apiKey['id'] }}" aria-haspopup="dialog" class="max-sm:w-full">{{ __('Revoke') }}<span class="sr-only"> {{ $apiKey['name'] }}</span></x-button.secondary>
       </x-box.row>
     @empty
       <x-empty-state :title="__('No API keys yet')">

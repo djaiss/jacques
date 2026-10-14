@@ -55,7 +55,7 @@
   <div class="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
     <h2 class="text-[22px] leading-tight font-bold tracking-tight text-ink">{{ __('Allowed to') }}</h2>
 
-    <p class="text-[15px] text-muted" x-text="grantCounts[grantedCount()]">{{ $viewModel->grantCountLabel() }}</p>
+    <p aria-live="polite" class="text-[15px] text-muted" x-text="grantCounts[grantedCount()]">{{ $viewModel->grantCountLabel() }}</p>
   </div>
 
   <label for="permission-filter" class="sr-only">{{ __('Filter permissions') }}</label>
@@ -67,7 +67,7 @@
     x-on:input.stop
     x-on:keydown.enter.prevent
     placeholder="{{ __('Filter permissions') }}"
-    class="mb-3 block w-full appearance-none rounded-xl border-[1.5px] border-hairline-strong bg-input px-3.5 py-2.5 text-base text-ink placeholder-placeholder transition-colors duration-150 hover:border-focus hover:bg-hover focus:border-focus focus:bg-canvas focus:ring-3 focus:ring-focus/15 focus:outline-none"
+    class="mb-3 block w-full appearance-none rounded-xl border-[1.5px] border-control bg-input px-3.5 py-2.5 text-base text-ink placeholder-placeholder transition-colors duration-150 hover:border-ink hover:bg-hover focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none"
   />
 
   <!-- the permission matrix -->
@@ -78,7 +78,7 @@
           type="button"
           x-on:click="collapsed[@js($group['title'])] = ! collapsed[@js($group['title'])]"
           :aria-expanded="open(@js($group['title'])) ? 'true' : 'false'"
-          class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-hover"
+          class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
         >
           <svg
             width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
@@ -89,18 +89,15 @@
             <path d="M4.4 6.4 8 10l3.6-3.6"></path>
           </svg>
 
-          <span class="text-[13px] font-bold tracking-[0.08em] whitespace-nowrap text-body uppercase">{{ $group['title'] }}</span>
+          <span class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <span class="text-[13px] font-bold tracking-[0.08em] text-body uppercase">{{ $group['title'] }}</span>
 
-          <span class="hidden truncate text-[13px] text-muted-soft lg:block">{{ $group['note'] }}</span>
+            <span class="text-[13px] text-muted-soft">{{ $group['note'] }}</span>
+          </span>
 
-          <span
-            class="ml-auto block h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-sunken"
-            role="img"
-            aria-label="{{ $group['count'] }}"
-            title="{{ $group['count'] }}"
-            :aria-label="counts[@js($group['title'])][grantedIn(@js($group['title']))]"
-            :title="counts[@js($group['title'])][grantedIn(@js($group['title']))]"
-          >
+          <span class="ml-auto shrink-0 text-[13px] text-muted tabular-nums" x-text="counts[@js($group['title'])][grantedIn(@js($group['title']))]">{{ $group['count'] }}</span>
+
+          <span class="block h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
             <span
               class="block h-full rounded-full {{ $bars[$group['tone']] }}"
               style="width: {{ $group['width'] }}"
@@ -133,7 +130,7 @@
 
               <span
                 aria-hidden="true"
-                class="flex size-5.5 shrink-0 items-center justify-center rounded-[7px] bg-canvas text-transparent ring-[1.5px] ring-hairline-strong transition-colors peer-checked:bg-ink peer-checked:text-canvas peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-focus"
+                class="flex size-5.5 shrink-0 items-center justify-center rounded-[7px] bg-canvas text-transparent ring-[1.5px] ring-control transition-colors peer-disabled:opacity-60 peer-checked:bg-ink peer-checked:text-canvas peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring"
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M2.5 6.3 4.8 8.6 9.5 3.8"></path>
@@ -149,11 +146,12 @@
                 x-cloak
                 x-show="granted[@js($permission['value'])]"
                 x-on:click="scope = scope === 'self' ? 'company' : 'self'"
-                x-text="scopes[scope]"
                 @disabled(! $role['isEditable'])
-                aria-label="{{ __('Scope of :permission', ['permission' => $permission['label']]) }}"
-                class="cursor-pointer rounded-md text-sm font-semibold whitespace-nowrap text-muted underline decoration-hairline-strong underline-offset-4 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none disabled:cursor-not-allowed max-sm:justify-self-start max-sm:pl-9"
-              ></button>
+                class="cursor-pointer rounded-md text-sm font-semibold whitespace-nowrap text-muted underline decoration-hairline-strong underline-offset-4 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none disabled:cursor-not-allowed max-sm:justify-self-start max-sm:pl-9"
+              >
+                <span class="sr-only">{{ __('Scope of :permission', ['permission' => $permission['label']]) }}:</span>
+                <span aria-live="polite" x-text="scopes[scope]"></span>
+              </button>
 
               <input type="hidden" name="permissions[{{ $permission['value'] }}][scope]" :value="scope" />
             @else
@@ -164,7 +162,7 @@
       </div>
     @endforeach
 
-    <p x-cloak x-show="nothingMatches()" class="px-3 py-6 text-center text-[15px] text-muted">{{ __('No permission matches that.') }}</p>
+    <p x-cloak x-show="nothingMatches()" role="status" class="px-3 py-6 text-center text-[15px] text-muted">{{ __('No permission matches that.') }}</p>
   </div>
 
   <!-- note about scopes -->

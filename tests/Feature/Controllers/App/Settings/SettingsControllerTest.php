@@ -104,4 +104,16 @@ class SettingsControllerTest extends TestCase
 
         return $this->makeMember(User::factory()->create(['company_id' => $company->id]));
     }
+
+    #[Test]
+    public function it_lets_a_keyboard_skip_straight_to_the_content(): void
+    {
+        $user = $this->member();
+
+        $response = $this->actingAs($user)->get(route('settings.index'));
+
+        $response->assertSee('href="#main"', escape: false);
+        $response->assertSee('Skip to content');
+        $response->assertSee('<main id="main"', escape: false);
+    }
 }

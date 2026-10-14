@@ -35,6 +35,7 @@
                 <x-input
                   type="password"
                   id="password"
+                  :help="__('Minimum 8 characters.')"
                   :label="__('New password')"
                   autocomplete="new-password"
                   passwordrules="minlength: 8"
@@ -55,8 +56,6 @@
                   required
                 />
               </div>
-
-              <p class="text-xs text-muted">{{ __('Minimum 8 characters.') }}</p>
             </div>
 
             <x-button class="w-full">{{ __('Change my password') }}</x-button>

@@ -9,7 +9,7 @@
     <a
       href="{{ $row['url'] }}"
       data-turbo="true"
-      class="grid w-full cursor-pointer items-center border-b border-hairline-soft px-5.5 py-4 text-left transition-colors last:border-b-0 hover:bg-hover {{ $columns }}"
+      class="grid w-full cursor-pointer items-center border-b border-hairline-soft px-5.5 py-4 text-left transition-colors last:border-b-0 hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-inset {{ $columns }}"
     >
       <span class="accent-tile grid size-9.5 place-items-center rounded-xl" style="--tile-hue: {{ $row['hue'] }}">
         <x-settings-icon name="roles" />

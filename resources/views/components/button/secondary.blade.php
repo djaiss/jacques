@@ -9,7 +9,7 @@
 ])
 
 @php
-  $classes = 'relative inline-flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-hairline-strong bg-card py-2.5 text-[15px] font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-ink hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none disabled:pointer-events-none disabled:bg-disabled disabled:text-on-disabled [:where(&)]:px-4';
+  $classes = 'relative inline-flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-hairline-strong bg-card py-2.5 text-[15px] font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-ink hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none disabled:pointer-events-none disabled:bg-disabled disabled:text-on-disabled [:where(&)]:px-4';
 @endphp
 
 @isset($href)

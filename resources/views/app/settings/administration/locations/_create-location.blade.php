@@ -6,11 +6,11 @@
   x-transition.opacity.duration.110ms
   x-on:keydown.escape="creating = false"
   x-on:click.self="creating = false"
-  x-effect="if (creating) { $nextTick(() => $el.querySelector('input[name=name]').focus()) }"
   :data-escape-guard="creating ? '' : null"
   class="fixed inset-0 z-70 flex justify-center overflow-y-auto bg-black/35 px-4 py-14"
 >
   <div
+    x-trap.inert="creating"
     role="dialog"
     aria-modal="true"
     aria-labelledby="create-location-title"

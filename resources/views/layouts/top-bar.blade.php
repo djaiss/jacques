@@ -14,6 +14,8 @@
   </head>
 
   <body class="bg-page font-sans text-body antialiased">
+    <a href="#main" class="sr-only z-80 rounded-[10px] bg-primary px-4 py-2.5 text-[15px] font-semibold text-on-primary focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:ring-2 focus:ring-focus-ring focus:outline-none">{{ __('Skip to content') }}</a>
+
     <div
       x-data="{ menuOpen: false }"
       @keydown.escape.window="menuOpen = false"
@@ -23,7 +25,9 @@
       <div class="mx-auto max-w-265 px-4 sm:px-8">
         <x-top-bar :company-name="$companyName" :name="$name" :employee="$employee" />
 
-        {{ $slot }}
+        <main id="main" tabindex="-1" class="focus:outline-none">
+          {{ $slot }}
+        </main>
       </div>
     </div>
 

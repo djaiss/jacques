@@ -1,7 +1,7 @@
 {{-- The light and dark switch. --}}
 @php
   /* Bigger on a phone, where the two buttons are aimed at with a thumb. */
-  $button = 'flex h-6 w-7 cursor-pointer items-center justify-center rounded-sm transition-colors max-sm:h-8 max-sm:w-9';
+  $button = 'flex h-6 w-7 cursor-pointer items-center justify-center rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none max-sm:h-8 max-sm:w-9';
 @endphp
 
 <div x-data {{ $attributes->class(['flex gap-0.5 rounded-md border border-hairline-strong bg-canvas p-0.5']) }}>

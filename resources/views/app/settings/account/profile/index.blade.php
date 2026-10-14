@@ -52,9 +52,11 @@
                 :error="$errors->get('avatar')"
                 required
                 x-on:change="tooBig = window.oversizedFiles($event.target.files, 5120).length > 0"
+                x-bind:aria-invalid="tooBig ? 'true' : null"
+                aria-errormessage="avatar-too-big"
               />
 
-              <p x-show="tooBig" x-cloak x-text="tooBigMessage" class="text-sm text-error"></p>
+              <p id="avatar-too-big" role="alert" x-show="tooBig" x-cloak x-text="tooBig ? tooBigMessage : ''" class="text-sm text-error"></p>
 
               <x-button>{{ __('Upload') }}</x-button>
             </x-form>
@@ -63,7 +65,8 @@
               <button
                 type="button"
                 x-on:click="removingAvatar = true"
-                class="cursor-pointer text-sm text-muted hover:text-ink"
+                aria-haspopup="dialog"
+                class="cursor-pointer rounded-md text-sm text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
               >{{ __('Remove the avatar') }}</button>
 
               <x-confirm-dialog

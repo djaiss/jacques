@@ -26,7 +26,7 @@
 
       <div class="grid gap-x-10 gap-y-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div class="min-w-0">
-          <p class="font-semibold text-ink">{{ __('Language') }}</p>
+          <p id="locale-label" class="font-semibold text-ink">{{ __('Language') }}</p>
           <p class="mt-1 text-[15px] leading-relaxed text-body">{{ __('The language the interface is drawn in.') }}</p>
         </div>
 
@@ -38,13 +38,14 @@
             :label="$viewModel->localeLabel()"
             :options="$viewModel->locales()"
             :title="__('Interface language')"
+            labelledby="locale-label"
           />
         </x-form>
       </div>
 
       <div class="mt-6 grid gap-x-10 gap-y-3.5 border-t border-hairline-soft pt-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div class="min-w-0">
-          <p class="font-semibold text-ink">{{ __('Time format') }}</p>
+          <p id="time-format-label" class="font-semibold text-ink">{{ __('Time format') }}</p>
           <p class="mt-1 text-[15px] leading-relaxed text-body">{{ __('How every clock time is written. Dates are unaffected.') }}</p>
         </div>
 
@@ -62,13 +63,14 @@
             :label="$viewModel->timeFormatLabel()"
             :options="$viewModel->timeFormats()"
             :title="__('Time format')"
+            labelledby="time-format-label"
             monospaced-hints
           />
         </x-form>
       </div>
     </x-section>
 
-    <p id="time-preview" class="text-sm text-muted-soft">
+    <p id="time-preview" aria-live="polite" class="text-sm text-muted-soft">
       {{ __('It is :time where you are, in :language.', ['time' => $viewModel->timePreview(), 'language' => $viewModel->localeLabel()]) }}
     </p>
   </div>

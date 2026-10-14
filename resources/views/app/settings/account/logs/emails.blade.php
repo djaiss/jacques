@@ -36,7 +36,7 @@
 
       @if ($viewModel->emailsSent()->hasMorePages())
         <div id="pagination" class="border-t border-hairline-soft px-4.5 py-3 text-center text-sm">
-          <x-link x-target="emails-sent-container pagination" :href="$viewModel->emailsSent()->nextPageUrl()">{{ __('Load more') }}</x-link>
+          <x-link x-target="emails-sent-container pagination" x-autofocus :href="$viewModel->emailsSent()->nextPageUrl()">{{ __('Load more') }}</x-link>
         </div>
       @endif
     </div>

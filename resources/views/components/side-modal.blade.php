@@ -26,6 +26,7 @@
     x-transition:enter="transition duration-200 ease-out"
     x-transition:enter-start="translate-x-6 opacity-0"
     x-transition:enter-end="translate-x-0 opacity-100"
+    x-trap.inert="{{ $show }}"
     role="dialog"
     aria-modal="true"
     @if ($labelledby) aria-labelledby="{{ $labelledby }}" @endif
@@ -41,7 +42,7 @@
           type="button"
           x-on:click="{{ $close }}"
           aria-label="{{ __('Close the panel') }}"
-          class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
+          class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <line x1="3.6" y1="3.6" x2="12.4" y2="12.4"></line>

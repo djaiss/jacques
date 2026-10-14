@@ -18,7 +18,7 @@
   <x-image
     :src="$url(\App\Models\Employee::AVATAR_SIZE)"
     :srcset="$url(\App\Models\Employee::AVATAR_SIZE).' 1x, '.$url(\App\Models\Employee::AVATAR_SIZE * 2).' 2x'"
-    :alt="$name"
+    alt=""
     :width="$size"
     :height="$size"
     loading="eager"

@@ -24,6 +24,7 @@
   class="fixed inset-0 z-70 flex justify-center overflow-y-auto bg-black/35 px-4 py-14"
 >
   <div
+    x-trap.inert="{{ $show }}"
     role="dialog"
     aria-modal="true"
     aria-labelledby="{{ $labelledby }}"

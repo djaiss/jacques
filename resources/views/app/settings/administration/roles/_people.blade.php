@@ -25,16 +25,17 @@
         <x-avatar :employee="$person['employee']" :name="$person['name']" :size="34" />
 
         <div class="min-w-0 flex-1">
-          <p class="truncate text-base font-semibold text-ink">{{ $person['name'] }}</p>
+          <p class="text-base font-semibold wrap-anywhere text-ink">{{ $person['name'] }}</p>
 
-          <p class="truncate text-sm text-muted">{{ $person['since'] }}</p>
+          <p class="text-sm text-muted">{{ $person['since'] }}</p>
         </div>
 
         <button
           type="button"
           x-on:click="removing = {{ $person['id'] }}"
-          class="cursor-pointer rounded-md px-1.5 py-1 text-[15px] font-semibold text-muted transition-colors hover:text-error"
-        >{{ __('Remove') }}</button>
+          aria-haspopup="dialog"
+          class="cursor-pointer rounded-md px-1.5 py-1 text-[15px] font-semibold text-muted transition-colors hover:text-error focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+        >{{ __('Remove') }}<span class="sr-only"> {{ $person['name'] }}</span></button>
       </div>
     @empty
       <x-empty-state :title="__('Nobody holds this role yet')">

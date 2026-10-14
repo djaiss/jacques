@@ -31,7 +31,7 @@
           </div>
         </div>
 
-        <div class="mx-auto rounded-xl border border-hairline bg-white p-3">
+        <div role="img" aria-label="{{ __('QR code to scan with your authenticator app') }}" class="mx-auto rounded-xl border border-hairline bg-white p-3">
           {{ $viewModel->qrCode() }}
         </div>
       </div>

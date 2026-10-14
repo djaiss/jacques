@@ -4,6 +4,7 @@
   @var string $label
   @var array<int, array{value: string, label: string, hint: string, selected: bool}> $options
   @var string|null $title
+  @var string|null $labelledby
   @var bool $monospacedHints
 --}}
 @props([
@@ -11,6 +12,7 @@
   'label',
   'options',
   'title' => null,
+  'labelledby' => null,
   'monospacedHints' => false,
 ])
 
@@ -21,10 +23,11 @@
     @click.outside="open = false"
     @keydown.escape.window="open = false"
     :aria-expanded="open ? 'true' : 'false'"
+    @if ($labelledby) aria-labelledby="{{ $labelledby }} {{ $name }}-value" @endif
     :class="open ? 'border-focus' : 'border-hairline-strong'"
-    class="flex w-full cursor-pointer items-center gap-2 rounded-md border bg-canvas px-3 py-2 text-sm text-ink transition-colors hover:bg-hover sm:w-42"
+    class="flex w-full cursor-pointer items-center gap-2 rounded-md border bg-canvas px-3 py-2 text-sm text-ink transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none sm:w-42"
   >
-    <span class="truncate">{{ $label }}</span>
+    <span id="{{ $name }}-value" class="truncate">{{ $label }}</span>
 
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="ml-auto shrink-0 text-muted transition-transform duration-200" :class="open && 'rotate-180'" aria-hidden="true">
       <path d="M4.4 6.4 8 10l3.6-3.6"></path>
