@@ -17,9 +17,10 @@
     <button
       type="button"
       x-on:click="edit({{ $row['id'] }})"
+      aria-haspopup="dialog"
       :class="open === {{ $row['id'] }} && 'bg-hover'"
       @class([
-        'grid w-full cursor-pointer items-center border-b border-hairline-soft px-5.5 py-4 text-left transition-colors last:border-b-0 hover:bg-hover',
+        'grid w-full cursor-pointer items-center border-b border-hairline-soft px-5.5 py-4 text-left transition-colors last:border-b-0 hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-inset',
         $columns,
         'bg-sunken' => $row['isArchived'],
       ])
@@ -39,10 +40,10 @@
           @endif
         </span>
 
-        <span class="block truncate text-[15px] text-body">{{ $row['place'] }}</span>
+        <span class="block text-[15px] wrap-anywhere text-body">{{ $row['place'] }}</span>
       </span>
 
-      <span class="truncate text-[15px] text-muted max-md:col-start-2 max-md:row-start-2 md:text-right">{{ $row['timezone'] }}</span>
+      <span class="text-[15px] wrap-anywhere text-muted max-md:col-start-2 max-md:row-start-2 md:text-right">{{ $row['timezone'] }}</span>
 
       <span class="block size-2 -rotate-45 justify-self-end border-r-2 border-b-2 border-muted-soft max-md:col-start-3 max-md:row-start-1" aria-hidden="true"></span>
     </button>

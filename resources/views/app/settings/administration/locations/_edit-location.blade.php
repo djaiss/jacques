@@ -4,7 +4,7 @@
   <x-slot:header>
     <p class="text-xs font-bold tracking-[0.08em] text-muted uppercase">{{ __('Edit location') }}</p>
 
-    <h2 id="location-panel-title" class="mt-1 truncate text-[26px] font-bold tracking-tight text-ink" x-text="form.name"></h2>
+    <h2 id="location-panel-title" class="mt-1 text-[26px] font-bold tracking-tight wrap-anywhere text-ink" x-text="form.name || @js(__('Edit location'))"></h2>
   </x-slot:header>
 
   <!-- the fields of the location -->
@@ -20,7 +20,7 @@
 
     <div id="location-errors">
       @if ($errors->getBag('default')->any())
-        <ul class="space-y-1 rounded-xl bg-error/8 px-3.5 py-3 text-sm text-error ring-[1.5px] ring-error/25">
+        <ul role="alert" class="space-y-1 rounded-xl bg-error/8 px-3.5 py-3 text-sm text-error ring-[1.5px] ring-error/25">
           @foreach ($errors->getBag('default')->all() as $message)
             <li>{{ $message }}</li>
           @endforeach
@@ -29,7 +29,9 @@
     </div>
 
     <x-input
-      id="name"
+      id="location_name"
+      name="name"
+      :error="$errors->get('name')"
       x-model="form.name"
       :label="__('Name')"
       minlength="2"
@@ -38,7 +40,9 @@
     />
 
     <x-input
-      id="address_line_1"
+      id="location_address_line_1"
+      name="address_line_1"
+      :error="$errors->get('address_line_1')"
       x-model="form.addressLine1"
       :label="__('Address')"
       :placeholder="__('Street and number')"
@@ -46,7 +50,9 @@
     />
 
     <x-input
-      id="address_line_2"
+      id="location_address_line_2"
+      name="address_line_2"
+      :error="$errors->get('address_line_2')"
       x-model="form.addressLine2"
       :label="__('Address line 2')"
       :placeholder="__('Building, floor or suite')"
@@ -55,14 +61,18 @@
 
     <div class="grid gap-4.5 sm:grid-cols-2">
       <x-input
-        id="postal_code"
+        id="location_postal_code"
+      name="postal_code"
+      :error="$errors->get('postal_code')"
         x-model="form.postalCode"
         :label="__('Postal code')"
         maxlength="20"
       />
 
       <x-input
-        id="city"
+        id="location_city"
+      name="city"
+      :error="$errors->get('city')"
         x-model="form.city"
         :label="__('City')"
         maxlength="255"
@@ -71,7 +81,9 @@
 
     <div class="grid gap-4.5 sm:grid-cols-2">
       <x-input
-        id="region"
+        id="location_region"
+      name="region"
+      :error="$errors->get('region')"
         x-model="form.region"
         :label="__('Region')"
         :help="__('State, province or county')"
@@ -79,7 +91,9 @@
       />
 
       <x-input
-        id="country"
+        id="location_country"
+      name="country"
+      :error="$errors->get('country')"
         x-model="form.country"
         :label="__('Country')"
         :help="__('Two letters, such as US')"
@@ -91,7 +105,9 @@
 
     <div class="grid gap-4.5 sm:grid-cols-2">
       <x-input
-        id="phone"
+        id="location_phone"
+      name="phone"
+      :error="$errors->get('phone')"
         type="tel"
         x-model="form.phone"
         :label="__('Phone')"
@@ -100,7 +116,9 @@
       />
 
       <x-input
-        id="email"
+        id="location_email"
+      name="email"
+      :error="$errors->get('email')"
         type="email"
         x-model="form.email"
         :label="__('Email address')"
@@ -110,13 +128,14 @@
     </div>
 
     <div class="space-y-1.5">
-      <x-label for="timezone" :value="__('Time zone')" />
+      <x-label for="location_timezone" :value="__('Time zone')" />
 
       <select
-        id="timezone"
+        id="location_timezone"
         name="timezone"
         x-model="form.timezone"
-        class="block w-full appearance-none rounded-[10px] border-[1.5px] border-hairline-strong bg-input px-3.25 py-2.75 text-base text-ink transition-colors duration-150 hover:border-focus hover:bg-hover focus:border-focus focus:bg-canvas focus:outline-none"
+        aria-describedby="location_timezone-help"
+        class="block w-full appearance-none rounded-[10px] border-[1.5px] border-control bg-input px-3.25 py-2.75 text-base text-ink transition-colors duration-150 hover:border-ink hover:bg-hover focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none"
       >
         <option value="">{{ __('Same as the company') }}</option>
 
@@ -125,18 +144,18 @@
         @endforeach
       </select>
 
-      <p class="text-xs text-muted">{{ __('Left empty, this location follows the company time zone.') }}</p>
+      <p id="location_timezone-help" class="text-xs text-muted">{{ __('Left empty, this location follows the company time zone.') }}</p>
     </div>
 
     <label
       class="flex cursor-pointer items-start gap-3.25 rounded-[14px] px-4 py-3.75 transition-colors"
       :class="form.isHeadquarters ? 'bg-accent-soft ring-[1.5px] ring-accent-ink/30' : 'bg-sunken ring-[1.5px] ring-hairline'"
     >
-      <input type="checkbox" id="is_headquarters" name="is_headquarters" value="1" x-model="form.isHeadquarters" class="peer sr-only" />
+      <input type="checkbox" id="location_is_headquarters" name="is_headquarters" value="1" x-model="form.isHeadquarters" class="peer sr-only" />
 
       <span
         aria-hidden="true"
-        class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-hairline-strong bg-canvas text-transparent transition-colors peer-checked:border-accent-ink peer-checked:bg-accent-ink peer-checked:text-canvas peer-focus-visible:ring-2 peer-focus-visible:ring-focus"
+        class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-control bg-canvas text-transparent transition-colors peer-checked:border-accent-ink peer-checked:bg-accent-ink peer-checked:text-canvas peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring"
       >
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <path d="M2.5 6.3 4.8 8.6 9.5 3.8"></path>

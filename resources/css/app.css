@@ -32,6 +32,10 @@
     --color-nav-active: var(--nav-active);
     --color-nav-active-border: var(--nav-active-border);
     --color-focus: var(--focus);
+
+    /* The ring around whatever has the keyboard focus, and the border of a field. Both have to stand out at 3:1. */
+    --color-focus-ring: var(--focus-ring);
+    --color-control: var(--control);
     --color-ink: var(--ink);
     --color-body: var(--body);
     --color-muted: var(--muted);
@@ -52,11 +56,12 @@
     --color-layer-stack: var(--layer-stack);
     --color-layer-bar: var(--layer-bar);
 
-    /* Fixed semantic colors, they read the same in both themes. */
     --color-menu: #1c1a17;
-    --color-success: #4f8a49;
-    --color-warning: #9a6a24;
-    --color-error: #9a3f2b;
+
+    /* Semantic colors, lighter in dark so they keep their contrast on a dark surface. */
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-error: var(--error);
 
     /* Primary button tokens follow the primary, so they invert in dark. */
     --color-accent: var(--primary);
@@ -150,16 +155,21 @@
     --nav-active: #e4dfd1;
     --nav-active-border: #ccc5b5;
     --focus: #b8b1a2;
+    --focus-ring: #3f5fd0;
+    --control: #837d70;
     --ink: #17161a;
     --body: #5f5b54;
     --muted: #6e6a62;
-    --muted-soft: #a9a399;
-    --placeholder: #9c968c;
+    --muted-soft: #736e66;
+    --placeholder: #736e66;
     --primary: #17161a;
     --on-primary: #ffffff;
     --disabled: #e9e5dc;
     --on-disabled: #a9a399;
     --brand: #3f5fd0;
+    --success: #3f7539;
+    --warning: #875d1c;
+    --error: #9a3f2b;
     --layer-backdrop: #e3ded2;
     --layer-stack: #ebe7dc;
     --layer-bar: #f0ede4;
@@ -188,16 +198,21 @@
     --nav-active: #37332a;
     --nav-active-border: #4d4739;
     --focus: #57503f;
+    --focus-ring: #93a7f0;
+    --control: #807a6e;
     --ink: #f2efe7;
     --body: #a49d90;
     --muted: #918a7e;
-    --muted-soft: #777166;
-    --placeholder: #625c52;
+    --muted-soft: #8f887b;
+    --placeholder: #8f887b;
     --primary: #f2efe7;
     --on-primary: #14130f;
     --disabled: #26231d;
     --on-disabled: #6d6759;
     --brand: #93a7f0;
+    --success: #73ad6c;
+    --warning: #d7a25a;
+    --error: #e08a74;
     --layer-backdrop: #070604;
     --layer-stack: #0c0b08;
     --layer-bar: #100e0b;
@@ -216,11 +231,23 @@
     }
 }
 
-/* Somebody who asked for less motion still gets the toast, it just stops moving. */
+/*
+ * Somebody who asked for less motion gets none. Every transition and animation
+ * finishes at once rather than being removed, so the Alpine transitions still
+ * fire their end events and a panel still opens, it just stops moving.
+ */
 @media (prefers-reduced-motion: reduce) {
-    .animate-toast-in,
-    .animate-toast-out,
-    .animate-toast-tick,
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+        scroll-behavior: auto !important;
+    }
+
     .animate-toast-ring,
     .animate-toast-timer {
         animation: none;

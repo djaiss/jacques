@@ -26,7 +26,7 @@
         <x-status :message="session('status')" />
 
         <!-- registration form -->
-        <div x-data="{ terms: @js((bool) old('terms')) }">
+        <div>
           <x-box>
             <x-form method="post" :action="route('auth.register.create')" class="space-y-4">
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -84,6 +84,7 @@
                   <x-input
                     type="password"
                     id="password"
+                    :help="__('Minimum 8 characters.')"
                     :label="__('Password')"
                     autocomplete="new-password"
                     passwordrules="minlength: 8"
@@ -103,17 +104,15 @@
                     required
                   />
                 </div>
-
-                <p class="text-xs text-muted">{{ __('Minimum 8 characters.') }}</p>
               </div>
 
-              <x-checkbox id="terms" x-model="terms" :checked="(bool) old('terms')" :error="$errors->get('terms')" required>
+              <x-checkbox id="terms" :checked="(bool) old('terms')" :error="$errors->get('terms')" required>
                 {!! __('I agree with the :terms and the :privacy.', ['terms' => $terms, 'privacy' => $privacy]) !!}
               </x-checkbox>
 
               <x-turnstile data-size="flexible" />
 
-              <x-button class="w-full" x-bind:disabled="! terms">{{ __('Next step: validate your email address') }}</x-button>
+              <x-button class="w-full">{{ __('Next step: validate your email address') }}</x-button>
             </x-form>
           </x-box>
         </div>

@@ -66,7 +66,7 @@
                 type="submit"
                 class="inline cursor-pointer font-semibold text-ink underline underline-offset-2 decoration-hairline-strong transition-colors duration-150 hover:text-brand hover:decoration-brand"
               >
-                Sign in as {{ $viewModel->localSignInEmail() }}
+                {{ __('Sign in as :email', ['email' => $viewModel->localSignInEmail()]) }}
               </button>
             </x-form>
           </x-box>

@@ -15,6 +15,8 @@
   </head>
 
   <body class="bg-layer-backdrop font-sans text-body antialiased">
+    <a href="#main" class="sr-only z-80 rounded-[10px] bg-primary px-4 py-2.5 text-[15px] font-semibold text-on-primary focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:ring-2 focus:ring-focus-ring focus:outline-none">{{ __('Skip to content') }}</a>
+
     <div
       {{ $attributes->merge(['x-data' => '{}', 'class' => 'flex min-h-screen flex-col']) }}
       @keydown.escape.window="if (! document.querySelector('[data-escape-guard]')) window.location.assign(@js($backUrl))"
@@ -40,7 +42,7 @@
         </span>
       </a>
 
-      <main class="mx-4 min-w-0 flex-1 rounded-t-xl border border-b-0 border-hairline-strong bg-page">
+      <main id="main" tabindex="-1" class="mx-4 focus:outline-none min-w-0 flex-1 rounded-t-xl border border-b-0 border-hairline-strong bg-page">
         <!-- the bar of the layer -->
         <header class="sticky top-0 z-5 flex h-13.5 items-center gap-3.5 rounded-t-xl border-b border-hairline-soft bg-page/90 pr-5.5 pl-4.5 backdrop-blur-md">
           <a

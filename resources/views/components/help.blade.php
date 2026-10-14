@@ -34,7 +34,7 @@
     aria-haspopup="dialog"
     aria-label="{{ __('Help') }}"
     :class="open ? 'border-brand text-brand' : 'border-hairline-strong text-muted-soft'"
-    class="flex size-4 cursor-pointer items-center justify-center rounded-full border bg-canvas text-xs leading-none font-bold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
+    class="flex size-4 cursor-pointer items-center justify-center rounded-full border bg-canvas text-xs leading-none font-bold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
   >?</button>
 
   <div
@@ -60,7 +60,7 @@
           x-show="pinned"
           @click="close()"
           aria-label="{{ __('Close') }}"
-          class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-soft transition-colors hover:text-ink"
+          class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-soft transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <line x1="4" y1="4" x2="12" y2="12"></line>

@@ -44,6 +44,16 @@ class RegistrationControllerTest extends TestCase
     }
 
     #[Test]
+    public function it_ties_the_password_hint_to_the_password_field(): void
+    {
+        $response = $this->get(route('auth.register.new'));
+
+        $response->assertSee('aria-describedby="password-help"', escape: false);
+        $response->assertSee('id="password-help"', escape: false);
+        $response->assertDontSee('x-bind:disabled', escape: false);
+    }
+
+    #[Test]
     public function it_links_to_the_terms_of_use_and_the_privacy_policy(): void
     {
         $response = $this->get(route('auth.register.new'));

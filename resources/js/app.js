@@ -2,6 +2,7 @@ import 'instant.page';
 
 import * as Turbo from '@hotwired/turbo';
 import Alpine from 'alpinejs';
+import focus from '@alpinejs/focus';
 import morph from '@alpinejs/morph';
 import ajax from '@imacrayon/alpine-ajax';
 
@@ -16,6 +17,7 @@ Turbo.session.drive = false;
 
 window.Alpine = Alpine;
 
+Alpine.plugin(focus);
 Alpine.plugin(morph);
 Alpine.plugin(ajax);
 

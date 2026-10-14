@@ -22,8 +22,23 @@
   <div x-sync x-merge="replace" id="notifications" class="pointer-events-auto flex w-full max-w-115 flex-col gap-3">
     @foreach ($toasts as $toast)
       <div
-        x-data="{ shown: true, leaving: false, dismiss() { this.leaving = true; setTimeout(() => this.shown = false, 200) } }"
-        x-init="setTimeout(() => dismiss(), 4500)"
+        x-data="{
+          shown: true,
+          leaving: false,
+          paused: false,
+          remaining: 4500,
+          started: 0,
+          timer: null,
+          run() { this.paused = false; this.started = Date.now(); this.timer = setTimeout(() => this.dismiss(), this.remaining) },
+          pause() { if (this.paused) return; this.paused = true; clearTimeout(this.timer); this.remaining -= Date.now() - this.started },
+          resume() { this.$nextTick(() => { if (! this.paused || this.$el.matches(':hover, :focus-within')) return; this.run() }) },
+          dismiss() { this.leaving = true; setTimeout(() => this.shown = false, 200) },
+        }"
+        x-init="run()"
+        x-on:mouseenter="pause()"
+        x-on:mouseleave="resume()"
+        x-on:focusin="pause()"
+        x-on:focusout="resume()"
         x-show="shown"
         :class="leaving ? 'animate-toast-out' : 'animate-toast-in'"
         class="relative flex items-start gap-4 overflow-hidden rounded-2xl bg-canvas px-4.5 pt-4.5 pb-5 shadow-2xl ring-[1.5px] ring-hairline"
@@ -56,7 +71,7 @@
           type="button"
           x-on:click="dismiss()"
           aria-label="{{ __('Dismiss') }}"
-          class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
+          class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <line x1="3.6" y1="3.6" x2="12.4" y2="12.4"></line>
@@ -64,7 +79,7 @@
           </svg>
         </button>
 
-        <span x-show="! leaving" class="animate-toast-timer absolute inset-x-0 bottom-0 h-1 origin-left {{ $toast['bar'] }}" aria-hidden="true"></span>
+        <span x-show="! leaving" :style="paused && 'animation-play-state: paused'" class="animate-toast-timer absolute inset-x-0 bottom-0 h-1 origin-left {{ $toast['bar'] }}" aria-hidden="true"></span>
       </div>
     @endforeach
   </div>

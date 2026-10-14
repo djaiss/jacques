@@ -2,6 +2,7 @@
 {{--
   @var string $type
   @var string|null $id
+  @var string|null $name
   @var string|null $label
   @var string|null $value
   @var string|null $placeholder
@@ -16,6 +17,7 @@
 @props([
   'type' => 'text',
   'id' => null,
+  'name' => null,
   'label' => null,
   'value' => null,
   'placeholder' => null,
@@ -38,10 +40,10 @@
   $classes = [
     'block w-full appearance-none',
     'px-3.25 py-2.75 text-base',
-    'rounded-[10px] border-[1.5px] border-hairline-strong bg-input text-ink placeholder-placeholder',
+    'rounded-[10px] border-[1.5px] border-control bg-input text-ink placeholder-placeholder',
     'transition-colors duration-150',
-    'hover:border-focus hover:bg-hover',
-    'focus:border-focus focus:bg-canvas focus:ring-3 focus:ring-focus/15 focus:outline-none',
+    'hover:border-ink hover:bg-hover',
+    'focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none',
     'disabled:cursor-default disabled:opacity-60',
     'aria-invalid:border-error',
   ];
@@ -54,7 +56,7 @@
 
   <input
     id="{{ $id }}"
-    name="{{ $id }}"
+    name="{{ $name ?? $id }}"
     type="{{ $type }}"
     value="{{ $value }}"
     placeholder="{{ $placeholder }}"

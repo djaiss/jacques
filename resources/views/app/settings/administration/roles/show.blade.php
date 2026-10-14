@@ -36,6 +36,8 @@
             @if ($onPeopleTab)
               <h1 class="text-[32px] leading-tight font-bold tracking-tight text-ink">{{ $role['name'] }}</h1>
             @else
+              <h1 class="sr-only">{{ $role['name'] }}</h1>
+
               <label for="role-name" class="sr-only">{{ __('Name of the role') }}</label>
 
               <input
@@ -48,7 +50,7 @@
                 required
                 @disabled(! $role['isEditable'])
                 @if ($errors->has('name')) aria-invalid="true" aria-describedby="role-name-error" @endif
-                class="-mx-2.5 min-w-40 flex-1 rounded-[10px] border-[1.5px] border-transparent bg-transparent px-2.5 py-1 text-[32px] leading-tight font-bold tracking-tight text-ink transition-colors outline-none hover:border-hairline-strong focus:border-focus focus:bg-canvas disabled:hover:border-transparent"
+                class="-mx-2.5 min-w-40 flex-1 rounded-[10px] border-[1.5px] border-transparent bg-transparent px-2.5 py-1 text-[32px] leading-tight font-bold tracking-tight text-ink transition-colors outline-none hover:border-hairline-strong focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring disabled:hover:border-transparent"
               />
             @endif
 
@@ -93,19 +95,19 @@
 
     <!-- permissions or people -->
     <div class="mb-5 flex justify-center">
-      <div class="flex gap-0.75 rounded-xl bg-canvas p-1 ring-[1.5px] ring-hairline">
+      <nav aria-label="{{ __('Role sections') }}" class="flex gap-0.75 rounded-xl bg-canvas p-1 ring-[1.5px] ring-hairline">
         @foreach ($viewModel->tabs() as $tab)
           <a
             href="{{ $tab['url'] }}"
             data-turbo="true"
             @if ($tab['current']) aria-current="page" @endif
             @if ($tab['key'] === 'permissions') x-text="tabCounts[grantedCount()]" @endif
-            class="rounded-[9px] px-3.5 py-2 text-[15px] font-semibold transition-colors {{ $tab['current'] ? 'bg-nav-hover text-ink' : 'text-muted hover:text-ink' }}"
+            class="rounded-[9px] px-3.5 py-2 text-[15px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none {{ $tab['current'] ? 'bg-nav-hover text-ink' : 'text-muted hover:text-ink' }}"
           >
             {{ $tab['label'] }}
           </a>
         @endforeach
-      </div>
+      </nav>
     </div>
 
     <!-- the tab being read -->

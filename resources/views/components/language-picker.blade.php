@@ -21,10 +21,10 @@
     @keydown.escape.window="open = false"
     :aria-expanded="open ? 'true' : 'false'"
     :class="open ? 'border-focus' : 'border-hairline-strong'"
-    class="flex cursor-pointer items-center gap-2 rounded-md border bg-canvas px-3 py-2 text-sm text-ink transition-colors"
+    class="flex cursor-pointer items-center gap-2 rounded-md border bg-canvas px-3 py-2 text-sm text-ink transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
   >
     <span class="{{ $flag }}" style="background: {{ $selected['flag'] }};" aria-hidden="true"></span>
-    <span>{{ $selected['label'] }}</span>
+    <span><span class="sr-only">{{ __('Interface language') }}: </span>{{ $selected['label'] }}</span>
 
     <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted" aria-hidden="true">
       <path d="M4.5 6.6 8 3.1l3.5 3.5"></path>
