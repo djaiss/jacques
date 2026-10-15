@@ -114,7 +114,7 @@
         @foreach ($group['permissions'] as $permission)
           <div
             x-show="open(@js($group['title'])) && matches(@js($permission['value']))"
-            class="grid gap-x-3.5 gap-y-1.5 rounded-xl py-2.5 pr-3 pl-8.5 transition-colors hover:bg-hover sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            class="grid gap-x-3.5 gap-y-1.5 rounded-xl py-2.5 pr-3 pl-8.5 ring-[1.5px] ring-transparent transition-colors hover:bg-hover hover:ring-hairline sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
           >
             <label class="flex min-w-0 cursor-pointer items-center gap-3.5">
               <input
