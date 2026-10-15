@@ -236,6 +236,7 @@ class User extends Authenticatable
     {
         return $this->grants ??= RolePermission::query()
             ->whereIn('role_id', $this->roles()->select('roles.id'))
+            ->orderBy('id')
             ->get()
             ->groupBy(fn (RolePermission $grant): string => $grant->permission->value)
             ->map(fn ($grants): array => $grants->pluck('scope')->unique()->values()->all())
