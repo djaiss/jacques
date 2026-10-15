@@ -38,7 +38,7 @@
 
       <select
         id="location-assignee"
-        name="user"
+        name="staff"
         required
         class="block w-full rounded-xl border-[1.5px] border-control bg-input px-3.5 py-2.5 text-base text-ink transition-colors hover:border-ink focus:border-focus-ring focus:ring-2 focus:ring-focus-ring focus:outline-none"
       >

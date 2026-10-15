@@ -104,7 +104,7 @@ class UpdateCompanyCurrenciesTest extends TestCase
 
         $company = Company::factory()->create();
         $dwight = User::factory()->create(['company_id' => $company->id]);
-        $this->grant($dwight, PermissionEnum::EmployeeView);
+        $this->grant($dwight, PermissionEnum::StaffView);
 
         new UpdateCompanyCurrencies(
             author: $dwight,

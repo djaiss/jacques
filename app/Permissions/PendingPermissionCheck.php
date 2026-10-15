@@ -7,8 +7,8 @@ namespace App\Permissions;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
+use App\Models\Staff;
 use App\Models\User;
 use InvalidArgumentException;
 
@@ -19,14 +19,14 @@ class PendingPermissionCheck
         private readonly PermissionEnum $permission,
     ) {}
 
-    public function forEmployee(Employee $employee): PermissionDecision
+    public function forStaff(Staff $staff): PermissionDecision
     {
-        if (! $this->permission->targetsEmployee()) {
-            throw new InvalidArgumentException($this->permission->value.' is not about one employee and cannot be checked with forEmployee()');
+        if (! $this->permission->targetsStaff()) {
+            throw new InvalidArgumentException($this->permission->value.' is not about one staff member and cannot be checked with forStaff()');
         }
 
         // Tenant isolation comes first, before any grant is read.
-        if ($this->user->company_id !== $employee->company_id) {
+        if ($this->user->company_id !== $staff->company_id) {
             return new PermissionDecision(false);
         }
 
@@ -36,16 +36,14 @@ class PendingPermissionCheck
             return new PermissionDecision(true);
         }
 
-        if (in_array(ScopeEnum::Location, $scopes, true) && $this->sharesALocationWith($employee)) {
+        if (in_array(ScopeEnum::Location, $scopes, true) && $this->sharesALocationWith($staff)) {
             return new PermissionDecision(true);
         }
 
         if (in_array(ScopeEnum::Self, $scopes, true)) {
-            // An account behind no employee has no record of its own, so self
-            // covers nothing for it.
-            return new PermissionDecision(
-                $this->user->employee_id !== null && $this->user->employee_id === $employee->id,
-            );
+            // An account behind no staff member has no record of its own, so
+            // self covers nothing for it.
+            return new PermissionDecision($this->user->staff?->id === $staff->id);
         }
 
         return new PermissionDecision(false);
@@ -69,14 +67,14 @@ class PendingPermissionCheck
 
         return new PermissionDecision(
             in_array(ScopeEnum::Location, $scopes, true)
-            && $this->user->locations()->whereKey($location->id)->exists(),
+            && $this->user->staff?->activeLocations()->whereKey($location->id)->exists() === true,
         );
     }
 
     public function forCompany(Company $company): PermissionDecision
     {
-        if ($this->permission->targetsEmployee()) {
-            throw new InvalidArgumentException($this->permission->value.' is about one employee and has to be checked with forEmployee()');
+        if ($this->permission->targetsStaff()) {
+            throw new InvalidArgumentException($this->permission->value.' is about one staff member and has to be checked with forStaff()');
         }
 
         if ($this->user->company_id !== $company->id) {
@@ -95,10 +93,14 @@ class PendingPermissionCheck
         return new PermissionDecision($this->grantedScopes() !== []);
     }
 
-    private function sharesALocationWith(Employee $employee): bool
+    private function sharesALocationWith(Staff $staff): bool
     {
-        return $this->user->locations()
-            ->whereHas('users', fn ($query) => $query->where('employee_id', $employee->id))
+        if ($this->user->staff === null) {
+            return false;
+        }
+
+        return $this->user->staff->activeLocations()
+            ->whereHas('staff', fn ($query) => $query->whereKey($staff->id))
             ->exists();
     }
 

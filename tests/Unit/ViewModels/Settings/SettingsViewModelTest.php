@@ -6,9 +6,9 @@ namespace Tests\Unit\ViewModels\Settings;
 
 use App\Enums\PermissionEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use App\ViewModels\Settings\SettingsViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,7 +24,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $titles = array_column($viewModel->accountRows(), 'title');
 
@@ -36,7 +36,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = User::factory()->create(['two_factor_confirmed_at' => now()]);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertSame('Two-factor on', $viewModel->accountRows()[1]['value']);
     }
@@ -46,7 +46,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = User::factory()->create(['two_factor_confirmed_at' => null]);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertSame('Two-factor off', $viewModel->accountRows()[1]['value']);
     }
@@ -61,7 +61,7 @@ class SettingsViewModelTest extends TestCase
         );
         Location::factory()->count(2)->create(['company_id' => $company->id]);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertSame('2 locations', $viewModel->companyRows()[0]['value']);
     }
@@ -71,7 +71,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertSame([], $viewModel->companyRows());
     }
@@ -81,7 +81,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = $this->giveDefaultRole(User::factory()->create(), Role::MANAGER);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertEquals(['Locations'], array_column($viewModel->companyRows(), 'title'));
     }
@@ -91,7 +91,7 @@ class SettingsViewModelTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.example']);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: null);
+        $viewModel = new SettingsViewModel(user: $user, staff: null);
 
         $this->assertSame('michael.scott@dundermifflin.example', $viewModel->name());
     }
@@ -100,13 +100,13 @@ class SettingsViewModelTest extends TestCase
     public function it_names_the_role_of_somebody(): void
     {
         $company = Company::factory()->create();
-        $employee = Employee::factory()->create(['company_id' => $company->id]);
         $user = $this->grant(
-            User::factory()->create(['company_id' => $company->id, 'employee_id' => $employee->id]),
+            User::factory()->create(['company_id' => $company->id]),
             PermissionEnum::LocationManage,
         );
+        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
 
-        $viewModel = new SettingsViewModel(user: $user, employee: $employee);
+        $viewModel = new SettingsViewModel(user: $user, staff: $staff);
 
         $this->assertSame('location.manage at company scope', $viewModel->role());
     }

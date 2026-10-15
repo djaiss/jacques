@@ -83,7 +83,7 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
     Route::post('settings/account/profile/avatar', [AvatarController::class, 'update'])->name('settings.avatar.update');
     Route::delete('settings/account/profile/avatar', [AvatarController::class, 'destroy'])->name('settings.avatar.destroy');
-    Route::get('settings/account/profile/avatar/{employee}/{size}', [AvatarController::class, 'show'])->whereNumber(['employee', 'size'])->name('settings.avatar.show');
+    Route::get('settings/account/profile/avatar/{staff}/{size}', [AvatarController::class, 'show'])->whereNumber(['staff', 'size'])->name('settings.avatar.show');
 });
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
@@ -106,5 +106,5 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
     Route::delete('settings/administration/locations/{location}/archive', [LocationArchiveController::class, 'destroy'])->whereNumber('location')->name('settings.locationArchives.destroy');
 
     Route::post('settings/administration/locations/{location}/people', [LocationPeopleController::class, 'create'])->whereNumber('location')->name('settings.locationPeople.create');
-    Route::delete('settings/administration/locations/{location}/people/{user}', [LocationPeopleController::class, 'destroy'])->whereNumber(['location', 'user'])->name('settings.locationPeople.destroy');
+    Route::delete('settings/administration/locations/{location}/people/{staff}', [LocationPeopleController::class, 'destroy'])->whereNumber(['location', 'staff'])->name('settings.locationPeople.destroy');
 });

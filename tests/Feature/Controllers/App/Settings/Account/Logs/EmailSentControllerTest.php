@@ -6,7 +6,7 @@ namespace Tests\Feature\Controllers\App\Settings\Account\Logs;
 
 use App\Models\Company;
 use App\Models\EmailSent;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,14 +20,12 @@ class EmailSentControllerTest extends TestCase
     public function it_shows_the_emails_sent_screen(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create(['company_id' => $company->id]);
+        Staff::factory()->create([
             'company_id' => $company->id,
             'first_name' => 'Pam',
             'last_name' => 'Beesly',
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
+            'user_id' => $user->id,
         ]);
         EmailSent::factory()->create([
             'company_id' => $company->id,

@@ -20,8 +20,8 @@ class TopBarLayout extends Component
 
         return view('layouts.top-bar', [
             'companyName' => $user->company->name,
-            'name' => $user->employee->name ?? $user->email,
-            'employee' => $user->employee,
+            'name' => $user->staff->name ?? $user->email,
+            'staff' => $user->staff,
         ]);
     }
 }

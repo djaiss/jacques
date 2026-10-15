@@ -61,13 +61,15 @@ servent qu'à afficher les prix du catalogue, puisque Jacques n'encaisse rien
 prix dans chacune, saisi par le salon. Jacques ne convertit jamais un montant
 d'une devise à une autre.
 
-### D3. Un membre de l'équipe est un compte utilisateur
+### D3. Un membre de l'équipe est une fiche, liée ou non à un compte
 
-Il n'existe pas de personne au planning sans compte. Créer un membre de l'équipe
-crée son accès.
+Un membre de l'équipe (`Staff`) existe sans compte. Une personne qui ne se
+connecte jamais figure quand même au planning. Une fiche est liée à un compte au
+plus, et un compte à une fiche au plus.
 
-Conséquence : une personne qui quitte le salon est désactivée, jamais supprimée,
-sinon l'historique des rendez-vous perd son auteur.
+Conséquence : une personne qui quitte le salon est désactivée. Sa fiche ne peut
+être supprimée que tant qu'aucun rendez-vous ne la mentionne, sinon l'historique
+des rendez-vous perd son auteur.
 
 ### D4. Quatre rôles par défaut, modifiables et cumulables
 
@@ -332,30 +334,32 @@ numéros et les erreurs de saisie.
 ## Ce que ces décisions impliquent comme modèles
 
 Les vingt fichiers de concepts effacés listaient 99 modèles. Les décisions ci
-dessus en laissent 23.
+dessus en laissent 25.
 
 ### Salon et équipe
 
-`Salon`, `User`, `ScheduleRule`, `ScheduleException`.
+`Salon`, `User`, `Staff`, `LocationStaff`, `StaffWorkingHour`, `StaffAbsence`.
 
 Le salon porte sa langue, son fuseau horaire, ses devises et les deux réglages de
 réservation (D14, D20).
 
-`ScheduleRule` est une règle récurrente qui dit qu'un salon ou une personne est
-disponible ou indisponible. Elle remplace les horaires d'ouverture, les horaires
-de travail et les pauses.
+`LocationStaff` affecte une fiche à un établissement, et peut être suspendue.
 
-`ScheduleException` est la même chose, mais datée. Elle remplace les jours de
-fermeture, les congés et les blocages d'agenda.
+`StaffWorkingHour` est une plage horaire hebdomadaire d'une personne dans un
+établissement. Plusieurs plages le même jour laissent une pause entre elles.
+
+`StaffAbsence` est une période datée, en UTC, où une personne ne travaille pas,
+dans un établissement ou dans tous. Les horaires d'ouverture et les jours de
+fermeture des établissements restent à modéliser.
 
 ### Catalogue
 
 `ServiceCategory`, `Service`, `ServiceStep`, `LocationService`,
-`TeamMemberService`.
+`StaffLocationService`.
 
 `LocationService` dit qu'un établissement propose une prestation, et porte le
 prix surchargé (D8). Savoir faire une prestation dans un établissement, c'est
-figurer dans `TeamMemberService`. Il n'y a pas de modèle de compétence et
+figurer dans `StaffLocationService`. Il n'y a pas de modèle de compétence et
 aucune durée n'est surchargée.
 
 Une variante de prestation se déclare comme une prestation distincte dans la

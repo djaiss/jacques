@@ -2,12 +2,12 @@
 {{--
   @var string $companyName
   @var string $name
-  @var \App\Models\Employee|null $employee
+  @var \App\Models\Staff|null $staff
 --}}
 @props([
   'companyName',
   'name',
-  'employee' => null,
+  'staff' => null,
 ])
 
 @php
@@ -125,6 +125,6 @@
   <div id="top-bar-identity" class="flex items-center gap-2.25">
     <span class="text-sm text-body">{{ $name }}</span>
 
-    <x-avatar :employee="$employee" :name="$name" :size="28" />
+    <x-avatar :staff="$staff" :name="$name" :size="28" />
   </div>
 </header>

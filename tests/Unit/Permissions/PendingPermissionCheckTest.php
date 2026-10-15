@@ -7,10 +7,11 @@ namespace Tests\Unit\Permissions;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
+use App\Models\LocationStaff;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,14 +25,14 @@ class PendingPermissionCheckTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function it_allows_an_employee_of_the_company_at_company_scope(): void
+    public function it_allows_a_staff_member_of_the_company_at_company_scope(): void
     {
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $michael = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Company);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $michael = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Company);
 
         $this->assertTrue(
-            $michael->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
+            $michael->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
         );
     }
 
@@ -39,28 +40,28 @@ class PendingPermissionCheckTest extends TestCase
     public function it_allows_only_their_own_record_at_self_scope(): void
     {
         $company = Company::factory()->create();
-        $jim = Employee::factory()->create(['company_id' => $company->id]);
-        $pam = Employee::factory()->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Self, $jim);
+        $jim = Staff::factory()->create(['company_id' => $company->id]);
+        $pam = Staff::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self, $jim);
 
         $this->assertTrue(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($jim)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($jim)->allowed(),
         );
         $this->assertFalse(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($pam)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($pam)->allowed(),
         );
     }
 
     #[Test]
-    public function it_never_matches_self_when_the_user_has_no_employee(): void
+    public function it_never_matches_self_when_the_user_has_no_staff_record(): void
     {
         $company = Company::factory()->create();
-        $creed = Employee::factory()->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Self);
+        $creed = Staff::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self);
 
-        $this->assertNull($user->employee_id);
+        $this->assertNull($user->staff);
         $this->assertFalse(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($creed)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($creed)->allowed(),
         );
     }
 
@@ -68,24 +69,24 @@ class PendingPermissionCheckTest extends TestCase
     public function it_denies_when_no_role_grants_the_permission(): void
     {
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::EmployeeView, ScopeEnum::Company);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
 
         $this->assertFalse(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
         );
     }
 
     #[Test]
-    public function it_denies_an_employee_of_another_company(): void
+    public function it_denies_a_staff_member_of_another_company(): void
     {
         $dunderMifflin = Company::factory()->create();
         $michaelScottPaperCompany = Company::factory()->create();
-        $stranger = Employee::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
-        $user = $this->userWith($dunderMifflin, PermissionEnum::EmployeeUpdate, ScopeEnum::Company);
+        $stranger = Staff::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
+        $user = $this->userWith($dunderMifflin, PermissionEnum::StaffUpdate, ScopeEnum::Company);
 
         $this->assertFalse(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($stranger)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($stranger)->allowed(),
         );
     }
 
@@ -93,12 +94,12 @@ class PendingPermissionCheckTest extends TestCase
     public function it_allows_the_owner_role_everything_inside_their_own_company(): void
     {
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
         $this->assertTrue(
-            $owner->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
+            $owner->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
         );
         $this->assertTrue(
             $owner->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
@@ -115,10 +116,10 @@ class PendingPermissionCheckTest extends TestCase
         $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $dunderMifflin->id]), Role::OWNER);
 
         $michaelScottPaperCompany = Company::factory()->create();
-        $stranger = Employee::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
+        $stranger = Staff::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
 
         $this->assertFalse(
-            $owner->permission(PermissionEnum::EmployeeView)->forEmployee($stranger)->allowed(),
+            $owner->permission(PermissionEnum::StaffView)->forStaff($stranger)->allowed(),
         );
         $this->assertFalse(
             $owner->permission(PermissionEnum::CompanyManage)->forCompany($michaelScottPaperCompany)->allowed(),
@@ -132,7 +133,7 @@ class PendingPermissionCheckTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $stamford = Location::factory()->create(['company_id' => $company->id]);
         $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Location);
-        $user->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id])->locations()->attach($scranton);
 
         $this->assertTrue(
             $user->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
@@ -160,7 +161,7 @@ class PendingPermissionCheckTest extends TestCase
         $company = Company::factory()->create();
         $nashua = Location::factory()->create();
         $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Company);
-        $user->locations()->attach($nashua);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id])->locations()->attach($nashua);
 
         $this->assertFalse(
             $user->permission(PermissionEnum::LocationManage)->forLocation($nashua)->allowed(),
@@ -173,18 +174,66 @@ class PendingPermissionCheckTest extends TestCase
         $company = Company::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $stamford = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $andy = Employee::factory()->create(['company_id' => $company->id]);
-        User::factory()->create(['company_id' => $company->id, 'employee_id' => $dwight->id])->locations()->attach($scranton);
-        User::factory()->create(['company_id' => $company->id, 'employee_id' => $andy->id])->locations()->attach($stamford);
-        $michael = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Location);
-        $michael->locations()->attach($scranton);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $andy = Staff::factory()->create(['company_id' => $company->id]);
+        $dwight->locations()->attach($scranton);
+        $andy->locations()->attach($stamford);
+        $michael = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Location);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         $this->assertTrue(
-            $michael->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->allowed(),
+            $michael->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
         );
         $this->assertFalse(
-            $michael->permission(PermissionEnum::EmployeeUpdate)->forEmployee($andy)->allowed(),
+            $michael->permission(PermissionEnum::StaffUpdate)->forStaff($andy)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_denies_a_location_whose_assignment_is_paused_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Location);
+        $michael = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+        LocationStaff::factory()->paused()->create(['location_id' => $scranton->id, 'staff_id' => $michael->id]);
+
+        $this->assertFalse(
+            $user->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_denies_a_colleague_when_the_shared_assignment_is_paused_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $dwight->locations()->attach($scranton);
+        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Location);
+        $michael = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+        LocationStaff::factory()->paused()->create(['location_id' => $scranton->id, 'staff_id' => $michael->id]);
+
+        $this->assertFalse(
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
+        );
+    }
+
+    #[Test]
+    public function it_denies_an_account_without_a_staff_record_at_location_scope(): void
+    {
+        $company = Company::factory()->create();
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $dwight->locations()->attach($scranton);
+        $locationManager = $this->userWith($company, PermissionEnum::LocationManage, ScopeEnum::Location);
+        $staffEditor = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Location);
+
+        $this->assertFalse(
+            $locationManager->permission(PermissionEnum::LocationManage)->forLocation($scranton)->allowed(),
+        );
+        $this->assertFalse(
+            $staffEditor->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->allowed(),
         );
     }
 
@@ -214,21 +263,21 @@ class PendingPermissionCheckTest extends TestCase
     public function it_adds_up_the_grants_of_several_roles(): void
     {
         $company = Company::factory()->create();
-        $angela = Employee::factory()->create(['company_id' => $company->id]);
-        $oscar = Employee::factory()->create(['company_id' => $company->id]);
+        $angela = Staff::factory()->create(['company_id' => $company->id]);
+        $oscar = Staff::factory()->create(['company_id' => $company->id]);
 
-        $user = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Self, $angela);
+        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self, $angela);
 
         $accountant = Role::factory()->create(['company_id' => $company->id]);
         RolePermission::factory()->create([
             'role_id' => $accountant->id,
-            'permission' => PermissionEnum::EmployeeUpdate,
+            'permission' => PermissionEnum::StaffUpdate,
             'scope' => ScopeEnum::Company,
         ]);
         $user->roles()->attach($accountant->id);
 
         $this->assertTrue(
-            $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($oscar)->allowed(),
+            $user->permission(PermissionEnum::StaffUpdate)->forStaff($oscar)->allowed(),
         );
     }
 
@@ -247,7 +296,7 @@ class PendingPermissionCheckTest extends TestCase
     public function it_denies_a_company_wide_permission_the_role_does_not_grant(): void
     {
         $company = Company::factory()->create();
-        $user = $this->userWith($company, PermissionEnum::EmployeeCreate, ScopeEnum::Company);
+        $user = $this->userWith($company, PermissionEnum::StaffCreate, ScopeEnum::Company);
 
         $this->assertFalse(
             $user->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed(),
@@ -267,26 +316,26 @@ class PendingPermissionCheckTest extends TestCase
     }
 
     #[Test]
-    public function it_refuses_to_check_a_company_wide_permission_against_an_employee(): void
+    public function it_refuses_to_check_a_company_wide_permission_against_a_staff_member(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
         $user = $this->userWith($company, PermissionEnum::CompanyManage, ScopeEnum::Company);
 
-        $user->permission(PermissionEnum::CompanyManage)->forEmployee($dwight);
+        $user->permission(PermissionEnum::CompanyManage)->forStaff($dwight);
     }
 
     #[Test]
-    public function it_refuses_to_check_a_permission_about_one_employee_against_a_company(): void
+    public function it_refuses_to_check_a_permission_about_one_staff_member_against_a_company(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
         $company = Company::factory()->create();
-        $user = $this->userWith($company, PermissionEnum::EmployeeUpdate, ScopeEnum::Company);
+        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Company);
 
-        $user->permission(PermissionEnum::EmployeeUpdate)->forCompany($company);
+        $user->permission(PermissionEnum::StaffUpdate)->forCompany($company);
     }
 
     #[Test]
@@ -295,20 +344,20 @@ class PendingPermissionCheckTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::EmployeeView, ScopeEnum::Company);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
 
-        $user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($dwight)->authorize();
+        $user->permission(PermissionEnum::StaffUpdate)->forStaff($dwight)->authorize();
     }
 
     #[Test]
     public function it_says_nothing_when_the_check_passes(): void
     {
         $company = Company::factory()->create();
-        $dwight = Employee::factory()->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::EmployeeView, ScopeEnum::Company);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
 
-        $user->permission(PermissionEnum::EmployeeView)->forEmployee($dwight)->authorize();
+        $user->permission(PermissionEnum::StaffView)->forStaff($dwight)->authorize();
 
         $this->assertTrue(true);
     }
@@ -317,22 +366,22 @@ class PendingPermissionCheckTest extends TestCase
     public function it_reads_the_roles_of_a_user_once_a_request(): void
     {
         $company = Company::factory()->create();
-        $user = $this->userWith($company, PermissionEnum::EmployeeView, ScopeEnum::Company);
-        $employees = Employee::factory()->count(5)->create(['company_id' => $company->id]);
+        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
+        $staffMembers = Staff::factory()->count(5)->create(['company_id' => $company->id]);
 
         $queries = 0;
         DB::listen(function () use (&$queries): void {
             $queries++;
         });
 
-        foreach ($employees as $employee) {
-            $user->permission(PermissionEnum::EmployeeView)->forEmployee($employee)->allowed();
+        foreach ($staffMembers as $staff) {
+            $user->permission(PermissionEnum::StaffView)->forStaff($staff)->allowed();
         }
 
         $this->assertEquals(1, $queries);
     }
 
-    private function userWith(Company $company, PermissionEnum $permission, ScopeEnum $scope, ?Employee $employee = null): User
+    private function userWith(Company $company, PermissionEnum $permission, ScopeEnum $scope, ?Staff $staff = null): User
     {
         $role = Role::factory()->create(['company_id' => $company->id]);
 
@@ -342,10 +391,9 @@ class PendingPermissionCheckTest extends TestCase
             'scope' => $scope,
         ]);
 
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee?->id,
-        ]);
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $staff?->update(['user_id' => $user->id]);
 
         $user->roles()->attach($role->id);
 

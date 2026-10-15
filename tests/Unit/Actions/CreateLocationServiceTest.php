@@ -13,6 +13,7 @@ use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\Service;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,7 +82,7 @@ class CreateLocationServiceTest extends TestCase
         $company = Company::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $dwight->locations()->attach($scranton->id);
+        Staff::factory()->create(['company_id' => $dwight->company_id, 'user_id' => $dwight->id])->locations()->attach($scranton->id);
         $haircut = Service::factory()->create(['company_id' => $company->id]);
 
         new CreateLocationService(author: $dwight, location: $scranton, service: $haircut)->execute();
@@ -98,7 +99,7 @@ class CreateLocationServiceTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $stamford = Location::factory()->create(['company_id' => $company->id]);
         $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $dwight->locations()->attach($scranton->id);
+        Staff::factory()->create(['company_id' => $dwight->company_id, 'user_id' => $dwight->id])->locations()->attach($scranton->id);
         $haircut = Service::factory()->create(['company_id' => $company->id]);
 
         new CreateLocationService(author: $dwight, location: $stamford, service: $haircut)->execute();
@@ -112,7 +113,7 @@ class CreateLocationServiceTest extends TestCase
         $company = Company::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $pam = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::RECEPTIONIST);
-        $pam->locations()->attach($scranton->id);
+        Staff::factory()->create(['company_id' => $pam->company_id, 'user_id' => $pam->id])->locations()->attach($scranton->id);
         $haircut = Service::factory()->create(['company_id' => $company->id]);
 
         new CreateLocationService(author: $pam, location: $scranton, service: $haircut)->execute();

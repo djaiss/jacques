@@ -7,9 +7,9 @@ namespace App\ViewModels\Settings\Administration;
 use App\Enums\PermissionEnum;
 use App\Enums\PermissionGroupEnum;
 use App\Enums\ScopeEnum;
-use App\Models\Employee;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\Staff;
 use App\Models\User;
 use App\Models\UserRole;
 use Carbon\Carbon;
@@ -183,7 +183,7 @@ class RolesViewModel
         return array_key_exists(PermissionEnum::RoleManage->value, $this->grants());
     }
 
-    /** @return array<int, array{id: int, name: string, email: string, employee: Employee|null, since: string, removeUrl: string, isRemovable: bool}> */
+    /** @return array<int, array{id: int, name: string, email: string, staff: Staff|null, since: string, removeUrl: string, isRemovable: bool}> */
     public function people(): array
     {
         if ($this->role === null) {
@@ -195,13 +195,13 @@ class RolesViewModel
             && $this->role->users()->where('is_active', true)->count() === 1;
 
         return $this->role->users()
-            ->with('employee')
+            ->with('staff')
             ->get()
             ->map(fn (User $user): array => [
                 'id' => $user->id,
-                'name' => $user->employee->name ?? $user->email,
+                'name' => $user->staff->name ?? $user->email,
                 'email' => $user->email,
-                'employee' => $user->employee,
+                'staff' => $user->staff,
                 'since' => __('Holds it since :date', ['date' => $heldSince[$user->id]->isoFormat('MMM YYYY')]),
                 'removeUrl' => route('settings.rolePeople.destroy', [$this->role->id, $user->id]),
                 'isRemovable' => ! ($isLastOwner && $user->is_active),
@@ -209,7 +209,7 @@ class RolesViewModel
             ->all();
     }
 
-    /** @return array<int, array{id: int, name: string, email: string, employee: Employee|null}> */
+    /** @return array<int, array{id: int, name: string, email: string, staff: Staff|null}> */
     public function assignable(): array
     {
         if ($this->role === null) {
@@ -218,13 +218,13 @@ class RolesViewModel
 
         return $this->user->company->users()
             ->whereDoesntHave('roles', fn ($query) => $query->where('roles.id', $this->role->id))
-            ->with('employee')
+            ->with('staff')
             ->get()
             ->map(fn (User $user): array => [
                 'id' => $user->id,
-                'name' => $user->employee->name ?? $user->email,
+                'name' => $user->staff->name ?? $user->email,
                 'email' => $user->email,
-                'employee' => $user->employee,
+                'staff' => $user->staff,
             ])
             ->all();
     }

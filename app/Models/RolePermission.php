@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Class RolePermission
  *
- * One thing a role is allowed to do, and the scope saying over which employees
+ * One thing a role is allowed to do, and the scope saying over which staff members
  * it is allowed to do it. A role grants a permission once, at one scope.
  *
  * @property int $id

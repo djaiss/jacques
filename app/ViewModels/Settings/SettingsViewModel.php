@@ -6,14 +6,14 @@ namespace App\ViewModels\Settings;
 
 use App\Enums\PermissionEnum;
 use App\Enums\TimeFormatEnum;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 
 class SettingsViewModel
 {
     public function __construct(
         private readonly User $user,
-        private readonly ?Employee $employee,
+        private readonly ?Staff $staff,
     ) {}
 
     public function companyName(): string
@@ -23,12 +23,12 @@ class SettingsViewModel
 
     public function name(): string
     {
-        return $this->employee->name ?? $this->user->email;
+        return $this->staff->name ?? $this->user->email;
     }
 
-    public function employee(): ?Employee
+    public function staff(): ?Staff
     {
-        return $this->employee;
+        return $this->staff;
     }
 
     public function role(): string

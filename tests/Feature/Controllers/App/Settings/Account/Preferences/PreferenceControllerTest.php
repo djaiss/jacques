@@ -6,7 +6,7 @@ namespace Tests\Feature\Controllers\App\Settings\Account\Preferences;
 
 use App\Enums\TimeFormatEnum;
 use App\Models\Company;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -21,17 +21,17 @@ class PreferenceControllerTest extends TestCase
     public function it_shows_the_preferences_screen(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'locale' => 'en',
+            'time_format' => TimeFormatEnum::TwentyFourHour,
+        ]);
+        Staff::factory()->create([
             'company_id' => $company->id,
             'first_name' => 'Michael',
             'last_name' => 'Scott',
             'display_name' => null,
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
-            'locale' => 'en',
-            'time_format' => TimeFormatEnum::TwentyFourHour,
+            'user_id' => $user->id,
         ]);
 
         $response = $this->actingAs($user)->get(route('settings.preferences.index'));
@@ -50,10 +50,9 @@ class PreferenceControllerTest extends TestCase
     }
 
     #[Test]
-    public function it_writes_the_email_address_in_the_top_bar_when_there_is_no_employee_record(): void
+    public function it_writes_the_email_address_in_the_top_bar_when_there_is_no_staff_record(): void
     {
         $user = User::factory()->create([
-            'employee_id' => null,
             'email' => 'accountant@vancerefrigeration.com',
         ]);
 

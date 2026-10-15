@@ -15,30 +15,30 @@ class LocationPeopleController extends Controller
     public function create(Request $request, int $location): RedirectResponse
     {
         $validated = $request->validate([
-            'user' => ['required', 'integer'],
+            'staff' => ['required', 'integer'],
         ]);
 
-        $user = new AssignLocation(
+        $staff = new AssignLocation(
             author: $request->user(),
-            user: $request->user()->company->users()->findOrFail($validated['user']),
+            staff: $request->user()->company->staff()->findOrFail($validated['staff']),
             location: $request->user()->company->locations()->findOrFail($location),
         )->execute();
 
         return back()
             ->with('status', __('The person is assigned to the location.'))
-            ->with('status_description', __(':email works there from now on.', ['email' => $user->email]));
+            ->with('status_description', __(':name works there from now on.', ['name' => $staff->name]));
     }
 
-    public function destroy(Request $request, int $location, int $user): RedirectResponse
+    public function destroy(Request $request, int $location, int $staff): RedirectResponse
     {
-        $user = new RemoveLocation(
+        $staff = new RemoveLocation(
             author: $request->user(),
-            user: $request->user()->company->users()->findOrFail($user),
+            staff: $request->user()->company->staff()->findOrFail($staff),
             location: $request->user()->company->locations()->findOrFail($location),
         )->execute();
 
         return back()
             ->with('status', __('The person is taken off the location.'))
-            ->with('status_description', __(':email keeps every other location they work at.', ['email' => $user->email]));
+            ->with('status_description', __(':name keeps every other location they work at.', ['name' => $staff->name]));
     }
 }

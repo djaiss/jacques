@@ -16,17 +16,23 @@ enum UserActionEnum: string implements Translatable
     case UserPasswordUpdated = 'user_password_updated';
     case UserPreferencesUpdated = 'user_preferences_updated';
     case UserDeleted = 'user_deleted';
-    case EmployeeCreated = 'employee_created';
-    case EmployeeInformationUpdated = 'employee_information_updated';
-    case EmployeeAvatarUpdated = 'employee_avatar_updated';
-    case EmployeeAvatarDeleted = 'employee_avatar_deleted';
+    case StaffCreated = 'staff_created';
+    case StaffInformationUpdated = 'staff_information_updated';
+    case StaffAvatarUpdated = 'staff_avatar_updated';
+    case StaffAvatarDeleted = 'staff_avatar_deleted';
+    case StaffPositionUpdated = 'staff_position_updated';
+    case StaffActivated = 'staff_activated';
+    case StaffDeactivated = 'staff_deactivated';
+    case StaffDeleted = 'staff_deleted';
     case LocationCreated = 'location_created';
     case LocationUpdated = 'location_updated';
     case LocationDeleted = 'location_deleted';
     case LocationArchived = 'location_archived';
     case LocationRestored = 'location_restored';
-    case UserAssignedToLocation = 'user_assigned_to_location';
-    case UserRemovedFromLocation = 'user_removed_from_location';
+    case StaffAssignedToLocation = 'staff_assigned_to_location';
+    case StaffRemovedFromLocation = 'staff_removed_from_location';
+    case LocationStaffActivated = 'location_staff_activated';
+    case LocationStaffDeactivated = 'location_staff_deactivated';
     case RoleCreated = 'role_created';
     case RoleUpdated = 'role_updated';
     case RoleDeleted = 'role_deleted';
@@ -55,8 +61,14 @@ enum UserActionEnum: string implements Translatable
     case LocationServiceCreated = 'location_service_created';
     case LocationServiceUpdated = 'location_service_updated';
     case LocationServiceDeleted = 'location_service_deleted';
-    case TeamMemberServiceAssigned = 'team_member_service_assigned';
-    case TeamMemberServiceRemoved = 'team_member_service_removed';
+    case StaffLocationServiceAssigned = 'staff_location_service_assigned';
+    case StaffLocationServiceRemoved = 'staff_location_service_removed';
+    case StaffWorkingHourCreated = 'staff_working_hour_created';
+    case StaffWorkingHourUpdated = 'staff_working_hour_updated';
+    case StaffWorkingHourDeleted = 'staff_working_hour_deleted';
+    case StaffAbsenceCreated = 'staff_absence_created';
+    case StaffAbsenceUpdated = 'staff_absence_updated';
+    case StaffAbsenceDeleted = 'staff_absence_deleted';
 
     public function description(): string
     {
@@ -69,17 +81,23 @@ enum UserActionEnum: string implements Translatable
             self::UserPasswordUpdated => 'Changed their password',
             self::UserPreferencesUpdated => 'Changed their preferences',
             self::UserDeleted => 'Deleted the account of :email',
-            self::EmployeeCreated => 'Added :name to the company',
-            self::EmployeeInformationUpdated => 'Updated the profile of :name',
-            self::EmployeeAvatarUpdated => 'Changed the avatar of :name',
-            self::EmployeeAvatarDeleted => 'Removed the avatar of :name',
+            self::StaffCreated => 'Added :name to the company',
+            self::StaffInformationUpdated => 'Updated the profile of :name',
+            self::StaffAvatarUpdated => 'Changed the avatar of :name',
+            self::StaffAvatarDeleted => 'Removed the avatar of :name',
+            self::StaffPositionUpdated => 'Moved :name in the order of the team',
+            self::StaffActivated => 'Reactivated :name',
+            self::StaffDeactivated => 'Deactivated :name',
+            self::StaffDeleted => 'Deleted :name from the company',
             self::LocationCreated => 'Created the location called :name',
             self::LocationUpdated => 'Updated the location called :name',
             self::LocationDeleted => 'Deleted the location called :name',
             self::LocationArchived => 'Archived the location called :name',
             self::LocationRestored => 'Reopened the location called :name',
-            self::UserAssignedToLocation => 'Assigned :email to the location called :name',
-            self::UserRemovedFromLocation => 'Took :email off the location called :name',
+            self::StaffAssignedToLocation => 'Assigned :staff to the location called :name',
+            self::StaffRemovedFromLocation => 'Took :staff off the location called :name',
+            self::LocationStaffActivated => 'Resumed the assignment of :staff to the location called :name',
+            self::LocationStaffDeactivated => 'Paused the assignment of :staff to the location called :name',
             self::RoleCreated => 'Created the role called :name',
             self::RoleUpdated => 'Changed the role called :name',
             self::RoleDeleted => 'Deleted the role called :name',
@@ -108,8 +126,14 @@ enum UserActionEnum: string implements Translatable
             self::LocationServiceCreated => 'Offered the service called :name at the location called :location',
             self::LocationServiceUpdated => 'Updated the service called :name at the location called :location',
             self::LocationServiceDeleted => 'Stopped offering the service called :name at the location called :location',
-            self::TeamMemberServiceAssigned => 'Let :email perform the service called :name at the location called :location',
-            self::TeamMemberServiceRemoved => 'Stopped :email performing the service called :name at the location called :location',
+            self::StaffLocationServiceAssigned => 'Let :staff perform the service called :name at the location called :location',
+            self::StaffLocationServiceRemoved => 'Stopped :staff performing the service called :name at the location called :location',
+            self::StaffWorkingHourCreated => 'Added working hours for :name at the location called :location',
+            self::StaffWorkingHourUpdated => 'Changed working hours of :name at the location called :location',
+            self::StaffWorkingHourDeleted => 'Removed working hours of :name at the location called :location',
+            self::StaffAbsenceCreated => 'Recorded an absence of :name',
+            self::StaffAbsenceUpdated => 'Changed an absence of :name',
+            self::StaffAbsenceDeleted => 'Removed an absence of :name',
         };
     }
 

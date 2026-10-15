@@ -10,14 +10,13 @@ use App\Helpers\TextSanitizer;
 use App\Jobs\CreateDefaultServices;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Create a company, its first user and the employee that user is. The company
+ * Create a company, its first user and the staff member that user is. The company
  * gets the roles it starts life with, and the first user is given the Owner
  * role, which is what owning the company means. Its default catalogue is
  * copied on the queue.
@@ -27,8 +26,6 @@ class CreateCompany
     private Company $company;
 
     private User $owner;
-
-    private Employee $employee;
 
     public function __construct(
         private string $name,
@@ -47,8 +44,7 @@ class CreateCompany
             $this->createOwner();
             $this->createDefaultRoles();
             $this->giveOwnerRole();
-            $this->createEmployee();
-            $this->attachEmployee();
+            $this->createStaff();
         });
 
         $this->createDefaultCatalogue();
@@ -103,21 +99,16 @@ class CreateCompany
         $this->owner->forgetGrants();
     }
 
-    private function createEmployee(): void
+    private function createStaff(): void
     {
-        $this->employee = new CreateEmployee(
+        new CreateStaff(
             author: $this->owner,
             company: $this->company,
             firstName: $this->firstName,
             lastName: $this->lastName,
-            workEmail: $this->email,
+            email: $this->email,
+            user: $this->owner,
         )->execute();
-    }
-
-    private function attachEmployee(): void
-    {
-        $this->owner->employee_id = $this->employee->id;
-        $this->owner->save();
     }
 
     private function createDefaultCatalogue(): void

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Controllers\App;
 
 use App\Models\Company;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -106,16 +106,18 @@ class WelcomeControllerTest extends TestCase
     private function newcomer(array $attributes = []): User
     {
         $company = Company::factory()->welcomeScreenPending()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create([
             'company_id' => $company->id,
+            ...$attributes,
+        ]);
+
+        Staff::factory()->create([
+            'company_id' => $company->id,
+            'user_id' => $user->id,
             'first_name' => 'Michael',
             'last_name' => 'Scott',
         ]);
 
-        return User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
-            ...$attributes,
-        ]);
+        return $user;
     }
 }

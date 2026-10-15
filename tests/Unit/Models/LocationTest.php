@@ -7,8 +7,9 @@ namespace Tests\Unit\Models;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationService;
+use App\Models\LocationStaff;
 use App\Models\Service;
-use App\Models\User;
+use App\Models\Staff;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -29,14 +30,15 @@ class LocationTest extends TestCase
     }
 
     #[Test]
-    public function it_has_many_users(): void
+    public function it_belongs_to_many_staff_members_with_the_state_of_each_assignment(): void
     {
         $location = Location::factory()->create();
-        $user = User::factory()->create(['company_id' => $location->company_id]);
-        $location->users()->attach($user);
+        $dwight = Staff::factory()->create(['company_id' => $location->company_id]);
+        LocationStaff::factory()->paused()->create(['location_id' => $location->id, 'staff_id' => $dwight->id]);
 
-        $this->assertTrue($location->users()->exists());
-        $this->assertEquals($user->id, $location->users->first()->id);
+        $this->assertTrue($location->staff()->exists());
+        $this->assertEquals($dwight->id, $location->staff->first()->id);
+        $this->assertFalse((bool) $location->staff->first()->pivot->is_active);
     }
 
     #[Test]

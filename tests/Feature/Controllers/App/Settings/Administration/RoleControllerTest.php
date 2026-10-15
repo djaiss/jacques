@@ -29,7 +29,7 @@ class RoleControllerTest extends TestCase
         $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Regional manager']);
         RolePermission::factory()->create([
             'role_id' => $role->id,
-            'permission' => PermissionEnum::EmployeeView,
+            'permission' => PermissionEnum::StaffView,
             'scope' => ScopeEnum::Company,
         ]);
 
@@ -38,7 +38,7 @@ class RoleControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('Regional manager');
         $response->assertSee('Team');
-        $response->assertSee('1 of 16 permissions');
+        $response->assertSee('1 of 17 permissions');
     }
 
     #[Test]
@@ -111,7 +111,7 @@ class RoleControllerTest extends TestCase
         $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Temp']);
         RolePermission::factory()->create([
             'role_id' => $role->id,
-            'permission' => PermissionEnum::EmployeeCreate,
+            'permission' => PermissionEnum::StaffCreate,
             'scope' => ScopeEnum::Company,
         ]);
 
@@ -119,7 +119,7 @@ class RoleControllerTest extends TestCase
             'name' => 'Sales representative',
             'description' => 'Sells paper.',
             'permissions' => [
-                PermissionEnum::EmployeeView->value => ['granted' => '1', 'scope' => ScopeEnum::Self->value],
+                PermissionEnum::StaffView->value => ['granted' => '1', 'scope' => ScopeEnum::Self->value],
                 PermissionEnum::AppointmentManage->value => ['granted' => '1', 'scope' => ScopeEnum::Location->value],
             ],
         ]);
@@ -139,7 +139,7 @@ class RoleControllerTest extends TestCase
         ]);
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $role->id,
-            'permission' => PermissionEnum::EmployeeView->value,
+            'permission' => PermissionEnum::StaffView->value,
             'scope' => ScopeEnum::Self->value,
         ]);
     }
@@ -261,8 +261,8 @@ class RoleControllerTest extends TestCase
         $response = $this->actingAs($user)->withSession([
             '_old_input' => [
                 'permissions' => [
-                    PermissionEnum::EmployeeView->value => ['granted' => '1'],
-                    PermissionEnum::EmployeeUpdate->value => ['granted' => '1'],
+                    PermissionEnum::StaffView->value => ['granted' => '1'],
+                    PermissionEnum::StaffUpdate->value => ['granted' => '1'],
                 ],
             ],
         ])->get(route('settings.roles.show', $role->id));
@@ -284,11 +284,11 @@ class RoleControllerTest extends TestCase
         $response = $this->actingAs($user)->put(route('settings.roles.update', $role->id), [
             'name' => 'Sales representative',
             'permissions' => [
-                PermissionEnum::EmployeeView->value => ['granted' => '1', 'scope' => 'reports'],
+                PermissionEnum::StaffView->value => ['granted' => '1', 'scope' => 'reports'],
             ],
         ]);
 
-        $response->assertSessionHasErrors('permissions.employee.view.scope');
+        $response->assertSessionHasErrors('permissions.staff.view.scope');
     }
 
     #[Test]

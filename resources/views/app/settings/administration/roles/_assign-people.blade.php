@@ -37,7 +37,7 @@
             type="submit"
             class="flex w-full cursor-pointer items-center gap-3.5 rounded-xl px-3 py-2.75 text-left transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
           >
-            <x-avatar :employee="$person['employee']" :name="$person['name']" :size="32" />
+            <x-avatar :staff="$person['staff']" :name="$person['name']" :size="32" />
 
             <span class="min-w-0 flex-1">
               <span class="block text-base font-semibold wrap-anywhere text-ink">{{ $person['name'] }}</span>

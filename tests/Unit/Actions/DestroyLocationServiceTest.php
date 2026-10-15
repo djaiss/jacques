@@ -11,7 +11,8 @@ use App\Jobs\LogUserAction;
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Role;
-use App\Models\TeamMemberService;
+use App\Models\Staff;
+use App\Models\StaffLocationService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,7 +30,7 @@ class DestroyLocationServiceTest extends TestCase
         Queue::fake();
 
         $locationService = LocationService::factory()->create();
-        $assignment = TeamMemberService::factory()->create(['location_service_id' => $locationService->id]);
+        $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
         $michael = $this->grant(User::factory()->create(['company_id' => $locationService->location->company_id]), PermissionEnum::ServiceManage);
 
         new DestroyLocationService(author: $michael, locationService: $locationService)->execute();
@@ -53,7 +54,7 @@ class DestroyLocationServiceTest extends TestCase
         $atStamford = LocationService::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $atStamford->location->company_id]);
         $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $scranton->company_id]), Role::MANAGER);
-        $dwight->locations()->attach($scranton->id);
+        Staff::factory()->create(['company_id' => $dwight->company_id, 'user_id' => $dwight->id])->locations()->attach($scranton->id);
 
         new DestroyLocationService(author: $dwight, locationService: $atStamford)->execute();
     }

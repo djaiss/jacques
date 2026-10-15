@@ -6,7 +6,7 @@ namespace Tests\Feature\Controllers\App\Auth;
 
 use App\Enums\EmailTypeEnum;
 use App\Models\Company;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -63,7 +63,7 @@ class RegistrationControllerTest extends TestCase
     }
 
     #[Test]
-    public function it_creates_a_company_an_owner_and_an_employee(): void
+    public function it_creates_a_company_an_owner_and_a_staff_record(): void
     {
         Queue::fake();
 
@@ -77,8 +77,8 @@ class RegistrationControllerTest extends TestCase
         $this->assertEquals(1, Company::query()->count());
         $this->assertEquals('Dunder Mifflin', $user->company->name);
         $this->assertTrue($user->isOwner());
-        $this->assertEquals(1, Employee::query()->count());
-        $this->assertEquals('Michael Scott', $user->employee->name);
+        $this->assertEquals(1, Staff::query()->count());
+        $this->assertEquals('Michael Scott', $user->staff->name);
     }
 
     #[Test]

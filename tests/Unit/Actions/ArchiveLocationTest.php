@@ -11,6 +11,7 @@ use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,7 +98,7 @@ class ArchiveLocationTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $stamford = Location::factory()->create(['company_id' => $company->id]);
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $michael->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $michael->company_id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         new ArchiveLocation(author: $michael, location: $scranton)->execute();
 

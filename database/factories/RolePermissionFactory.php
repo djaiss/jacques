@@ -24,7 +24,7 @@ class RolePermissionFactory extends Factory
     {
         return [
             'role_id' => Role::factory(),
-            'permission' => PermissionEnum::EmployeeView,
+            'permission' => PermissionEnum::StaffView,
             'scope' => ScopeEnum::Company,
         ];
     }

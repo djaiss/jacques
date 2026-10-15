@@ -12,7 +12,7 @@ use App\Models\Company;
 use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\Service;
-use App\Models\TeamMemberService;
+use App\Models\StaffLocationService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,13 +25,13 @@ class DestroyServiceTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function it_deletes_a_service_with_its_steps_offers_and_team_members(): void
+    public function it_deletes_a_service_with_its_steps_offers_and_staff_assignments(): void
     {
         Queue::fake();
 
         $locationService = LocationService::factory()->create();
         $service = $locationService->service;
-        $assignment = TeamMemberService::factory()->create(['location_service_id' => $locationService->id]);
+        $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
         new DestroyService(author: $michael, service: $service)->execute();

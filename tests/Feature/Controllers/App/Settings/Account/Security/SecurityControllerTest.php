@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Controllers\App\Settings\Account\Security;
 
 use App\Models\Company;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,16 +19,16 @@ class SecurityControllerTest extends TestCase
     public function it_shows_the_security_screen(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'password_changed_at' => now()->subDays(2),
+        ]);
+        Staff::factory()->create([
             'company_id' => $company->id,
             'first_name' => 'Dwight',
             'last_name' => 'Schrute',
             'display_name' => null,
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
-            'password_changed_at' => now()->subDays(2),
+            'user_id' => $user->id,
         ]);
 
         $response = $this->actingAs($user)->get(route('settings.security.index'));
@@ -46,11 +46,8 @@ class SecurityControllerTest extends TestCase
     public function it_carries_the_top_bar_and_the_way_back_to_the_settings_hub(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create(['company_id' => $company->id]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
-        ]);
+        $user = User::factory()->create(['company_id' => $company->id]);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
 
         $response = $this->actingAs($user)->get(route('settings.security.index'));
 

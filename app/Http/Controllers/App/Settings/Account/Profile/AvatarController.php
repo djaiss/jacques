@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App\Settings\Account\Profile;
 
-use App\Actions\DestroyEmployeeAvatar;
-use App\Actions\UpdateEmployeeAvatar;
+use App\Actions\DestroyStaffAvatar;
+use App\Actions\UpdateStaffAvatar;
 use App\Enums\PermissionEnum;
 use App\Http\Controllers\Controller;
-use App\Models\Employee;
+use App\Models\Staff;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -22,15 +22,15 @@ class AvatarController extends Controller
             'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ]);
 
-        $employee = $request->user()->employee;
+        $staff = $request->user()->staff;
 
-        if ($employee === null) {
+        if ($staff === null) {
             abort(404);
         }
 
-        new UpdateEmployeeAvatar(
+        new UpdateStaffAvatar(
             author: $request->user(),
-            employee: $employee,
+            staff: $staff,
             file: $validated['avatar'],
         )->execute();
 
@@ -41,15 +41,15 @@ class AvatarController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        $employee = $request->user()->employee;
+        $staff = $request->user()->staff;
 
-        if ($employee === null) {
+        if ($staff === null) {
             abort(404);
         }
 
-        new DestroyEmployeeAvatar(
+        new DestroyStaffAvatar(
             author: $request->user(),
-            employee: $employee,
+            staff: $staff,
         )->execute();
 
         return redirect()->route('settings.profile.index')
@@ -57,25 +57,25 @@ class AvatarController extends Controller
             ->with('status_description', __('We show your initials again.'));
     }
 
-    public function show(Request $request, Employee $employee, int $size): StreamedResponse
+    public function show(Request $request, Staff $staff, int $size): StreamedResponse
     {
         $request->user()
-            ->permission(PermissionEnum::EmployeeView)
-            ->forEmployee($employee)
+            ->permission(PermissionEnum::StaffView)
+            ->forStaff($staff)
             ->authorize();
 
-        if (! $employee->hasAvatar()) {
+        if (! $staff->hasAvatar()) {
             abort(404);
         }
 
         // Only the sizes actually written to disk, so this cannot be turned
         // into an endpoint that resizes whatever it is asked for.
-        if (! in_array($size, Employee::avatarPixelSizes(), true)) {
+        if (! in_array($size, Staff::avatarPixelSizes(), true)) {
             abort(404);
         }
 
         $disk = Storage::disk((string) config('filesystems.default'));
-        $path = $employee->avatarVariantPath($size);
+        $path = $staff->avatarVariantPath($size);
 
         if (! $disk->exists($path)) {
             abort(404);

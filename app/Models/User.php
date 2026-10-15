@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -24,7 +25,6 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * @property int $id
  * @property int $company_id
- * @property int|null $employee_id
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property string|null $password_hash
@@ -69,7 +69,6 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'company_id',
-        'employee_id',
         'email',
         'email_verified_at',
         'password_hash',
@@ -128,14 +127,14 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the employee the account gives access to, when the account belongs to
-     * somebody who works for the company.
+     * Get the staff member the account gives access to, when the account belongs
+     * to somebody who works for the company.
      *
-     * @return BelongsTo<Employee, $this>
+     * @return HasOne<Staff, $this>
      */
-    public function employee(): BelongsTo
+    public function staff(): HasOne
     {
-        return $this->belongsTo(Employee::class);
+        return $this->hasOne(Staff::class);
     }
 
     /**
@@ -147,27 +146,6 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'user_roles')->withTimestamps();
-    }
-
-    /**
-     * Get the locations the user is assigned to, which is what a permission
-     * granted at location scope reaches.
-     *
-     * @return BelongsToMany<Location, $this>
-     */
-    public function locations(): BelongsToMany
-    {
-        return $this->belongsToMany(Location::class, 'user_locations')->withTimestamps();
-    }
-
-    /**
-     * Get the services the user performs, each as offered at one location.
-     *
-     * @return BelongsToMany<LocationService, $this>
-     */
-    public function locationServices(): BelongsToMany
-    {
-        return $this->belongsToMany(LocationService::class, 'team_member_services')->withTimestamps();
     }
 
     /**
@@ -212,8 +190,8 @@ class User extends Authenticatable
     /**
      * Start a permission check, to be finished by naming what it is about:
      *
-     *     $user->permission(PermissionEnum::EmployeeUpdate)
-     *         ->forEmployee($employee)
+     *     $user->permission(PermissionEnum::StaffUpdate)
+     *         ->forStaff($staff)
      *         ->authorize();
      */
     public function permission(PermissionEnum $permission): PendingPermissionCheck

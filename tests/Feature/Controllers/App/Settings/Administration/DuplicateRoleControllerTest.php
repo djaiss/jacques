@@ -31,7 +31,7 @@ class DuplicateRoleControllerTest extends TestCase
         $original = Role::factory()->create(['company_id' => $company->id, 'name' => 'Branch manager', 'description' => 'Runs Scranton.']);
         RolePermission::factory()->create([
             'role_id' => $original->id,
-            'permission' => PermissionEnum::EmployeeUpdate,
+            'permission' => PermissionEnum::StaffUpdate,
             'scope' => ScopeEnum::Self,
         ]);
 
@@ -47,7 +47,7 @@ class DuplicateRoleControllerTest extends TestCase
         $this->assertEquals(0, $copy->users()->count());
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $copy->id,
-            'permission' => PermissionEnum::EmployeeUpdate->value,
+            'permission' => PermissionEnum::StaffUpdate->value,
             'scope' => ScopeEnum::Self->value,
         ]);
     }

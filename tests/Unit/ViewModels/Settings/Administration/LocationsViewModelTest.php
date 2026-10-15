@@ -9,6 +9,7 @@ use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use App\ViewModels\Settings\Administration\LocationsViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -243,7 +244,7 @@ class LocationsViewModelTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
         Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $michael->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         $viewModel = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active);
 
@@ -263,8 +264,10 @@ class LocationsViewModelTest extends TestCase
     public function it_hands_the_panel_who_works_at_each_location_and_who_could(): void
     {
         $company = Company::factory()->create();
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id, 'email' => 'michael@dundermifflin.com']), Role::OWNER);
-        $dwight = User::factory()->create(['company_id' => $company->id, 'email' => 'dwight@dundermifflin.com']);
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $michaelStaff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id, 'first_name' => 'Michael', 'last_name' => 'Scott']);
+        $dwightAccount = User::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $dwightAccount->id, 'first_name' => 'Dwight', 'last_name' => 'Schrute']);
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $dwight->locations()->attach($scranton);
 
@@ -272,10 +275,10 @@ class LocationsViewModelTest extends TestCase
 
         $this->assertEquals([[
             'id' => $dwight->id,
-            'name' => 'dwight@dundermifflin.com',
+            'name' => 'Dwight Schrute',
             'removeUrl' => route('settings.locationPeople.destroy', [$scranton->id, $dwight->id]),
         ]], $drawer[$scranton->id]['people']);
-        $this->assertEquals([['id' => $michael->id, 'name' => 'michael@dundermifflin.com']], $drawer[$scranton->id]['assignable']);
+        $this->assertEquals([['id' => $michaelStaff->id, 'name' => 'Michael Scott']], $drawer[$scranton->id]['assignable']);
         $this->assertEquals(route('settings.locationPeople.create', $scranton->id), $drawer[$scranton->id]['assignUrl']);
     }
 
@@ -285,12 +288,32 @@ class LocationsViewModelTest extends TestCase
         $company = Company::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $michael->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         $viewModel = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active);
 
         $this->assertFalse($viewModel->canAssignPeople());
         $this->assertSame([], $viewModel->drawer()[$scranton->id]['people']);
         $this->assertSame([], $viewModel->drawer()[$scranton->id]['assignable']);
+    }
+
+    #[Test]
+    public function it_hands_the_panel_staff_members_without_an_account(): void
+    {
+        $company = Company::factory()->create();
+        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $creed = Staff::factory()->create(['company_id' => $company->id, 'user_id' => null, 'first_name' => 'Creed', 'last_name' => 'Bratton']);
+        $meredith = Staff::factory()->create(['company_id' => $company->id, 'user_id' => null, 'first_name' => 'Meredith', 'last_name' => 'Palmer']);
+        $meredith->locations()->attach($scranton);
+
+        $drawer = new LocationsViewModel(user: $michael, scope: LocationScopeEnum::Active)->drawer();
+
+        $this->assertEquals([[
+            'id' => $meredith->id,
+            'name' => 'Meredith Palmer',
+            'removeUrl' => route('settings.locationPeople.destroy', [$scranton->id, $meredith->id]),
+        ]], $drawer[$scranton->id]['people']);
+        $this->assertEquals([['id' => $creed->id, 'name' => 'Creed Bratton']], $drawer[$scranton->id]['assignable']);
     }
 }
