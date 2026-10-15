@@ -17,7 +17,8 @@ use InvalidArgumentException;
 /**
  * Create a staff member of a company, last in the order of the team, and link
  * them to an account of the same company when one is given. An account gives
- * access to one staff member at most.
+ * access to one staff member at most, and an email address belongs to one
+ * staff member of the company at most.
  */
 class CreateStaff
 {
@@ -42,6 +43,7 @@ class CreateStaff
         $this->authorize();
         $this->validate();
         $this->sanitize();
+        $this->validateEmail();
         $this->create();
         $this->log();
 
@@ -82,6 +84,22 @@ class CreateStaff
 
         $email = TextSanitizer::nullablePlainText($this->email);
         $this->email = $email === null ? null : mb_strtolower($email);
+    }
+
+    private function validateEmail(): void
+    {
+        if ($this->email === null) {
+            return;
+        }
+
+        $taken = Staff::query()
+            ->where('company_id', $this->company->id)
+            ->where('email', $this->email)
+            ->exists();
+
+        if ($taken) {
+            throw new InvalidArgumentException('Another staff member of the company already uses this email address');
+        }
     }
 
     private function create(): void

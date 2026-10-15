@@ -227,4 +227,42 @@ class CreateStaffTest extends TestCase
             lastName: 'Halpert',
         )->execute();
     }
+
+    #[Test]
+    public function it_throws_when_another_staff_member_of_the_company_uses_the_email(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($user, PermissionEnum::StaffCreate);
+        Staff::factory()->create(['company_id' => $company->id, 'email' => 'dwight.schrute@dundermifflin.com']);
+
+        new CreateStaff(
+            author: $user,
+            company: $company,
+            firstName: 'Mose',
+            email: 'Dwight.Schrute@DunderMifflin.com',
+        )->execute();
+    }
+
+    #[Test]
+    public function it_accepts_an_email_used_in_another_company(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($user, PermissionEnum::StaffCreate);
+        Staff::factory()->create(['email' => 'dwight.schrute@dundermifflin.com']);
+
+        $staff = new CreateStaff(
+            author: $user,
+            company: $company,
+            firstName: 'Dwight',
+            email: 'dwight.schrute@dundermifflin.com',
+        )->execute();
+
+        $this->assertEquals('dwight.schrute@dundermifflin.com', $staff->email);
+    }
 }
