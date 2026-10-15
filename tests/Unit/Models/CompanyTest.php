@@ -6,6 +6,8 @@ namespace Tests\Unit\Models;
 
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -33,6 +35,27 @@ class CompanyTest extends TestCase
 
         $this->assertTrue($company->locations()->exists());
         $this->assertCount(2, $company->locations()->get());
+    }
+
+    #[Test]
+    public function it_has_many_service_categories_in_the_order_of_their_position(): void
+    {
+        $company = Company::factory()->create();
+        $colours = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 2]);
+        $cuts = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
+
+        $this->assertTrue($company->serviceCategories()->exists());
+        $this->assertEquals([$cuts->id, $colours->id], $company->serviceCategories->pluck('id')->all());
+    }
+
+    #[Test]
+    public function it_has_many_services(): void
+    {
+        $company = Company::factory()->create();
+        Service::factory()->count(2)->create(['company_id' => $company->id]);
+
+        $this->assertTrue($company->services()->exists());
+        $this->assertCount(2, $company->services()->get());
     }
 
     #[Test]

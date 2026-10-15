@@ -161,6 +161,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the services the user performs, each as offered at one location.
+     *
+     * @return BelongsToMany<LocationService, $this>
+     */
+    public function locationServices(): BelongsToMany
+    {
+        return $this->belongsToMany(LocationService::class, 'team_member_services')->withTimestamps();
+    }
+
+    /**
      * Get whether the user holds the Owner role, which grants everything and
      * which a company never runs out of.
      */
@@ -226,6 +236,7 @@ class User extends Authenticatable
     {
         return $this->grants ??= RolePermission::query()
             ->whereIn('role_id', $this->roles()->select('roles.id'))
+            ->orderBy('id')
             ->get()
             ->groupBy(fn (RolePermission $grant): string => $grant->permission->value)
             ->map(fn ($grants): array => $grants->pluck('scope')->unique()->values()->all())

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Class Location
@@ -96,6 +97,28 @@ class Location extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_locations')->withTimestamps();
+    }
+
+    /**
+     * Get the services the location offers, each with its price and state there.
+     *
+     * @return HasMany<LocationService, $this>
+     */
+    public function locationServices(): HasMany
+    {
+        return $this->hasMany(LocationService::class);
+    }
+
+    /**
+     * Get the services the location offers.
+     *
+     * @return BelongsToMany<Service, $this>
+     */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'location_services')
+            ->withPivot(['price', 'is_active'])
+            ->withTimestamps();
     }
 
     /**

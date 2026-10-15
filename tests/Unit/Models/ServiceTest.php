@@ -1,0 +1,98 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit\Models;
+
+use App\Models\Company;
+use App\Models\Location;
+use App\Models\LocationService;
+use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Models\ServiceStep;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+class ServiceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    #[Test]
+    public function it_belongs_to_a_company(): void
+    {
+        $company = Company::factory()->create();
+        $service = Service::factory()->create(['company_id' => $company->id]);
+
+        $this->assertTrue($service->company()->exists());
+        $this->assertEquals($company->id, $service->company->id);
+    }
+
+    #[Test]
+    public function it_belongs_to_a_category(): void
+    {
+        $category = ServiceCategory::factory()->create();
+        $service = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id]);
+
+        $this->assertTrue($service->category()->exists());
+        $this->assertEquals($category->id, $service->category->id);
+    }
+
+    #[Test]
+    public function it_has_no_category_by_default(): void
+    {
+        $service = Service::factory()->create();
+
+        $this->assertNull($service->category);
+    }
+
+    #[Test]
+    public function it_has_many_steps_in_the_order_they_are_performed(): void
+    {
+        $service = Service::factory()->create();
+        $second = ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2]);
+
+        $this->assertTrue($service->steps()->exists());
+        $this->assertEquals([1, 2], $service->steps->pluck('position')->all());
+        $this->assertEquals($second->id, $service->steps->last()->id);
+    }
+
+    #[Test]
+    public function it_has_many_location_services(): void
+    {
+        $locationService = LocationService::factory()->create();
+
+        $this->assertTrue($locationService->service->locationServices()->exists());
+    }
+
+    #[Test]
+    public function it_belongs_to_many_locations(): void
+    {
+        $location = Location::factory()->create();
+        $service = Service::factory()->create(['company_id' => $location->company_id]);
+        $service->locations()->attach($location->id, ['price' => 4000]);
+
+        $this->assertTrue($service->locations()->exists());
+        $this->assertEquals(4000, $service->locations->first()->pivot->price);
+    }
+
+    #[Test]
+    public function it_lasts_the_active_and_processing_time_of_its_steps(): void
+    {
+        $service = Service::factory()->create();
+        $service->steps()->delete();
+        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 1, 'active_duration' => 20, 'processing_duration' => 30]);
+        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2, 'active_duration' => 15, 'processing_duration' => 0]);
+
+        $this->assertEquals(65, $service->refresh()->duration);
+    }
+
+    #[Test]
+    public function it_casts_the_price_and_the_active_flag(): void
+    {
+        $service = Service::factory()->inactive()->create(['price' => 3500]);
+
+        $this->assertSame(3500, $service->refresh()->price);
+        $this->assertFalse($service->is_active);
+    }
+}

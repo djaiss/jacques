@@ -39,6 +39,21 @@ enum UserActionEnum: string implements Translatable
     case ApiKeyCreated = 'api_key_created';
     case ApiKeyDeleted = 'api_key_deleted';
     case WelcomeScreenDismissed = 'welcome_screen_dismissed';
+    case ServiceCategoryCreated = 'service_category_created';
+    case ServiceCategoryUpdated = 'service_category_updated';
+    case ServiceCategoryMoved = 'service_category_moved';
+    case ServiceCategoryDeleted = 'service_category_deleted';
+    case ServiceCreated = 'service_created';
+    case ServiceUpdated = 'service_updated';
+    case ServiceMoved = 'service_moved';
+    case ServiceDeactivated = 'service_deactivated';
+    case ServiceActivated = 'service_activated';
+    case ServiceDeleted = 'service_deleted';
+    case LocationServiceCreated = 'location_service_created';
+    case LocationServiceUpdated = 'location_service_updated';
+    case LocationServiceDeleted = 'location_service_deleted';
+    case TeamMemberServiceAssigned = 'team_member_service_assigned';
+    case TeamMemberServiceRemoved = 'team_member_service_removed';
 
     public function description(): string
     {
@@ -74,6 +89,21 @@ enum UserActionEnum: string implements Translatable
             self::ApiKeyCreated => 'Created the API key called :name',
             self::ApiKeyDeleted => 'Revoked the API key called :name',
             self::WelcomeScreenDismissed => 'Dismissed the welcome screen',
+            self::ServiceCategoryCreated => 'Created the service category called :name',
+            self::ServiceCategoryUpdated => 'Updated the service category called :name',
+            self::ServiceCategoryMoved => 'Moved the service category called :name',
+            self::ServiceCategoryDeleted => 'Deleted the service category called :name',
+            self::ServiceCreated => 'Created the service called :name',
+            self::ServiceUpdated => 'Updated the service called :name',
+            self::ServiceMoved => 'Moved the service called :name',
+            self::ServiceDeactivated => 'Deactivated the service called :name',
+            self::ServiceActivated => 'Activated the service called :name',
+            self::ServiceDeleted => 'Deleted the service called :name',
+            self::LocationServiceCreated => 'Offered the service called :name at the location called :location',
+            self::LocationServiceUpdated => 'Updated the service called :name at the location called :location',
+            self::LocationServiceDeleted => 'Stopped offering the service called :name at the location called :location',
+            self::TeamMemberServiceAssigned => 'Let :email perform the service called :name at the location called :location',
+            self::TeamMemberServiceRemoved => 'Stopped :email performing the service called :name at the location called :location',
         };
     }
 

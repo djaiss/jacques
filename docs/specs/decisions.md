@@ -101,12 +101,13 @@ Une coupe suivie d'une couleur est un seul rendez-vous. Les prestations
 s'enchaînent dans l'ordre choisi, et leurs étapes forment une seule suite. Une
 pose au milieu libère la personne, quelle que soit la prestation qui la contient.
 
-### D8. Le prix est surchargeable par personne, la durée non
+### D8. Le prix est surchargeable par établissement, la durée non
 
-Chaque couple personne et prestation peut porter son propre prix. En l'absence
-de surcharge, le prix de la prestation s'applique.
+Une prestation n'est proposée dans un établissement qu'après y avoir été
+ajoutée, et chaque établissement peut y porter son propre prix. En l'absence de
+surcharge, le prix de la prestation s'applique.
 
-Les durées, elles, sont celles de la prestation pour tout le monde. Surcharger
+Les durées, elles, sont celles de la prestation partout et pour tout le monde. Surcharger
 une durée n'a pas de sens tant qu'une prestation est une suite d'étapes : il
 faudrait dire quelle étape est rallongée, et le temps de pose est imposé par le
 produit, pas par la personne.
@@ -328,7 +329,7 @@ numéros et les erreurs de saisie.
 ## Ce que ces décisions impliquent comme modèles
 
 Les vingt fichiers de concepts effacés listaient 99 modèles. Les décisions ci
-dessus en laissent 22.
+dessus en laissent 23.
 
 ### Salon et équipe
 
@@ -346,11 +347,13 @@ fermeture, les congés et les blocages d'agenda.
 
 ### Catalogue
 
-`ServiceCategory`, `Service`, `ServiceStep`, `TeamMemberService`.
+`ServiceCategory`, `Service`, `ServiceStep`, `LocationService`,
+`TeamMemberService`.
 
-Savoir faire une prestation, c'est figurer dans `TeamMemberService`, qui porte
-aussi le prix surchargé. Il n'y a pas de modèle de compétence et aucune durée
-n'y est surchargée (D8).
+`LocationService` dit qu'un établissement propose une prestation, et porte le
+prix surchargé (D8). Savoir faire une prestation dans un établissement, c'est
+figurer dans `TeamMemberService`. Il n'y a pas de modèle de compétence et
+aucune durée n'est surchargée.
 
 Une variante de prestation se déclare comme une prestation distincte dans la
 même catégorie. Il n'y a ni variante ni forfait.
@@ -431,6 +434,11 @@ Annulées le 14 octobre 2026, à la définition des rôles par défaut.
   est affecté à des établissements précis.
 - Rôles fixes et sans écran d'administration des droits (ancienne D4),
   remplacée parce que l'éditeur de rôles existant est conservé.
+
+Annulée le 14 octobre 2026, à la définition du catalogue.
+
+- Prix surchargé par personne (ancienne D8), remplacé par un prix surchargé par
+  établissement, là où la prestation est proposée.
 
 ## Questions encore ouvertes
 
