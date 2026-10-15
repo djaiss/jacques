@@ -40,4 +40,14 @@ class CompanyFactory extends Factory
             'trial_ends_at' => now()->addDays(30),
         ]);
     }
+
+    /**
+     * Indicate that the company has not seen the welcome screen yet.
+     */
+    public function welcomeScreenPending(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_welcome_screen_pending' => true,
+        ]);
+    }
 }

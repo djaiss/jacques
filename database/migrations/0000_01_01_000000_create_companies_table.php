@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('currency', 3)->nullable()->comment('default currency of the company');
             $table->string('billing_email')->nullable()->comment('email address the invoices are sent to');
             $table->datetime('trial_ends_at')->nullable()->comment('when the trial ends');
+            $table->boolean('is_welcome_screen_pending')->default(false)->comment('whether the company still has to see the welcome screen shown after signing up');
             $table->json('settings')->nullable()->comment('configuration that does not deserve a column of its own, starting with the modules the company has turned on');
             $table->timestamps();
         });

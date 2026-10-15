@@ -140,6 +140,22 @@ class CreateCompanyTest extends TestCase
     }
 
     #[Test]
+    public function it_owes_the_new_company_the_welcome_screen(): void
+    {
+        Queue::fake();
+
+        $company = new CreateCompany(
+            name: 'Dunder Mifflin',
+            firstName: 'Michael',
+            lastName: 'Scott',
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        $this->assertTrue($company->refresh()->is_welcome_screen_pending);
+    }
+
+    #[Test]
     public function it_makes_the_slug_unique(): void
     {
         Queue::fake();

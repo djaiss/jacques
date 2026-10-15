@@ -38,6 +38,7 @@ enum UserActionEnum: string implements Translatable
     case MagicLinkCreated = 'magic_link_created';
     case ApiKeyCreated = 'api_key_created';
     case ApiKeyDeleted = 'api_key_deleted';
+    case WelcomeScreenDismissed = 'welcome_screen_dismissed';
 
     public function description(): string
     {
@@ -72,6 +73,7 @@ enum UserActionEnum: string implements Translatable
             self::MagicLinkCreated => 'Asked for a sign-in link',
             self::ApiKeyCreated => 'Created the API key called :name',
             self::ApiKeyDeleted => 'Revoked the API key called :name',
+            self::WelcomeScreenDismissed => 'Dismissed the welcome screen',
         };
     }
 

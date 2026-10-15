@@ -46,4 +46,14 @@ class CompanyTest extends TestCase
         $this->assertFalse($expired->isOnTrial());
         $this->assertFalse($never->isOnTrial());
     }
+
+    #[Test]
+    public function it_does_not_owe_the_welcome_screen_by_default(): void
+    {
+        $company = Company::factory()->create();
+        $pending = Company::factory()->welcomeScreenPending()->create();
+
+        $this->assertFalse($company->refresh()->is_welcome_screen_pending);
+        $this->assertTrue($pending->refresh()->is_welcome_screen_pending);
+    }
 }

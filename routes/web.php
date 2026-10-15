@@ -19,18 +19,25 @@ use App\Http\Controllers\App\Settings\Administration\LocationPeopleController;
 use App\Http\Controllers\App\Settings\Administration\RoleController;
 use App\Http\Controllers\App\Settings\Administration\RolePeopleController;
 use App\Http\Controllers\App\Settings\SettingsController;
+use App\Http\Controllers\App\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
 // Until there is a dashboard to send people to.
 Route::get('/', function () {
     return view('welcome');
-})->name('home.index');
+})->middleware('welcome.screen')->name('home.index');
 
+// The screen a new company sees once, right after signing up.
 Route::middleware(['auth', 'set.locale'])->group(function (): void {
+    Route::get('welcome', [WelcomeController::class, 'index'])->name('welcome.index');
+    Route::put('welcome', [WelcomeController::class, 'update'])->name('welcome.update');
+});
+
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
 });
 
-Route::middleware(['auth', 'set.locale'])->group(function (): void {
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
     Route::get('settings/account/profile', [ProfileController::class, 'index'])->name('settings.profile.index');
     Route::put('settings/account/profile', [ProfileController::class, 'update'])->name('settings.profile.update');
     Route::get('settings/account/logs', [LogController::class, 'index'])->name('settings.logs.index');
@@ -56,7 +63,7 @@ Route::middleware(['auth', 'set.locale'])->group(function (): void {
     Route::get('settings/account/profile/avatar/{employee}/{size}', [AvatarController::class, 'show'])->whereNumber(['employee', 'size'])->name('settings.avatar.show');
 });
 
-Route::middleware(['auth', 'set.locale'])->group(function (): void {
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
     Route::get('settings/administration/roles', [RoleController::class, 'index'])->name('settings.roles.index');
     Route::post('settings/administration/roles', [RoleController::class, 'create'])->name('settings.roles.create');
     Route::get('settings/administration/roles/{role}/{tab?}', [RoleController::class, 'show'])->whereNumber('role')->where('tab', 'people')->name('settings.roles.show');
