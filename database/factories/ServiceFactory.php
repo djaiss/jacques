@@ -27,7 +27,7 @@ class ServiceFactory extends Factory
             'service_category_id' => null,
             'name' => ['en' => fake()->unique()->words(3, true)],
             'description' => ['en' => fake()->sentence()],
-            'price' => 3500,
+            'prices' => ['CAD' => 3500],
             'is_active' => true,
             'position' => 1,
         ];

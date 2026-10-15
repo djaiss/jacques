@@ -26,7 +26,7 @@ class LocationServiceFactory extends Factory
             'service_id' => fn (array $attributes): Service => Service::factory()->create([
                 'company_id' => Location::query()->findOrFail($attributes['location_id'])->company_id,
             ]),
-            'price' => null,
+            'prices' => null,
             'is_active' => true,
         ];
     }

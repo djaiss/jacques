@@ -23,7 +23,6 @@ class UpdateCompany
         private string $name,
         private ?string $legalName = null,
         private ?string $websiteUrl = null,
-        private readonly ?string $currency = null,
         private ?string $billingEmail = null,
     ) {}
 
@@ -68,7 +67,6 @@ class UpdateCompany
         $this->company->name = $this->name;
         $this->company->legal_name = $this->legalName;
         $this->company->website_url = $this->websiteUrl;
-        $this->company->currency = $this->currency;
         $this->company->billing_email = $this->billingEmail;
         $this->company->save();
     }

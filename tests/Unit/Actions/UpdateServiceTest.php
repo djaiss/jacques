@@ -29,14 +29,14 @@ class UpdateServiceTest extends TestCase
     {
         Queue::fake();
 
-        $service = Service::factory()->create(['name' => ['en' => 'Colour'], 'price' => 3500]);
+        $service = Service::factory()->create(['name' => ['en' => 'Colour'], 'prices' => ['CAD' => 3500]]);
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
         $service = new UpdateService(
             author: $michael,
             service: $service,
             name: ['en' => 'Full colour'],
-            price: 4200,
+            prices: ['CAD' => 4200],
             steps: [
                 ['active_duration' => 25, 'processing_duration' => 35],
                 ['active_duration' => 10, 'processing_duration' => 0],
@@ -46,7 +46,7 @@ class UpdateServiceTest extends TestCase
         $service->refresh();
 
         $this->assertEquals(['en' => 'Full colour'], $service->name);
-        $this->assertEquals(4200, $service->price);
+        $this->assertEquals(['CAD' => 4200], $service->prices);
         $this->assertNull($service->description);
         $this->assertCount(2, $service->steps);
         $this->assertEquals(70, $service->duration);
@@ -76,7 +76,7 @@ class UpdateServiceTest extends TestCase
             author: $michael,
             service: $fringe,
             name: $fringe->name,
-            price: 1500,
+            prices: ['CAD' => 1500],
             steps: [['active_duration' => 15, 'processing_duration' => 0]],
             category: $colours,
         )->execute();
@@ -93,7 +93,7 @@ class UpdateServiceTest extends TestCase
         $service = Service::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateService(author: $michael, service: $service, name: ['en' => 'Colour'], price: 3500, steps: [])->execute();
+        new UpdateService(author: $michael, service: $service, name: ['en' => 'Colour'], prices: ['CAD' => 3500], steps: [])->execute();
     }
 
     #[Test]
@@ -109,7 +109,7 @@ class UpdateServiceTest extends TestCase
             author: $michael,
             service: $service,
             name: ['en' => 'Haircut'],
-            price: 3500,
+            prices: ['CAD' => 3500],
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
     }
@@ -126,7 +126,7 @@ class UpdateServiceTest extends TestCase
             author: $michael,
             service: $service,
             name: ['en' => 'Haircut'],
-            price: 3500,
+            prices: ['CAD' => 3500],
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
             category: ServiceCategory::factory()->create(),
         )->execute();
@@ -144,7 +144,7 @@ class UpdateServiceTest extends TestCase
             author: $dwight,
             service: $service,
             name: ['en' => 'Haircut'],
-            price: 3500,
+            prices: ['CAD' => 3500],
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
     }
@@ -167,7 +167,7 @@ class UpdateServiceTest extends TestCase
             author: $michael,
             service: $service->refresh(),
             name: ['en' => 'Women\'s haircut'],
-            price: 3500,
+            prices: ['CAD' => 3500],
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
 
@@ -189,5 +189,43 @@ class UpdateServiceTest extends TestCase
 
         $this->assertEquals(['en' => 'Haircut'], $service->refresh()->name);
         $this->assertEquals(['fr'], $service->missingLanguages());
+    }
+
+    #[Test]
+    public function it_keeps_the_prices_of_a_currency_the_salon_stopped_using(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create(['currencies' => ['CAD', 'USD']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        $service = Service::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['en' => 'Haircut'],
+            'prices' => ['CAD' => 3500, 'USD' => 2600],
+        ]);
+        $company->update(['currencies' => ['CAD']]);
+
+        new UpdateService(
+            author: $michael,
+            service: $service->refresh(),
+            name: ['en' => 'Haircut'],
+            prices: ['CAD' => 4000],
+            steps: [['active_duration' => 30, 'processing_duration' => 0]],
+        )->execute();
+
+        $this->assertEquals(['USD' => 2600, 'CAD' => 4000], $service->refresh()->prices);
+        $this->assertEquals([], $service->missingCurrencies());
+    }
+
+    #[Test]
+    public function it_shows_a_currency_added_to_the_salon_as_missing_until_it_is_priced(): void
+    {
+        $company = Company::factory()->create(['currencies' => ['CAD']]);
+        $service = Service::factory()->create(['company_id' => $company->id, 'prices' => ['CAD' => 3500]]);
+
+        $company->update(['currencies' => ['CAD', 'USD']]);
+
+        $this->assertEquals(['CAD' => 3500], $service->refresh()->prices);
+        $this->assertEquals(['USD'], $service->missingCurrencies());
     }
 }

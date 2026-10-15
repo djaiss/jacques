@@ -20,13 +20,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $legal_name
  * @property string|null $logo_path
  * @property string|null $website_url
- * @property string|null $currency
  * @property string|null $billing_email
  * @property Carbon|null $trial_ends_at
  * @property bool $is_welcome_screen_pending
  * @property bool $is_onboarding_pending
  * @property OnboardingStepEnum $onboarding_step
  * @property list<string> $languages
+ * @property list<string> $currencies
  * @property Carbon|null $default_catalogue_created_at
  * @property array<string, mixed>|null $settings
  * @property Carbon $created_at
@@ -50,13 +50,13 @@ class Company extends Model
         'legal_name',
         'logo_path',
         'website_url',
-        'currency',
         'billing_email',
         'trial_ends_at',
         'is_welcome_screen_pending',
         'is_onboarding_pending',
         'onboarding_step',
         'languages',
+        'currencies',
         'default_catalogue_created_at',
         'settings',
     ];
@@ -74,6 +74,7 @@ class Company extends Model
             'is_onboarding_pending' => 'boolean',
             'onboarding_step' => OnboardingStepEnum::class,
             'languages' => 'array',
+            'currencies' => 'array',
             'default_catalogue_created_at' => 'datetime',
             'settings' => 'array',
         ];

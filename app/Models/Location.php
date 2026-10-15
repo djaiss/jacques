@@ -117,7 +117,7 @@ class Location extends Model
     public function services(): BelongsToMany
     {
         return $this->belongsToMany(Service::class, 'location_services')
-            ->withPivot(['price', 'is_active'])
+            ->withPivot(['prices', 'is_active'])
             ->withTimestamps();
     }
 

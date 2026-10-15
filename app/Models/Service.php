@@ -29,12 +29,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Its name and description are written once per language of the salon, keyed
  * by language code. Texts in a language the salon stopped using are kept.
  *
+ * Its price is written once per currency of the salon, in the smallest unit of
+ * that currency, keyed by currency code. Nothing converts one into another,
+ * and prices in a currency the salon stopped using are kept.
+ *
  * @property int $id
  * @property int $company_id
  * @property int|null $service_category_id
  * @property array<string, string> $name
  * @property array<string, string|null>|null $description
- * @property int $price
+ * @property array<string, int> $prices
  * @property bool $is_active
  * @property int $position
  * @property-read int $duration
@@ -58,7 +62,7 @@ class Service extends Model
         'service_category_id',
         'name',
         'description',
-        'price',
+        'prices',
         'is_active',
         'position',
     ];
@@ -73,7 +77,7 @@ class Service extends Model
         return [
             'name' => 'array',
             'description' => 'array',
-            'price' => 'integer',
+            'prices' => 'array',
             'is_active' => 'boolean',
             'position' => 'integer',
         ];
@@ -127,7 +131,7 @@ class Service extends Model
     public function locations(): BelongsToMany
     {
         return $this->belongsToMany(Location::class, 'location_services')
-            ->withPivot(['price', 'is_active'])
+            ->withPivot(['prices', 'is_active'])
             ->withTimestamps();
     }
 
@@ -161,5 +165,19 @@ class Service extends Model
     public function missingLanguages(): array
     {
         return CatalogueText::missingLanguages($this->name, $this->company->languages);
+    }
+
+    /**
+     * Get the currencies of the salon the service has no price in yet, in the
+     * order of the salon.
+     *
+     * @return list<string>
+     */
+    public function missingCurrencies(): array
+    {
+        return array_values(array_filter(
+            $this->company->currencies,
+            fn (string $currency): bool => ! array_key_exists($currency, $this->prices),
+        ));
     }
 }

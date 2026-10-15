@@ -35,7 +35,6 @@ class UpdateCompanyTest extends TestCase
             name: 'Dunder Mifflin Paper Company',
             legalName: 'Dunder Mifflin Inc.',
             websiteUrl: 'https://dundermifflin.com',
-            currency: 'EUR',
             billingEmail: 'accounting@dundermifflin.com',
         )->execute();
 
@@ -45,7 +44,6 @@ class UpdateCompanyTest extends TestCase
 
         $this->assertEquals('Dunder Mifflin Paper Company', $company->name);
         $this->assertEquals('Dunder Mifflin Inc.', $company->legal_name);
-        $this->assertEquals('EUR', $company->currency);
         $this->assertEquals('accounting@dundermifflin.com', $company->billing_email);
 
         Queue::assertPushedOn(

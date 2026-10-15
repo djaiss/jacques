@@ -30,12 +30,13 @@ class CreateService
      * @param  array<string, string>  $name
      * @param  list<array{active_duration: int, processing_duration: int}>  $steps
      * @param  array<string, string|null>  $description
+     * @param  array<string, int>  $prices
      */
     public function __construct(
         private readonly User $author,
         private readonly Company $company,
         private array $name,
-        private readonly int $price,
+        private readonly array $prices,
         private readonly array $steps,
         private array $description = [],
         private readonly ?ServiceCategory $category = null,
@@ -98,8 +99,20 @@ class CreateService
             }
         }
 
-        if ($this->price < 0) {
-            throw new InvalidArgumentException('A price cannot be negative');
+        foreach ($this->prices as $currency => $amount) {
+            if (! in_array($currency, $this->company->currencies, true)) {
+                throw new InvalidArgumentException("{$currency} is not a currency of the company");
+            }
+
+            if ($amount < 0) {
+                throw new InvalidArgumentException('A price cannot be negative');
+            }
+        }
+
+        foreach ($this->company->currencies as $currency) {
+            if (! array_key_exists($currency, $this->prices)) {
+                throw new InvalidArgumentException("A price is needed in {$currency}");
+            }
         }
 
         if ($this->steps === []) {
@@ -129,7 +142,7 @@ class CreateService
             'service_category_id' => $this->category?->id,
             'name' => $this->name,
             'description' => $this->description === [] ? null : $this->description,
-            'price' => $this->price,
+            'prices' => $this->prices,
             'is_active' => true,
             'position' => (int) $lastPosition + 1,
         ]);

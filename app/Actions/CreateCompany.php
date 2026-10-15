@@ -75,6 +75,7 @@ class CreateCompany
             'is_onboarding_pending' => true,
             'onboarding_step' => OnboardingStepEnum::Location,
             'languages' => ['en'],
+            'currencies' => ['CAD'],
         ]);
     }
 

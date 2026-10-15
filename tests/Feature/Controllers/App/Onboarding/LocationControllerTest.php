@@ -52,6 +52,7 @@ class LocationControllerTest extends TestCase
             'country' => 'US',
             'timezone' => 'America/New_York',
             'languages' => ['en'],
+            'currencies' => ['CAD'],
         ]);
 
         $response->assertRedirect(route('onboarding.location.index'));
@@ -84,6 +85,7 @@ class LocationControllerTest extends TestCase
             'country' => 'US',
             'timezone' => 'America/New_York',
             'languages' => ['en'],
+            'currencies' => ['CAD'],
         ]);
 
         $response->assertSessionHasErrors(['name' => 'The salon needs a name.']);
@@ -100,6 +102,7 @@ class LocationControllerTest extends TestCase
             'country' => 'CA',
             'timezone' => 'Europe/Paris',
             'languages' => ['en'],
+            'currencies' => ['CAD'],
         ]);
 
         $response->assertSessionHasErrors('timezone');
@@ -112,7 +115,7 @@ class LocationControllerTest extends TestCase
         Queue::fake();
 
         $user = $this->owner();
-        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York', 'languages' => ['en']];
+        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York', 'languages' => ['en'], 'currencies' => ['CAD']];
 
         $this->actingAs($user)->put(route('onboarding.location.update'), $payload);
         $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'city' => 'Scranton']);
@@ -133,6 +136,7 @@ class LocationControllerTest extends TestCase
             'country' => 'CA',
             'timezone' => 'America/Toronto',
             'languages' => ['fr', 'en', 'es'],
+            'currencies' => ['CAD'],
         ])->assertRedirect(route('onboarding.location.index'));
 
         $this->assertEquals(['fr', 'en', 'es'], $user->company->refresh()->languages);
@@ -148,6 +152,7 @@ class LocationControllerTest extends TestCase
             'country' => 'US',
             'timezone' => 'America/New_York',
             'languages' => [],
+            'currencies' => ['CAD'],
         ]);
 
         $response->assertSessionHasErrors(['languages' => 'Choose at least one language.']);
@@ -159,7 +164,7 @@ class LocationControllerTest extends TestCase
     {
         $user = $this->owner();
 
-        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York'];
+        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York', 'currencies' => ['CAD']];
 
         $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'languages' => ['en', 'tlh']])
             ->assertSessionHasErrors('languages.1');
@@ -179,12 +184,82 @@ class LocationControllerTest extends TestCase
             'country' => 'CA',
             'timezone' => 'America/Toronto',
             'languages' => ['fr', 'es'],
+            'currencies' => ['CAD'],
         ]);
 
         $response = $this->actingAs($user->refresh())->get(route('onboarding.location.index'));
 
         $response->assertSee('Languages spoken at the salon');
         $response->assertViewHas('viewModel', fn (LocationViewModel $viewModel): bool => $viewModel->form()['languages'] === ['fr', 'es']);
+    }
+
+    #[Test]
+    public function it_saves_the_currencies_in_the_order_they_were_chosen(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin Nashua',
+            'country' => 'US',
+            'timezone' => 'America/New_York',
+            'languages' => ['en'],
+            'currencies' => ['USD', 'CAD'],
+        ])->assertRedirect(route('onboarding.location.index'));
+
+        $this->assertEquals(['USD', 'CAD'], $user->company->refresh()->currencies);
+    }
+
+    #[Test]
+    public function it_asks_for_at_least_one_currency(): void
+    {
+        $user = $this->owner();
+
+        $response = $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin',
+            'country' => 'US',
+            'timezone' => 'America/New_York',
+            'languages' => ['en'],
+            'currencies' => [],
+        ]);
+
+        $response->assertSessionHasErrors(['currencies' => 'Choose at least one currency.']);
+        $this->assertEquals(0, Location::query()->count());
+    }
+
+    #[Test]
+    public function it_refuses_an_unknown_currency_and_a_currency_chosen_twice(): void
+    {
+        $user = $this->owner();
+
+        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York', 'languages' => ['en']];
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'currencies' => ['CAD', 'SCHRUTEBUCK']])
+            ->assertSessionHasErrors('currencies.1');
+        $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'currencies' => ['CAD', 'CAD']])
+            ->assertSessionHasErrors('currencies.0');
+    }
+
+    #[Test]
+    public function it_shows_the_currencies_saved_when_the_salon_is_edited(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin Montreal',
+            'country' => 'CA',
+            'timezone' => 'America/Toronto',
+            'languages' => ['fr'],
+            'currencies' => ['CAD', 'USD'],
+        ]);
+
+        $response = $this->actingAs($user->refresh())->get(route('onboarding.location.index'));
+
+        $response->assertSee('Currencies accepted at the salon');
+        $response->assertViewHas('viewModel', fn (LocationViewModel $viewModel): bool => $viewModel->form()['currencies'] === ['CAD', 'USD']);
     }
 
     #[Test]

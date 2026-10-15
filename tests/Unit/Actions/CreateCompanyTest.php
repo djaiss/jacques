@@ -213,6 +213,22 @@ class CreateCompanyTest extends TestCase
     }
 
     #[Test]
+    public function it_prices_the_catalogue_in_canadian_dollars_until_the_salon_chooses_its_currencies(): void
+    {
+        Queue::fake();
+
+        $company = new CreateCompany(
+            name: 'Dunder Mifflin',
+            firstName: 'Michael',
+            lastName: 'Scott',
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        $this->assertEquals(['CAD'], $company->refresh()->currencies);
+    }
+
+    #[Test]
     public function it_makes_the_slug_unique(): void
     {
         Queue::fake();
