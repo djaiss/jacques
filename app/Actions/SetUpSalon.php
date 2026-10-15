@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Write what the first onboarding step asks: the name of the salon, which
  * renames the company, the languages it works in, and its first location,
- * created once and updated on every later submission.
+ * created once, offering the catalogue, and updated on every later submission.
  */
 class SetUpSalon
 {
@@ -76,7 +76,7 @@ class SetUpSalon
         $location = $this->firstLocation();
 
         if ($location === null) {
-            new CreateLocation(
+            $location = new CreateLocation(
                 author: $this->author,
                 company: $this->company,
                 name: $this->company->name,
@@ -89,6 +89,8 @@ class SetUpSalon
                 timezone: $this->timezone,
                 isHeadquarters: true,
             )->execute();
+
+            new OfferServicesAtLocation(location: $location)->execute();
 
             return;
         }

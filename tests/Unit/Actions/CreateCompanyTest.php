@@ -8,6 +8,7 @@ use App\Actions\CreateCompany;
 use App\Enums\OnboardingStepEnum;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
+use App\Jobs\CreateDefaultServices;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Role;
@@ -20,6 +21,26 @@ use Tests\TestCase;
 class CreateCompanyTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[Test]
+    public function it_queues_the_creation_of_the_default_catalogue(): void
+    {
+        Queue::fake();
+
+        $company = new CreateCompany(
+            name: 'Dunder Mifflin',
+            firstName: 'Michael',
+            lastName: 'Scott',
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        Queue::assertPushedOn(
+            queue: 'high',
+            job: CreateDefaultServices::class,
+            callback: fn (CreateDefaultServices $job): bool => $job->companyId === $company->id,
+        );
+    }
 
     #[Test]
     public function it_creates_a_company_and_its_owner(): void

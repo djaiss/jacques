@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Actions;
 
+use App\Actions\CreateDefaultCatalogue;
+use App\Actions\CreateLocation;
 use App\Actions\SetUpSalon;
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\Service;
 use App\Models\User;
@@ -151,6 +154,78 @@ class SetUpSalonTest extends TestCase
 
         $this->assertEquals(['en' => 'Haircut'], $service->refresh()->name);
         $this->assertEquals(['es'], $service->missingLanguages());
+    }
+
+    #[Test]
+    public function it_offers_the_catalogue_at_the_first_location(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        new CreateDefaultCatalogue(company: $user->company)->execute();
+
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+
+        $scranton = Location::query()->where('company_id', $user->company_id)->firstOrFail();
+
+        $this->assertEquals(17, LocationService::query()->where('location_id', $scranton->id)->whereNull('price')->where('is_active', true)->count());
+    }
+
+    #[Test]
+    public function it_does_not_offer_the_catalogue_twice_when_submitted_again(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        new CreateDefaultCatalogue(company: $user->company)->execute();
+
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin Scranton', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+
+        $this->assertEquals(17, LocationService::query()->count());
+    }
+
+    #[Test]
+    public function it_gets_the_catalogue_offered_when_it_is_created_after_the_first_location(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+        new CreateDefaultCatalogue(company: $user->company)->execute();
+
+        $scranton = Location::query()->where('company_id', $user->company_id)->firstOrFail();
+
+        $this->assertEquals(17, LocationService::query()->where('location_id', $scranton->id)->count());
+    }
+
+    #[Test]
+    public function it_does_not_offer_a_default_service_deleted_before_the_first_location(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        new CreateDefaultCatalogue(company: $user->company)->execute();
+        Service::query()->where('company_id', $user->company_id)->where('name->en', 'Balayage')->delete();
+
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+
+        $this->assertEquals(16, LocationService::query()->count());
+    }
+
+    #[Test]
+    public function it_does_not_offer_the_catalogue_at_a_location_created_later(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        new CreateDefaultCatalogue(company: $user->company)->execute();
+        new SetUpSalon(author: $user, name: 'Dunder Mifflin', country: 'US', timezone: 'America/New_York', languages: ['en'])->execute();
+
+        $stamford = new CreateLocation(author: $user, company: $user->company, name: 'Stamford')->execute();
+
+        $this->assertEquals(0, LocationService::query()->where('location_id', $stamford->id)->count());
     }
 
     private function owner(): User

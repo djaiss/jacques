@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Enums\OnboardingStepEnum;
 use App\Enums\UserActionEnum;
 use App\Helpers\TextSanitizer;
+use App\Jobs\CreateDefaultServices;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Employee;
@@ -18,7 +19,8 @@ use Illuminate\Support\Str;
 /**
  * Create a company, its first user and the employee that user is. The company
  * gets the roles it starts life with, and the first user is given the Owner
- * role, which is what owning the company means.
+ * role, which is what owning the company means. Its default catalogue is
+ * copied on the queue.
  */
 class CreateCompany
 {
@@ -49,6 +51,7 @@ class CreateCompany
             $this->attachEmployee();
         });
 
+        $this->createDefaultCatalogue();
         $this->log();
 
         return $this->company;
@@ -114,6 +117,13 @@ class CreateCompany
     {
         $this->owner->employee_id = $this->employee->id;
         $this->owner->save();
+    }
+
+    private function createDefaultCatalogue(): void
+    {
+        CreateDefaultServices::dispatch(companyId: $this->company->id)
+            ->onQueue('high')
+            ->afterCommit();
     }
 
     private function log(): void

@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_onboarding_pending
  * @property OnboardingStepEnum $onboarding_step
  * @property list<string> $languages
+ * @property Carbon|null $default_catalogue_created_at
  * @property array<string, mixed>|null $settings
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
@@ -56,6 +57,7 @@ class Company extends Model
         'is_onboarding_pending',
         'onboarding_step',
         'languages',
+        'default_catalogue_created_at',
         'settings',
     ];
 
@@ -72,6 +74,7 @@ class Company extends Model
             'is_onboarding_pending' => 'boolean',
             'onboarding_step' => OnboardingStepEnum::class,
             'languages' => 'array',
+            'default_catalogue_created_at' => 'datetime',
             'settings' => 'array',
         ];
     }
