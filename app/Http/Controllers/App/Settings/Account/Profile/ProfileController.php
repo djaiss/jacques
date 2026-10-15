@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App\Settings\Account\Profile;
 
-use App\Actions\UpdateEmployeeInformation;
+use App\Actions\UpdateStaffInformation;
 use App\Http\Controllers\Controller;
 use App\ViewModels\Settings\Account\Profile\ProfileViewModel;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +18,7 @@ class ProfileController extends Controller
         return view('app.settings.account.profile.index', [
             'viewModel' => new ProfileViewModel(
                 user: $request->user(),
-                employee: $request->user()->employee,
+                staff: $request->user()->staff,
             ),
         ]);
     }
@@ -32,19 +32,23 @@ class ProfileController extends Controller
             'work_email' => ['nullable', 'string', 'email', 'max:255'],
         ]);
 
-        $employee = $request->user()->employee;
+        $staff = $request->user()->staff;
 
-        if ($employee === null) {
+        if ($staff === null) {
             abort(404);
         }
 
-        new UpdateEmployeeInformation(
+        new UpdateStaffInformation(
             author: $request->user(),
-            employee: $employee,
+            staff: $staff,
             firstName: $validated['first_name'],
             lastName: $validated['last_name'],
             displayName: $validated['display_name'] ?? null,
-            workEmail: $validated['work_email'] ?? null,
+            email: $validated['work_email'] ?? null,
+            phone: $staff->phone,
+            jobTitle: $staff->job_title,
+            bio: $staff->bio,
+            isBookable: $staff->is_bookable,
         )->execute();
 
         return redirect()->route('settings.profile.index')

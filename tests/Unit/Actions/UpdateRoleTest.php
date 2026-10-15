@@ -34,7 +34,7 @@ class UpdateRoleTest extends TestCase
         $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Salesman', 'slug' => 'salesman']);
         RolePermission::factory()->create([
             'role_id' => $role->id,
-            'permission' => PermissionEnum::EmployeeView,
+            'permission' => PermissionEnum::StaffView,
             'scope' => ScopeEnum::Company,
         ]);
 
@@ -43,7 +43,7 @@ class UpdateRoleTest extends TestCase
             role: $role,
             name: 'Assistant regional manager',
             grants: [
-                ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Self],
+                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
             ],
             description: 'Assistant to the regional manager, really.',
         )->execute();
@@ -56,7 +56,7 @@ class UpdateRoleTest extends TestCase
         $this->assertEquals('Assistant to the regional manager, really.', $role->description);
         $this->assertEquals('salesman', $role->slug);
         $this->assertCount(1, $role->permissions);
-        $this->assertEquals(PermissionEnum::EmployeeUpdate, $role->permissions->first()->permission);
+        $this->assertEquals(PermissionEnum::StaffUpdate, $role->permissions->first()->permission);
         $this->assertEquals(ScopeEnum::Self, $role->permissions->first()->scope);
 
         Queue::assertPushedOn(
@@ -67,7 +67,7 @@ class UpdateRoleTest extends TestCase
                 && $job->user->id === $author->id
                 && $job->parameters === [
                     'name' => 'Assistant regional manager',
-                    'permissions' => 'employee.update:self',
+                    'permissions' => 'staff.update:self',
                 ],
         );
     }
@@ -157,8 +157,8 @@ class UpdateRoleTest extends TestCase
             role: $role,
             name: 'Salesman',
             grants: [
-                ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Self],
-                ['permission' => PermissionEnum::EmployeeUpdate, 'scope' => ScopeEnum::Company],
+                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
+                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Company],
             ],
         )->execute();
     }

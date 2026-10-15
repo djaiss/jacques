@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Actions\CreateCompany;
-use App\Models\Employee;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -29,9 +29,13 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->count(5)->create([
             'company_id' => $company->id,
-        ]);
+        ])->each(fn (User $user): Staff => Staff::factory()->create([
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]));
 
-        Employee::factory()->count(10)->create([
+        Staff::factory()->count(5)->create([
             'company_id' => $company->id,
         ]);
     }

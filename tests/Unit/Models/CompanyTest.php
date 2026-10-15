@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Location;
 use App\Models\Service;
 use App\Models\ServiceCategory;
+use App\Models\Staff;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,17 @@ class CompanyTest extends TestCase
 
         $this->assertTrue($company->users()->exists());
         $this->assertCount(2, $company->users()->get());
+    }
+
+    #[Test]
+    public function it_has_many_staff_members_in_the_order_of_their_position(): void
+    {
+        $company = Company::factory()->create();
+        $dwight = Staff::factory()->create(['company_id' => $company->id, 'position' => 2]);
+        $michael = Staff::factory()->create(['company_id' => $company->id, 'position' => 1]);
+
+        $this->assertTrue($company->staff()->exists());
+        $this->assertEquals([$michael->id, $dwight->id], $company->staff->pluck('id')->all());
     }
 
     #[Test]

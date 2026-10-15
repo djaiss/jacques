@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Location;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -20,18 +21,18 @@ class AssignLocation
 {
     public function __construct(
         private readonly User $author,
-        private readonly User $user,
+        private readonly Staff $staff,
         private readonly Location $location,
     ) {}
 
-    public function execute(): User
+    public function execute(): Staff
     {
         $this->authorize();
         $this->validate();
         $this->assign();
         $this->log();
 
-        return $this->user;
+        return $this->staff;
     }
 
     private function authorize(): void
@@ -44,14 +45,14 @@ class AssignLocation
 
     private function validate(): void
     {
-        if ($this->user->company_id !== $this->location->company_id) {
-            throw new ModelNotFoundException('User not found');
+        if ($this->staff->company_id !== $this->location->company_id) {
+            throw new ModelNotFoundException('Staff not found');
         }
     }
 
     private function assign(): void
     {
-        $this->user->locations()->syncWithoutDetaching([$this->location->id]);
+        $this->staff->locations()->syncWithoutDetaching([$this->location->id]);
     }
 
     private function log(): void
@@ -59,10 +60,10 @@ class AssignLocation
         LogUserAction::dispatch(
             company: $this->location->company,
             user: $this->author,
-            action: UserActionEnum::UserAssignedToLocation,
+            action: UserActionEnum::StaffAssignedToLocation,
             parameters: [
                 'name' => $this->location->name,
-                'email' => $this->user->email,
+                'staff' => $this->staff->name,
             ],
         )->onQueue('low');
     }

@@ -11,6 +11,7 @@ use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,28 +31,30 @@ class AssignLocationTest extends TestCase
         $company = Company::factory()->create();
         $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
-        $dwight = User::factory()->create([
+        $dwight = Staff::factory()->create([
             'company_id' => $company->id,
-            'email' => 'dwight.schrute@dundermifflin.com',
+            'first_name' => 'Dwight',
+            'last_name' => 'Schrute',
+            'display_name' => null,
         ]);
 
-        $result = new AssignLocation(author: $author, user: $dwight, location: $scranton)->execute();
+        $result = new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
 
-        $this->assertInstanceOf(User::class, $result);
-        $this->assertDatabaseHas('user_locations', [
-            'user_id' => $dwight->id,
+        $this->assertInstanceOf(Staff::class, $result);
+        $this->assertDatabaseHas('location_staff', [
+            'staff_id' => $dwight->id,
             'location_id' => $scranton->id,
         ]);
 
         Queue::assertPushedOn(
             queue: 'low',
             job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::UserAssignedToLocation
+            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::StaffAssignedToLocation
                 && $job->company->id === $company->id
                 && $job->user->id === $author->id
                 && $job->parameters === [
                     'name' => 'Scranton',
-                    'email' => 'dwight.schrute@dundermifflin.com',
+                    'staff' => 'Dwight Schrute',
                 ],
         );
     }
@@ -64,10 +67,10 @@ class AssignLocationTest extends TestCase
         $company = Company::factory()->create();
         $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
         $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
         $dwight->locations()->attach($scranton);
 
-        new AssignLocation(author: $author, user: $dwight, location: $scranton)->execute();
+        new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
 
         $this->assertEquals(1, $dwight->locations()->count());
     }
@@ -80,22 +83,22 @@ class AssignLocationTest extends TestCase
         $company = Company::factory()->create();
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
         $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
 
-        new AssignLocation(author: $michael, user: $dwight, location: $scranton)->execute();
+        new AssignLocation(author: $michael, staff: $dwight, location: $scranton)->execute();
     }
 
     #[Test]
-    public function it_throws_when_the_user_belongs_to_another_company(): void
+    public function it_throws_when_the_staff_member_belongs_to_another_company(): void
     {
         $this->expectException(ModelNotFoundException::class);
 
         $company = Company::factory()->create();
         $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
         $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $stranger = User::factory()->create();
+        $stranger = Staff::factory()->create();
 
-        new AssignLocation(author: $author, user: $stranger, location: $scranton)->execute();
+        new AssignLocation(author: $author, staff: $stranger, location: $scranton)->execute();
     }
 
     #[Test]
@@ -106,8 +109,8 @@ class AssignLocationTest extends TestCase
         $company = Company::factory()->create();
         $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
         $nashua = Location::factory()->create();
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+        $dwight = Staff::factory()->create(['company_id' => $company->id]);
 
-        new AssignLocation(author: $author, user: $dwight, location: $nashua)->execute();
+        new AssignLocation(author: $author, staff: $dwight, location: $nashua)->execute();
     }
 }

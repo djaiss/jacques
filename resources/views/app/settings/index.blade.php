@@ -17,7 +17,7 @@
 
     <!-- who you are -->
     <div class="flex items-center gap-3.5 rounded-2xl bg-canvas p-4.5 ring-[1.5px] ring-hairline">
-      <x-avatar :employee="$viewModel->employee()" :name="$viewModel->name()" :size="44" />
+      <x-avatar :staff="$viewModel->staff()" :name="$viewModel->name()" :size="44" />
 
       <div>
         <p class="font-semibold text-ink">{{ $viewModel->name() }}</p>

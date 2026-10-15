@@ -16,7 +16,6 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table): void {
             $table->id()->comment('primary key');
             $table->unsignedBigInteger('company_id')->comment('company the user belongs to');
-            $table->unsignedBigInteger('employee_id')->nullable()->index()->comment('employee the account gives access to, null when the account belongs to somebody who does not work for the company');
             $table->string('email')->unique()->comment('email address the user logs in with');
             $table->timestamp('email_verified_at')->nullable()->comment('when the email address was verified');
             $table->string('password_hash')->nullable()->comment('hashed password, null when the user signs in through SSO');
@@ -35,7 +34,6 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('company_id')->references('id')->on('companies')->cascadeOnDelete();
-            $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table): void {

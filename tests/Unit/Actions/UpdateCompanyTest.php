@@ -97,7 +97,7 @@ class UpdateCompanyTest extends TestCase
 
         $company = Company::factory()->create();
         $member = User::factory()->create(['company_id' => $company->id]);
-        $this->grant($member, PermissionEnum::EmployeeView);
+        $this->grant($member, PermissionEnum::StaffView);
 
         new UpdateCompany(
             author: $member,

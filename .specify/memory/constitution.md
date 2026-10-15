@@ -1,6 +1,11 @@
 <!--
 Sync Impact Report
-Version change: 1.1.0 -> 1.2.0
+Version change: 1.2.0 -> 1.3.0
+Rationale: D3 now lets a team member exist without an account, so the matching invariant changes.
+A team member is a staff record, linked to at most one account, and is deleted only while no
+appointment mentions it.
+
+Previous report (1.1.0 -> 1.2.0)
 Rationale: `app/Console/Commands` joins the allowed folders for `jacques:localize`, which now exists.
 
 Previous report (1.0.0 -> 1.1.0)
@@ -142,8 +147,8 @@ that file first, then an amendment here.
   before any comparison (D18).
 - Times are stored in UTC and shown in the time zone of the salon (D2). The public booking page
   speaks the language of the salon, not the browser's (D30).
-- A team member is a user account. Somebody who leaves is deactivated, never deleted (D3). An
-  erasure request anonymizes the client record and keeps its appointments (D23).
+- A team member is a staff record, linked to at most one user account. Somebody who leaves is
+  deactivated, and deleted only while no appointment mentions them (D3). An erasure request anonymizes the client record and keeps its appointments (D23).
 
 ## Technology and Architecture Constraints
 
@@ -203,4 +208,4 @@ new principle or materially expanded guidance, PATCH for wording that changes no
 A reviewer MUST be able to point at the action, the test and the translations for the change under
 review, and say which principles it had to satisfy.
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-14
+**Version**: 1.3.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-15

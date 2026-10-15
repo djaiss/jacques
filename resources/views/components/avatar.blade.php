@@ -1,23 +1,23 @@
 {{-- How somebody is shown: the avatar they uploaded when they have one, and their initials otherwise. --}}
 {{--
-  @var \App\Models\Employee|null $employee
+  @var \App\Models\Staff|null $staff
   @var string $name
   @var int $size
 --}}
 @props([
-  'employee' => null,
+  'staff' => null,
   'name',
   'size' => 34,
 ])
 
-@if ($employee?->hasAvatar())
+@if ($staff?->hasAvatar())
   @php
-    $url = fn (int $pixels): string => route('settings.avatar.show', ['employee' => $employee, 'size' => $pixels]);
+    $url = fn (int $pixels): string => route('settings.avatar.show', ['staff' => $staff, 'size' => $pixels]);
   @endphp
 
   <x-image
-    :src="$url(\App\Models\Employee::AVATAR_SIZE)"
-    :srcset="$url(\App\Models\Employee::AVATAR_SIZE).' 1x, '.$url(\App\Models\Employee::AVATAR_SIZE * 2).' 2x'"
+    :src="$url(\App\Models\Staff::AVATAR_SIZE)"
+    :srcset="$url(\App\Models\Staff::AVATAR_SIZE).' 1x, '.$url(\App\Models\Staff::AVATAR_SIZE * 2).' 2x'"
     alt=""
     :width="$size"
     :height="$size"

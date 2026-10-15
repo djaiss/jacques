@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * A location of a company. The company owns the list, the same way it owns its
  * roles, so an address is written down once and referred to afterwards rather
- * than typed again on every employee who works there.
+ * than typed again on every staff member who works there.
  *
  * A company that works entirely remotely simply has none.
  *
@@ -90,13 +90,15 @@ class Location extends Model
     }
 
     /**
-     * Get the people assigned to the location.
+     * Get the staff members assigned to the location, paused assignments included.
      *
-     * @return BelongsToMany<User, $this>
+     * @return BelongsToMany<Staff, $this>
      */
-    public function users(): BelongsToMany
+    public function staff(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'user_locations')->withTimestamps();
+        return $this->belongsToMany(Staff::class, 'location_staff')
+            ->withPivot('is_active')
+            ->withTimestamps();
     }
 
     /**

@@ -91,6 +91,16 @@ class Company extends Model
     }
 
     /**
+     * Get the staff members who work for the company, in the order of the team.
+     *
+     * @return HasMany<Staff, $this>
+     */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(Staff::class)->orderBy('position');
+    }
+
+    /**
      * Get the roles that exist inside the company.
      *
      * @return HasMany<Role, $this>

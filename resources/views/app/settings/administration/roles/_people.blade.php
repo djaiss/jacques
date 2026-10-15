@@ -22,7 +22,7 @@
   <div class="rounded-[18px] bg-canvas px-2.5 py-2 ring-[1.5px] ring-hairline">
     @forelse ($people as $person)
       <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-xl px-3 py-2.75">
-        <x-avatar :employee="$person['employee']" :name="$person['name']" :size="34" />
+        <x-avatar :staff="$person['staff']" :name="$person['name']" :size="34" />
 
         <div class="min-w-0 flex-1">
           <p class="text-base font-semibold wrap-anywhere text-ink">{{ $person['name'] }}</p>

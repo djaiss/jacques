@@ -14,6 +14,6 @@ class WelcomeViewModel
 
     public function firstName(): string
     {
-        return $this->user->employee->first_name ?? $this->user->email;
+        return $this->user->staff->first_name ?? $this->user->email;
     }
 }

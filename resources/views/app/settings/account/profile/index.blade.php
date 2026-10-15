@@ -1,4 +1,4 @@
-{{-- Where somebody edits their own employee record. --}}
+{{-- Where somebody edits their own staff record. --}}
 {{-- @var \App\ViewModels\Settings\Account\Profile\ProfileViewModel $viewModel --}}
 <x-top-bar-layout :title="__('Profile')">
   <x-breadcrumb
@@ -32,7 +32,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-5">
-          <x-avatar id="profile-avatar" :employee="$viewModel->employee()" :name="$viewModel->name()" :size="78" />
+          <x-avatar id="profile-avatar" :staff="$viewModel->staff()" :name="$viewModel->name()" :size="78" />
 
           <div
             class="space-y-3 max-sm:w-full"

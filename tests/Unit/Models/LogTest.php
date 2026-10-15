@@ -6,8 +6,8 @@ namespace Tests\Unit\Models;
 
 use App\Enums\UserActionEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Log;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -51,14 +51,13 @@ class LogTest extends TestCase
     #[Test]
     public function it_gives_the_name_of_whoever_performed_the_action(): void
     {
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create();
+        Staff::factory()->create([
+            'company_id' => $user->company_id,
+            'user_id' => $user->id,
             'first_name' => 'Michael',
             'last_name' => 'Scott',
             'display_name' => null,
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $employee->company_id,
-            'employee_id' => $employee->id,
         ]);
         $log = Log::factory()->create([
             'company_id' => $user->company_id,

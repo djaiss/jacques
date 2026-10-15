@@ -13,28 +13,29 @@ use Tests\TestCase;
 class PermissionEnumTest extends TestCase
 {
     #[Test]
-    public function it_knows_which_permissions_are_about_one_employee(): void
+    public function it_knows_which_permissions_are_about_one_staff_member(): void
     {
-        $this->assertTrue(PermissionEnum::EmployeeView->targetsEmployee());
-        $this->assertTrue(PermissionEnum::EmployeeUpdate->targetsEmployee());
-        $this->assertTrue(PermissionEnum::ScheduleView->targetsEmployee());
-        $this->assertTrue(PermissionEnum::ScheduleManage->targetsEmployee());
+        $this->assertTrue(PermissionEnum::StaffView->targetsStaff());
+        $this->assertTrue(PermissionEnum::StaffUpdate->targetsStaff());
+        $this->assertTrue(PermissionEnum::ScheduleView->targetsStaff());
+        $this->assertTrue(PermissionEnum::ScheduleManage->targetsStaff());
 
-        $this->assertFalse(PermissionEnum::EmployeeCreate->targetsEmployee());
-        $this->assertFalse(PermissionEnum::RoleManage->targetsEmployee());
-        $this->assertFalse(PermissionEnum::LocationManage->targetsEmployee());
+        $this->assertFalse(PermissionEnum::StaffCreate->targetsStaff());
+        $this->assertFalse(PermissionEnum::StaffDelete->targetsStaff());
+        $this->assertFalse(PermissionEnum::RoleManage->targetsStaff());
+        $this->assertFalse(PermissionEnum::LocationManage->targetsStaff());
     }
 
     #[Test]
     public function it_knows_which_permissions_are_about_one_location(): void
     {
         $this->assertTrue(PermissionEnum::LocationManage->targetsLocation());
-        $this->assertTrue(PermissionEnum::EmployeeCreate->targetsLocation());
+        $this->assertTrue(PermissionEnum::StaffCreate->targetsLocation());
         $this->assertTrue(PermissionEnum::ServiceManage->targetsLocation());
         $this->assertTrue(PermissionEnum::ReportView->targetsLocation());
 
         $this->assertFalse(PermissionEnum::BillingManage->targetsLocation());
-        $this->assertFalse(PermissionEnum::EmployeeView->targetsLocation());
+        $this->assertFalse(PermissionEnum::StaffView->targetsLocation());
     }
 
     #[Test]
@@ -59,12 +60,20 @@ class PermissionEnumTest extends TestCase
     }
 
     #[Test]
-    public function it_offers_every_scope_for_a_permission_about_one_employee(): void
+    public function it_offers_every_scope_for_a_permission_about_one_staff_member(): void
     {
         $this->assertEquals(
             [ScopeEnum::Self, ScopeEnum::Location, ScopeEnum::Company],
-            PermissionEnum::EmployeeUpdate->scopes(),
+            PermissionEnum::StaffUpdate->scopes(),
         );
+    }
+
+    #[Test]
+    public function it_offers_only_the_company_scope_for_deleting_a_staff_member(): void
+    {
+        $this->assertEquals([ScopeEnum::Company], PermissionEnum::StaffDelete->scopes());
+        $this->assertEquals(PermissionGroupEnum::Team, PermissionEnum::StaffDelete->group());
+        $this->assertEquals('Delete somebody from the team', PermissionEnum::StaffDelete->label());
     }
 
     #[Test]
@@ -82,7 +91,7 @@ class PermissionEnumTest extends TestCase
         $this->assertEquals(PermissionGroupEnum::Administration, PermissionEnum::RoleManage->group());
         $this->assertEquals(PermissionGroupEnum::Locations, PermissionEnum::LocationManage->group());
         $this->assertEquals(PermissionGroupEnum::Locations, PermissionEnum::ScheduleView->group());
-        $this->assertEquals(PermissionGroupEnum::Team, PermissionEnum::EmployeeCreate->group());
+        $this->assertEquals(PermissionGroupEnum::Team, PermissionEnum::StaffCreate->group());
         $this->assertEquals(PermissionGroupEnum::Services, PermissionEnum::ServiceManage->group());
         $this->assertEquals(PermissionGroupEnum::Clients, PermissionEnum::ClientView->group());
         $this->assertEquals(PermissionGroupEnum::Appointments, PermissionEnum::AppointmentManage->group());

@@ -7,7 +7,7 @@ namespace Tests\Unit\Models;
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Service;
-use App\Models\User;
+use App\Models\Staff;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -36,14 +36,14 @@ class LocationServiceTest extends TestCase
     }
 
     #[Test]
-    public function it_belongs_to_many_team_members(): void
+    public function it_belongs_to_many_staff_members(): void
     {
         $locationService = LocationService::factory()->create();
-        $jim = User::factory()->create(['company_id' => $locationService->location->company_id]);
-        $locationService->users()->attach($jim->id);
+        $jim = Staff::factory()->create(['company_id' => $locationService->location->company_id]);
+        $locationService->staff()->attach($jim->id);
 
-        $this->assertTrue($locationService->users()->exists());
-        $this->assertEquals($jim->id, $locationService->users->first()->id);
+        $this->assertTrue($locationService->staff()->exists());
+        $this->assertEquals($jim->id, $locationService->staff->first()->id);
     }
 
     #[Test]

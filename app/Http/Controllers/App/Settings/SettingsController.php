@@ -16,7 +16,7 @@ class SettingsController extends Controller
         return view('app.settings.index', [
             'viewModel' => new SettingsViewModel(
                 user: $request->user(),
-                employee: $request->user()->employee,
+                staff: $request->user()->staff,
             ),
         ]);
     }

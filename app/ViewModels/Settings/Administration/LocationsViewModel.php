@@ -7,6 +7,7 @@ namespace App\ViewModels\Settings\Administration;
 use App\Enums\LocationScopeEnum;
 use App\Enums\PermissionEnum;
 use App\Models\Location;
+use App\Models\Staff;
 use App\Models\User;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,7 +17,7 @@ class LocationsViewModel
     /** @var Collection<int, Location>|null */
     private ?Collection $locations = null;
 
-    /** @var Collection<int, User>|null */
+    /** @var Collection<int, Staff>|null */
     private ?Collection $people = null;
 
     public function __construct(
@@ -200,11 +201,11 @@ class LocationsViewModel
         }
 
         return $this->people()
-            ->filter(fn (User $user): bool => $user->locations->contains('id', $location->id))
-            ->map(fn (User $user): array => [
-                'id' => $user->id,
-                'name' => $user->employee->name ?? $user->email,
-                'removeUrl' => route('settings.locationPeople.destroy', [$location->id, $user->id]),
+            ->filter(fn (Staff $staff): bool => $staff->locations->contains('id', $location->id))
+            ->map(fn (Staff $staff): array => [
+                'id' => $staff->id,
+                'name' => $staff->name,
+                'removeUrl' => route('settings.locationPeople.destroy', [$location->id, $staff->id]),
             ])
             ->values()
             ->all();
@@ -218,22 +219,22 @@ class LocationsViewModel
         }
 
         return $this->people()
-            ->reject(fn (User $user): bool => $user->locations->contains('id', $location->id))
-            ->map(fn (User $user): array => [
-                'id' => $user->id,
-                'name' => $user->employee->name ?? $user->email,
+            ->reject(fn (Staff $staff): bool => $staff->locations->contains('id', $location->id))
+            ->map(fn (Staff $staff): array => [
+                'id' => $staff->id,
+                'name' => $staff->name,
             ])
             ->values()
             ->all();
     }
 
-    /** @return Collection<int, User> */
+    /** @return Collection<int, Staff> */
     private function people(): Collection
     {
-        return $this->people ??= $this->user->company->users()
-            ->with(['employee', 'locations'])
+        return $this->people ??= $this->user->company->staff()
+            ->with('locations')
             ->get()
-            ->sortBy(fn (User $user): string => mb_strtolower($user->employee->name ?? $user->email))
+            ->sortBy(fn (Staff $staff): string => mb_strtolower($staff->name))
             ->values();
     }
 
@@ -314,8 +315,11 @@ class LocationsViewModel
             return $this->locations;
         }
 
-        return $this->locations = $this->canAddLocations()
-            ? $this->user->company->locations()->get()
-            : $this->user->locations()->where('company_id', $this->user->company_id)->get();
+        if ($this->canAddLocations()) {
+            return $this->locations = $this->user->company->locations()->get();
+        }
+
+        return $this->locations = $this->user->staff?->activeLocations()->where('company_id', $this->user->company_id)->get()
+            ?? new Collection;
     }
 }

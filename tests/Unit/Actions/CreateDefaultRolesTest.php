@@ -8,9 +8,9 @@ use App\Actions\CreateDefaultRoles;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -103,9 +103,9 @@ class CreateDefaultRolesTest extends TestCase
                 'appointment.view' => 'location',
                 'client.manage' => 'company',
                 'client.view' => 'company',
-                'employee.create' => 'location',
-                'employee.update' => 'location',
-                'employee.view' => 'location',
+                'staff.create' => 'location',
+                'staff.update' => 'location',
+                'staff.view' => 'location',
                 'location.manage' => 'location',
                 'report.view' => 'location',
                 'schedule.manage' => 'location',
@@ -117,8 +117,8 @@ class CreateDefaultRolesTest extends TestCase
                 'appointment.manage' => 'self',
                 'appointment.view' => 'self',
                 'client.view' => 'self',
-                'employee.update' => 'self',
-                'employee.view' => 'self',
+                'staff.update' => 'self',
+                'staff.view' => 'self',
                 'schedule.view' => 'self',
                 'service.view' => 'location',
             ]],
@@ -154,18 +154,19 @@ class CreateDefaultRolesTest extends TestCase
     {
         $company = Company::factory()->create();
         $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $pam = Employee::factory()->create(['company_id' => $company->id]);
-        $jim = Employee::factory()->create(['company_id' => $company->id]);
-        User::factory()->create(['company_id' => $company->id, 'employee_id' => $jim->id])->locations()->attach($scranton);
+        $jimAccount = User::factory()->create(['company_id' => $company->id]);
+        $jim = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $jimAccount->id]);
+        $jim->locations()->attach($scranton);
 
-        $user = User::factory()->create(['company_id' => $company->id, 'employee_id' => $pam->id]);
-        $user->locations()->attach($scranton);
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $pam = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+        $pam->locations()->attach($scranton);
         $this->giveDefaultRole($user, Role::STAFF);
         $this->giveDefaultRole($user, Role::RECEPTIONIST);
 
-        $this->assertTrue($user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($pam)->allowed());
-        $this->assertFalse($user->permission(PermissionEnum::EmployeeUpdate)->forEmployee($jim)->allowed());
-        $this->assertTrue($user->permission(PermissionEnum::ScheduleView)->forEmployee($jim)->allowed());
+        $this->assertTrue($user->permission(PermissionEnum::StaffUpdate)->forStaff($pam)->allowed());
+        $this->assertFalse($user->permission(PermissionEnum::StaffUpdate)->forStaff($jim)->allowed());
+        $this->assertTrue($user->permission(PermissionEnum::ScheduleView)->forStaff($jim)->allowed());
         $this->assertEquals(
             [ScopeEnum::Self, ScopeEnum::Location],
             $user->grants()[PermissionEnum::AppointmentManage->value],

@@ -9,6 +9,7 @@ use App\Enums\ScopeEnum;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\Staff;
 use App\Models\User;
 use App\ViewModels\Settings\Administration\RolesViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +27,7 @@ class RolesViewModelTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
 
         $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Regional manager']);
-        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::EmployeeView]);
+        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::StaffView]);
         RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::CompanyManage]);
         $user->roles()->attach($role->id);
 
@@ -38,7 +39,7 @@ class RolesViewModelTest extends TestCase
         $this->assertCount(2, $rows);
         $this->assertEquals('Regional manager', $rows[0]['name']);
         $this->assertEquals('Administration and Team', $rows[0]['summary']);
-        $this->assertEquals('2 of 16 permissions', $rows[0]['permissions']);
+        $this->assertEquals('2 of 17 permissions', $rows[0]['permissions']);
         $this->assertEquals('1 person', $rows[0]['holders']);
         $this->assertEquals('Temp', $rows[1]['name']);
         $this->assertEquals('Nothing yet. Tick what it is allowed to do.', $rows[1]['summary']);
@@ -84,7 +85,7 @@ class RolesViewModelTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
 
         $role = Role::factory()->create(['company_id' => $company->id]);
-        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::EmployeeView]);
+        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::StaffView]);
         $user->roles()->attach($role->id);
 
         $tabs = new RolesViewModel(user: $user, role: $role, onPeopleTab: true)->tabs();
@@ -107,7 +108,7 @@ class RolesViewModelTest extends TestCase
         $role = Role::factory()->create(['company_id' => $company->id]);
         RolePermission::factory()->create([
             'role_id' => $role->id,
-            'permission' => PermissionEnum::EmployeeUpdate,
+            'permission' => PermissionEnum::StaffUpdate,
             'scope' => ScopeEnum::Self,
         ]);
 
@@ -115,11 +116,11 @@ class RolesViewModelTest extends TestCase
 
         $permissions = collect($groups)->pluck('permissions')->flatten(1)->keyBy('value');
 
-        $this->assertTrue($permissions[PermissionEnum::EmployeeUpdate->value]['granted']);
-        $this->assertEquals(ScopeEnum::Self->value, $permissions[PermissionEnum::EmployeeUpdate->value]['scope']);
+        $this->assertTrue($permissions[PermissionEnum::StaffUpdate->value]['granted']);
+        $this->assertEquals(ScopeEnum::Self->value, $permissions[PermissionEnum::StaffUpdate->value]['scope']);
 
-        $this->assertFalse($permissions[PermissionEnum::EmployeeView->value]['granted']);
-        $this->assertEquals(ScopeEnum::Company->value, $permissions[PermissionEnum::EmployeeView->value]['scope']);
+        $this->assertFalse($permissions[PermissionEnum::StaffView->value]['granted']);
+        $this->assertEquals(ScopeEnum::Company->value, $permissions[PermissionEnum::StaffView->value]['scope']);
     }
 
     #[Test]
@@ -134,7 +135,7 @@ class RolesViewModelTest extends TestCase
         $permissions = collect($groups)->pluck('permissions')->flatten(1)->keyBy('value');
 
         $this->assertEquals([], $permissions[PermissionEnum::CompanyManage->value]['scopes']);
-        $this->assertCount(3, $permissions[PermissionEnum::EmployeeView->value]['scopes']);
+        $this->assertCount(3, $permissions[PermissionEnum::StaffView->value]['scopes']);
         $this->assertCount(2, $permissions[PermissionEnum::ClientView->value]['scopes']);
     }
 
@@ -157,7 +158,7 @@ class RolesViewModelTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
 
         $role = Role::factory()->create(['company_id' => $company->id]);
-        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::EmployeeView]);
+        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::StaffView]);
 
         $viewModel = new RolesViewModel(user: $user, role: $role);
 
@@ -171,13 +172,13 @@ class RolesViewModelTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
 
         $role = Role::factory()->create(['company_id' => $company->id]);
-        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::EmployeeView]);
+        RolePermission::factory()->create(['role_id' => $role->id, 'permission' => PermissionEnum::StaffView]);
 
         $granted = new RolesViewModel(user: $user, role: $role)->grantedPermissions();
 
         $this->assertCount(count(PermissionEnum::cases()), $granted);
-        $this->assertTrue($granted[PermissionEnum::EmployeeView->value]);
-        $this->assertFalse($granted[PermissionEnum::EmployeeUpdate->value]);
+        $this->assertTrue($granted[PermissionEnum::StaffView->value]);
+        $this->assertFalse($granted[PermissionEnum::StaffUpdate->value]);
     }
 
     #[Test]
@@ -253,6 +254,25 @@ class RolesViewModelTest extends TestCase
     }
 
     #[Test]
+    public function it_names_the_people_of_a_role_after_their_staff_record(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id, 'email' => 'michael@dundermifflin.com']);
+        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id, 'first_name' => 'Michael', 'last_name' => 'Scott']);
+        User::factory()->create(['company_id' => $company->id, 'email' => 'jim@dundermifflin.com']);
+
+        $role = Role::factory()->create(['company_id' => $company->id]);
+        $user->roles()->attach($role->id);
+
+        $viewModel = new RolesViewModel(user: $user, role: $role);
+
+        $this->assertEquals('Michael Scott', $viewModel->people()[0]['name']);
+        $this->assertTrue($staff->is($viewModel->people()[0]['staff']));
+        $this->assertEquals('jim@dundermifflin.com', $viewModel->assignable()[0]['name']);
+        $this->assertNull($viewModel->assignable()[0]['staff']);
+    }
+
+    #[Test]
     public function it_says_why_a_role_cannot_be_deleted(): void
     {
         $company = Company::factory()->create();
@@ -306,7 +326,7 @@ class RolesViewModelTest extends TestCase
             ScopeEnum::Self->value => 'Themselves only',
             ScopeEnum::Location->value => 'Their locations',
             ScopeEnum::Company->value => 'Everybody in the company',
-        ], $permissions[PermissionEnum::EmployeeView->value]['scopes']);
+        ], $permissions[PermissionEnum::StaffView->value]['scopes']);
     }
 
     #[Test]

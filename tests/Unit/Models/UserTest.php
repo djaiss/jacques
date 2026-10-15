@@ -6,10 +6,8 @@ namespace Tests\Unit\Models;
 
 use App\Models\Company;
 use App\Models\EmailSent;
-use App\Models\Employee;
-use App\Models\Location;
-use App\Models\LocationService;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,39 +30,28 @@ class UserTest extends TestCase
     }
 
     #[Test]
-    public function it_belongs_to_an_employee(): void
+    public function it_has_one_staff_record(): void
     {
-        $employee = Employee::factory()->create(['first_name' => 'Michael', 'last_name' => 'Scott']);
-        $user = User::factory()->create([
-            'company_id' => $employee->company_id,
-            'employee_id' => $employee->id,
+        $user = User::factory()->create();
+        Staff::factory()->create([
+            'company_id' => $user->company_id,
+            'user_id' => $user->id,
+            'first_name' => 'Michael',
+            'last_name' => 'Scott',
+            'display_name' => null,
         ]);
 
-        $this->assertTrue($user->employee()->exists());
-        $this->assertEquals('Michael Scott', $user->employee->name);
+        $this->assertTrue($user->staff()->exists());
+        $this->assertEquals('Michael Scott', $user->staff->name);
     }
 
     #[Test]
-    public function it_has_many_locations(): void
+    public function it_has_no_staff_record_by_default(): void
     {
         $user = User::factory()->create();
-        $location = Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton']);
-        $user->locations()->attach($location);
 
-        $this->assertTrue($user->locations()->exists());
-        $this->assertEquals('Scranton', $user->locations->first()->name);
-    }
-
-    #[Test]
-    public function it_has_many_location_services(): void
-    {
-        $user = User::factory()->create();
-        $location = Location::factory()->create(['company_id' => $user->company_id]);
-        $locationService = LocationService::factory()->create(['location_id' => $location->id]);
-        $user->locationServices()->attach($locationService);
-
-        $this->assertTrue($user->locationServices()->exists());
-        $this->assertEquals($locationService->id, $user->locationServices->first()->id);
+        $this->assertFalse($user->staff()->exists());
+        $this->assertNull($user->staff);
     }
 
     #[Test]

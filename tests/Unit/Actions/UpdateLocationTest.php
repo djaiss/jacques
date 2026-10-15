@@ -11,6 +11,7 @@ use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -214,7 +215,7 @@ class UpdateLocationTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
         $stamford = Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford']);
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $michael->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $michael->company_id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         new UpdateLocation(author: $michael, location: $scranton, name: 'Scranton branch')->execute();
 

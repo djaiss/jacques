@@ -16,9 +16,10 @@ enum PermissionEnum: string implements Translatable
     case LocationManage = 'location.manage';
     case ScheduleView = 'schedule.view';
     case ScheduleManage = 'schedule.manage';
-    case EmployeeView = 'employee.view';
-    case EmployeeCreate = 'employee.create';
-    case EmployeeUpdate = 'employee.update';
+    case StaffView = 'staff.view';
+    case StaffCreate = 'staff.create';
+    case StaffUpdate = 'staff.update';
+    case StaffDelete = 'staff.delete';
     case ServiceView = 'service.view';
     case ServiceManage = 'service.manage';
     case ClientView = 'client.view';
@@ -27,13 +28,13 @@ enum PermissionEnum: string implements Translatable
     case AppointmentManage = 'appointment.manage';
     case ReportView = 'report.view';
 
-    public function targetsEmployee(): bool
+    public function targetsStaff(): bool
     {
         return match ($this) {
             self::ScheduleView,
             self::ScheduleManage,
-            self::EmployeeView,
-            self::EmployeeUpdate => true,
+            self::StaffView,
+            self::StaffUpdate => true,
             default => false,
         };
     }
@@ -42,7 +43,7 @@ enum PermissionEnum: string implements Translatable
     {
         return match ($this) {
             self::LocationManage,
-            self::EmployeeCreate,
+            self::StaffCreate,
             self::ServiceView,
             self::ServiceManage,
             self::ReportView => true,
@@ -56,9 +57,10 @@ enum PermissionEnum: string implements Translatable
         return match ($this) {
             self::BillingManage,
             self::CompanyManage,
-            self::RoleManage => [ScopeEnum::Company],
+            self::RoleManage,
+            self::StaffDelete => [ScopeEnum::Company],
             self::LocationManage,
-            self::EmployeeCreate,
+            self::StaffCreate,
             self::ServiceView,
             self::ServiceManage,
             self::ReportView => [ScopeEnum::Location, ScopeEnum::Company],
@@ -66,8 +68,8 @@ enum PermissionEnum: string implements Translatable
             self::ClientManage => [ScopeEnum::Self, ScopeEnum::Company],
             self::ScheduleView,
             self::ScheduleManage,
-            self::EmployeeView,
-            self::EmployeeUpdate,
+            self::StaffView,
+            self::StaffUpdate,
             self::AppointmentView,
             self::AppointmentManage => [ScopeEnum::Self, ScopeEnum::Location, ScopeEnum::Company],
         };
@@ -82,9 +84,10 @@ enum PermissionEnum: string implements Translatable
             self::LocationManage,
             self::ScheduleView,
             self::ScheduleManage => PermissionGroupEnum::Locations,
-            self::EmployeeView,
-            self::EmployeeCreate,
-            self::EmployeeUpdate => PermissionGroupEnum::Team,
+            self::StaffView,
+            self::StaffCreate,
+            self::StaffUpdate,
+            self::StaffDelete => PermissionGroupEnum::Team,
             self::ServiceView,
             self::ServiceManage => PermissionGroupEnum::Services,
             self::ClientView,
@@ -104,9 +107,10 @@ enum PermissionEnum: string implements Translatable
             self::LocationManage => 'Change a location and its opening hours',
             self::ScheduleView => 'See the schedule of a colleague',
             self::ScheduleManage => 'Change the schedule of a colleague',
-            self::EmployeeView => 'See the profile of a colleague',
-            self::EmployeeCreate => 'Add somebody to the team',
-            self::EmployeeUpdate => 'Change the profile of a colleague',
+            self::StaffView => 'See the profile of a colleague',
+            self::StaffCreate => 'Add somebody to the team',
+            self::StaffUpdate => 'Change the profile of a colleague',
+            self::StaffDelete => 'Delete somebody from the team',
             self::ServiceView => 'See the services',
             self::ServiceManage => 'Change the services',
             self::ClientView => 'See a client',

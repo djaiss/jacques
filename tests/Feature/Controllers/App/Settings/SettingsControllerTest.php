@@ -6,9 +6,9 @@ namespace Tests\Feature\Controllers\App\Settings;
 
 use App\Enums\PermissionEnum;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,14 +36,14 @@ class SettingsControllerTest extends TestCase
     public function it_shows_the_name_of_the_company_and_of_the_person(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
-            'company_id' => $company->id,
-            'display_name' => 'Michael Scott',
-        ]);
         $user = $this->giveDefaultRole(User::factory()->create([
             'company_id' => $company->id,
-            'employee_id' => $employee->id,
         ]), Role::STAFF);
+        Staff::factory()->create([
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'display_name' => 'Michael Scott',
+        ]);
 
         $response = $this->actingAs($user)->get(route('settings.index'));
 

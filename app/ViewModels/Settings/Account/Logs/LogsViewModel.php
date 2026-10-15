@@ -27,7 +27,7 @@ class LogsViewModel
     public function logs(): CursorPaginator
     {
         return $this->logs ??= $this->user->logs()
-            ->with('user.employee')
+            ->with('user.staff')
             ->latest()
             ->cursorPaginate(self::PER_PAGE);
     }

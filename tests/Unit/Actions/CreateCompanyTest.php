@@ -80,7 +80,7 @@ class CreateCompanyTest extends TestCase
     }
 
     #[Test]
-    public function it_creates_the_employee_the_owner_is(): void
+    public function it_creates_the_staff_record_of_the_owner_linked_to_their_account(): void
     {
         Queue::fake();
 
@@ -92,17 +92,16 @@ class CreateCompanyTest extends TestCase
             password: 'thatswhatshesaid',
         )->execute();
 
-        $this->assertDatabaseHas('employees', [
-            'company_id' => $company->id,
-            'first_name' => 'Michael',
-            'last_name' => 'Scott',
-            'work_email' => 'michael.scott@dundermifflin.com',
-        ]);
-
         $owner = $company->users()->firstOrFail();
 
-        $this->assertNotNull($owner->employee_id);
-        $this->assertEquals('Michael Scott', $owner->employee->name);
+        $this->assertDatabaseHas('staff', [
+            'company_id' => $company->id,
+            'user_id' => $owner->id,
+            'first_name' => 'Michael',
+            'last_name' => 'Scott',
+            'email' => 'michael.scott@dundermifflin.com',
+        ]);
+        $this->assertEquals('Michael Scott', $owner->staff->name);
     }
 
     #[Test]

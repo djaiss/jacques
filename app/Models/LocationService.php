@@ -85,13 +85,13 @@ class LocationService extends Model
     }
 
     /**
-     * Get the team members who perform the service at the location.
+     * Get the staff members who perform the service at the location.
      *
-     * @return BelongsToMany<User, $this>
+     * @return BelongsToMany<Staff, $this>
      */
-    public function users(): BelongsToMany
+    public function staff(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'team_member_services')->withTimestamps();
+        return $this->belongsToMany(Staff::class, 'staff_location_services')->withTimestamps();
     }
 
     /**

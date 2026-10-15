@@ -7,8 +7,8 @@ namespace Tests\Feature\Controllers\App\Settings\Account\Logs;
 use App\Enums\UserActionEnum;
 use App\Models\Company;
 use App\Models\EmailSent;
-use App\Models\Employee;
 use App\Models\Log;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -22,15 +22,13 @@ class LogControllerTest extends TestCase
     public function it_shows_the_logs_screen(): void
     {
         $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $employee = Employee::factory()->create([
+        $user = User::factory()->create(['company_id' => $company->id]);
+        Staff::factory()->create([
             'company_id' => $company->id,
             'first_name' => 'Michael',
             'last_name' => 'Scott',
             'display_name' => null,
-        ]);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'employee_id' => $employee->id,
+            'user_id' => $user->id,
         ]);
 
         Log::factory()->create([

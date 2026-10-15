@@ -83,14 +83,14 @@ class Log extends Model
     /**
      * Get who performed the action. A log outlives the account behind it, so it
      * falls back to the email address recorded at the time once that account,
-     * or the employee record under it, is gone.
+     * or the staff record under it, is gone.
      *
      * @return Attribute<string, never>
      */
     protected function author(): Attribute
     {
         return Attribute::make(
-            get: fn (): string => $this->user->employee->name ?? $this->user_email,
+            get: fn (): string => $this->user->staff->name ?? $this->user_email,
         );
     }
 

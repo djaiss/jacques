@@ -8,6 +8,7 @@ use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -286,7 +287,7 @@ class LocationControllerTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
         Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
         $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $michael->locations()->attach($scranton);
+        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
         $response = $this->actingAs($michael)->get(route('settings.locations.index'));
 
