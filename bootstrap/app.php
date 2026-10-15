@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RedirectToWelcomeScreen;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'set.locale' => SetLocale::class,
+            'welcome.screen' => RedirectToWelcomeScreen::class,
         ]);
 
         // The framework looks for routes named `login` and `home`; ours are
