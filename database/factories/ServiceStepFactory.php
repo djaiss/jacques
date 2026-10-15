@@ -23,8 +23,9 @@ class ServiceStepFactory extends Factory
         return [
             'service_id' => Service::factory(),
             'position' => 2,
-            'active_duration' => 20,
-            'processing_duration' => 30,
+            'name' => null,
+            'duration' => 30,
+            'requires_staff' => true,
         ];
     }
 }

@@ -116,11 +116,27 @@ class CreateDefaultCatalogueTest extends TestCase
 
         new CreateDefaultCatalogue(company: $company)->execute();
 
-        $this->assertEquals(20, ServiceStep::query()->whereIn('service_id', Service::query()->where('company_id', $company->id)->select('id'))->count());
-        $this->assertEquals([[30, 30], [30, 0]], $this->steps($company, 'Full Color'));
-        $this->assertEquals([[45, 30], [30, 0]], $this->steps($company, 'Highlights'));
-        $this->assertEquals([[10, 15], [10, 0]], $this->steps($company, 'Deep Conditioning'));
-        $this->assertEquals([[30, 0]], $this->steps($company, "Men's Haircut"));
+        $this->assertEquals(23, ServiceStep::query()->whereIn('service_id', Service::query()->where('company_id', $company->id)->select('id'))->count());
+        $this->assertEquals([['Color application', 30, true], ['Processing', 30, false], ['Rinse & finish', 30, true]], $this->steps($company, 'Full Color'));
+        $this->assertEquals([['Application', 45, true], ['Processing', 30, false], ['Rinse & finish', 30, true]], $this->steps($company, 'Highlights'));
+        $this->assertEquals([['Application', 10, true], ['Processing', 15, false], ['Rinse & finish', 10, true]], $this->steps($company, 'Deep Conditioning'));
+        $this->assertEquals([[null, 30, true]], $this->steps($company, "Men's Haircut"));
+    }
+
+    #[Test]
+    public function it_names_the_steps_in_every_interface_locale(): void
+    {
+        $company = Company::factory()->create();
+
+        new CreateDefaultCatalogue(company: $company)->execute();
+
+        $processing = ServiceStep::query()
+            ->whereIn('service_id', Service::query()->where('company_id', $company->id)->where('name->en', 'Full Color')->select('id'))
+            ->where('position', 2)
+            ->firstOrFail();
+
+        $this->assertEqualsCanonicalizing(['en', 'fr', 'de', 'es'], array_keys($processing->name));
+        $this->assertEquals('Processing', $processing->name['en']);
     }
 
     #[Test]
@@ -233,7 +249,7 @@ class CreateDefaultCatalogueTest extends TestCase
             ->whereIn('service_id', Service::query()->where('company_id', $company->id)->where('name->en', $name)->select('id'))
             ->orderBy('position')
             ->get()
-            ->map(fn (ServiceStep $step): array => [$step->active_duration, $step->processing_duration])
+            ->map(fn (ServiceStep $step): array => [$step->name['en'] ?? null, $step->duration, $step->requires_staff])
             ->all();
     }
 }

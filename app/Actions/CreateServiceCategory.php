@@ -23,7 +23,7 @@ class CreateServiceCategory
     private ServiceCategory $category;
 
     /**
-     * @param  array<string, string>  $name
+     * @param  array<string, string|null>  $name
      * @param  array<string, string|null>  $description
      */
     public function __construct(
@@ -54,8 +54,8 @@ class CreateServiceCategory
 
     private function sanitize(): void
     {
-        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
-        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
+        $this->name = array_filter(array_map(TextSanitizer::nullablePlainText(...), $this->name), fn (?string $text): bool => (string) $text !== '');
+        $this->description = array_filter(array_map(TextSanitizer::nullablePlainText(...), $this->description), fn (?string $text): bool => (string) $text !== '');
     }
 
     private function validate(): void
@@ -66,18 +66,14 @@ class CreateServiceCategory
             }
         }
 
-        foreach ($this->company->languages as $language) {
-            if (($this->name[$language] ?? '') === '') {
-                throw new InvalidArgumentException("A name is needed in {$language}");
-            }
-
+        foreach ($this->name as $language => $name) {
             $taken = ServiceCategory::query()
                 ->where('company_id', $this->company->id)
-                ->where("name->{$language}", $this->name[$language])
+                ->where("name->{$language}", $name)
                 ->exists();
 
             if ($taken) {
-                throw new InvalidArgumentException('The company already has a service category called '.$this->name[$language]);
+                throw new InvalidArgumentException('The company already has a service category called '.$name);
             }
         }
     }
@@ -102,7 +98,7 @@ class CreateServiceCategory
             company: $this->company,
             user: $this->author,
             action: UserActionEnum::ServiceCategoryCreated,
-            parameters: ['name' => $this->name[$this->company->languages[0]]],
+            parameters: ['name' => $this->name[$this->company->languages[0]] ?? __('Untitled')],
         )->onQueue('low');
     }
 }

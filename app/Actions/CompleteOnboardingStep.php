@@ -9,11 +9,15 @@ use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
+use App\Models\Location;
 use App\Models\User;
 
 /**
  * Record that the company finished one step of its onboarding. The saved step
  * only moves forward, and finishing the last step ends the onboarding.
+ * Finishing the services step, every time, also offers every service of the
+ * catalogue at the headquarters, since those written during the step are
+ * offered nowhere yet.
  */
 class CompleteOnboardingStep
 {
@@ -29,6 +33,10 @@ class CompleteOnboardingStep
         $this->company = $this->author->company;
 
         $this->authorize();
+
+        if ($this->step === OnboardingStepEnum::Services) {
+            $this->offerServicesAtHeadquarters();
+        }
 
         if (! $this->company->is_onboarding_pending) {
             return $this->company;
@@ -46,6 +54,20 @@ class CompleteOnboardingStep
             ->permission(PermissionEnum::CompanyManage)
             ->forCompany($this->company)
             ->authorize();
+    }
+
+    private function offerServicesAtHeadquarters(): void
+    {
+        $headquarters = Location::query()
+            ->where('company_id', $this->company->id)
+            ->where('is_headquarters', true)
+            ->first();
+
+        if ($headquarters === null) {
+            return;
+        }
+
+        new OfferServicesAtLocation(location: $headquarters)->execute();
     }
 
     private function update(): void

@@ -25,10 +25,19 @@ class ServiceStepTest extends TestCase
     }
 
     #[Test]
-    public function it_has_no_processing_time_unless_told_otherwise(): void
+    public function it_requires_a_team_member_unless_told_otherwise(): void
     {
         $service = Service::factory()->create();
 
-        $this->assertSame(0, $service->steps->first()->processing_duration);
+        $this->assertTrue($service->steps->first()->requires_staff);
+        $this->assertSame(30, $service->steps->first()->duration);
+    }
+
+    #[Test]
+    public function it_casts_its_name_per_language(): void
+    {
+        $step = ServiceStep::factory()->create(['name' => ['en' => 'Processing', 'fr' => 'Temps de pose']]);
+
+        $this->assertSame(['en' => 'Processing', 'fr' => 'Temps de pose'], $step->refresh()->name);
     }
 }

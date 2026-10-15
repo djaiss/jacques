@@ -13,9 +13,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Class ServiceStep
  *
- * One part of a service. The active duration is the time the team member works
- * on the client; the processing duration follows it, and during it the team
- * member is free for somebody else, while a colour sets for instance.
+ * One part of a service. During a step that requires staff, the team member
+ * works on the client; during a step that does not, the team member is free for
+ * somebody else, while a colour sets for instance. That second kind is the
+ * processing time of the product.
+ *
+ * Its name is written once per language of the salon, keyed by language code,
+ * and stays empty on a service made of a single step.
  *
  * Steps are written with their service, never one by one, so a service always
  * has at least one. The position is the rank of the step in the service.
@@ -23,8 +27,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $service_id
  * @property int $position
- * @property int $active_duration
- * @property int $processing_duration
+ * @property array<string, string>|null $name
+ * @property int $duration
+ * @property bool $requires_staff
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
  */
@@ -43,8 +48,9 @@ class ServiceStep extends Model
     protected $fillable = [
         'service_id',
         'position',
-        'active_duration',
-        'processing_duration',
+        'name',
+        'duration',
+        'requires_staff',
     ];
 
     /**
@@ -56,8 +62,9 @@ class ServiceStep extends Model
     {
         return [
             'position' => 'integer',
-            'active_duration' => 'integer',
-            'processing_duration' => 'integer',
+            'name' => 'array',
+            'duration' => 'integer',
+            'requires_staff' => 'boolean',
         ];
     }
 

@@ -70,4 +70,21 @@ class DestroyServiceCategoryTest extends TestCase
 
         new DestroyServiceCategory(author: $michael, category: ServiceCategory::factory()->create())->execute();
     }
+
+    #[Test]
+    public function it_deletes_a_category_with_its_services_when_asked_to(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        $barbering = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
+        $shave = Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $barbering->id]);
+
+        new DestroyServiceCategory(author: $michael, category: $barbering, withServices: true)->execute();
+
+        $this->assertModelMissing($barbering);
+        $this->assertModelMissing($shave);
+        $this->assertDatabaseMissing('service_steps', ['service_id' => $shave->id]);
+    }
 }

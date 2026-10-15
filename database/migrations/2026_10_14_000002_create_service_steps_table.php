@@ -14,8 +14,9 @@ return new class extends Migration
             $table->id()->comment('primary key');
             $table->unsignedBigInteger('service_id')->comment('service the step is part of');
             $table->unsignedInteger('position')->comment('rank of the step in the service, starting at 1');
-            $table->unsignedInteger('active_duration')->comment('minutes the team member works on the client');
-            $table->unsignedInteger('processing_duration')->default(0)->comment('minutes of processing after the active part, during which the team member is free');
+            $table->json('name')->nullable()->comment('name of the step in each salon language, keyed by language code');
+            $table->unsignedInteger('duration')->comment('minutes the step lasts');
+            $table->boolean('requires_staff')->default(true)->comment('whether the team member is busy during the step; when false, the step is processing time and the team member is free');
             $table->timestamps();
 
             $table->foreign('service_id')->references('id')->on('services')->cascadeOnDelete();

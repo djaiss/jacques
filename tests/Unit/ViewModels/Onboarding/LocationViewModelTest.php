@@ -30,7 +30,6 @@ class LocationViewModelTest extends TestCase
         $this->assertEquals('Dunder Mifflin', $form['name']);
         $this->assertEquals('', $form['country']);
         $this->assertEquals('', $form['timezone']);
-        $this->assertFalse($viewModel->isSetUp());
     }
 
     #[Test]
@@ -53,7 +52,6 @@ class LocationViewModelTest extends TestCase
         $this->assertEquals('Scranton', $form['city']);
         $this->assertEquals('US', $form['country']);
         $this->assertEquals('America/New_York', $form['timezone']);
-        $this->assertTrue($viewModel->isSetUp());
     }
 
     #[Test]

@@ -66,6 +66,6 @@ class LocationController extends Controller
             phone: $validated['phone'] ?? null,
         )->execute();
 
-        return redirect()->route('onboarding.location.index');
+        return redirect()->route('onboarding.services.index');
     }
 }

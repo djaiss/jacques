@@ -38,8 +38,8 @@ class UpdateServiceTest extends TestCase
             name: ['en' => 'Full colour'],
             prices: ['CAD' => 4200],
             steps: [
-                ['active_duration' => 25, 'processing_duration' => 35],
-                ['active_duration' => 10, 'processing_duration' => 0],
+                ['duration' => 25, 'requires_staff' => true], ['duration' => 35, 'requires_staff' => false],
+                ['duration' => 10, 'requires_staff' => true],
             ],
         )->execute();
 
@@ -48,8 +48,9 @@ class UpdateServiceTest extends TestCase
         $this->assertEquals(['en' => 'Full colour'], $service->name);
         $this->assertEquals(['CAD' => 4200], $service->prices);
         $this->assertNull($service->description);
-        $this->assertCount(2, $service->steps);
+        $this->assertCount(3, $service->steps);
         $this->assertEquals(70, $service->duration);
+        $this->assertEquals(35, $service->free_duration);
 
         Queue::assertPushedOn(
             queue: 'low',
@@ -77,7 +78,7 @@ class UpdateServiceTest extends TestCase
             service: $fringe,
             name: $fringe->name,
             prices: ['CAD' => 1500],
-            steps: [['active_duration' => 15, 'processing_duration' => 0]],
+            steps: [['duration' => 15, 'requires_staff' => true]],
             category: $colours,
         )->execute();
 
@@ -110,7 +111,7 @@ class UpdateServiceTest extends TestCase
             service: $service,
             name: ['en' => 'Haircut'],
             prices: ['CAD' => 3500],
-            steps: [['active_duration' => 45, 'processing_duration' => 0]],
+            steps: [['duration' => 45, 'requires_staff' => true]],
         )->execute();
     }
 
@@ -127,7 +128,7 @@ class UpdateServiceTest extends TestCase
             service: $service,
             name: ['en' => 'Haircut'],
             prices: ['CAD' => 3500],
-            steps: [['active_duration' => 45, 'processing_duration' => 0]],
+            steps: [['duration' => 45, 'requires_staff' => true]],
             category: ServiceCategory::factory()->create(),
         )->execute();
     }
@@ -145,7 +146,7 @@ class UpdateServiceTest extends TestCase
             service: $service,
             name: ['en' => 'Haircut'],
             prices: ['CAD' => 3500],
-            steps: [['active_duration' => 45, 'processing_duration' => 0]],
+            steps: [['duration' => 45, 'requires_staff' => true]],
         )->execute();
     }
 
@@ -168,7 +169,7 @@ class UpdateServiceTest extends TestCase
             service: $service->refresh(),
             name: ['en' => 'Women\'s haircut'],
             prices: ['CAD' => 3500],
-            steps: [['active_duration' => 45, 'processing_duration' => 0]],
+            steps: [['duration' => 45, 'requires_staff' => true]],
         )->execute();
 
         $company->update(['languages' => ['en', 'es']]);
@@ -176,7 +177,7 @@ class UpdateServiceTest extends TestCase
 
         $this->assertEquals(['es' => 'Corte', 'en' => 'Women\'s haircut'], $service->name);
         $this->assertEquals(['es' => 'Corto o largo'], $service->description);
-        $this->assertEquals([], $service->missingLanguages());
+        $this->assertEquals(['en'], $service->missingLanguages());
     }
 
     #[Test]
@@ -210,7 +211,7 @@ class UpdateServiceTest extends TestCase
             service: $service->refresh(),
             name: ['en' => 'Haircut'],
             prices: ['CAD' => 4000],
-            steps: [['active_duration' => 30, 'processing_duration' => 0]],
+            steps: [['duration' => 30, 'requires_staff' => true]],
         )->execute();
 
         $this->assertEquals(['USD' => 2600, 'CAD' => 4000], $service->refresh()->prices);

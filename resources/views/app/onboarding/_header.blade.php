@@ -1,5 +1,9 @@
 {{-- The top of every onboarding step: where it sits, the way out, and the four steps. --}}
-{{-- @var \App\ViewModels\Onboarding\StepViewModel $viewModel --}}
+{{--
+  @var \App\ViewModels\Onboarding\StepViewModel $viewModel
+  @var string|null $title
+  @var string|null $introduction
+--}}
 <x-breadcrumb
   :trail="[
     __('Getting started') => route('onboarding.index'),
@@ -9,14 +13,14 @@
 
 <div class="space-y-7">
   <!-- page title -->
-  <div class="flex flex-wrap items-end justify-between gap-6">
-    <div class="min-w-0 space-y-2">
+  <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0 flex-1 space-y-2">
       <p class="text-xs font-bold tracking-[0.08em] text-muted uppercase">{{ __('Onboarding · :step', ['step' => $viewModel->stepCounter()]) }}</p>
-      <h1 class="text-4xl leading-tight font-bold tracking-[-0.025em] text-ink">{{ __('Welcome to :name', ['name' => $viewModel->salonName()]) }}</h1>
-      <p class="text-lg leading-normal text-pretty text-body">{{ __('Four short steps, and your salon can take its first appointment.') }}</p>
+      <h1 class="text-4xl leading-tight font-bold tracking-[-0.025em] text-ink">{{ $title ?? __('Welcome to :name', ['name' => $viewModel->salonName()]) }}</h1>
+      <p class="text-lg leading-normal text-pretty text-body">{{ $introduction ?? __('Four short steps, and your salon can take its first appointment.') }}</p>
     </div>
 
-    <x-button.secondary :href="route('home.index')">{{ __('Finish later') }}</x-button.secondary>
+    <x-button.secondary :href="route('home.index')" class="shrink-0 self-start sm:self-end">{{ __('Finish later') }}</x-button.secondary>
   </div>
 
   <!-- step tracker -->

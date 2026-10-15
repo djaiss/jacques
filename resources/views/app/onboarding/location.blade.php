@@ -2,7 +2,6 @@
 {{-- @var \App\ViewModels\Onboarding\LocationViewModel $viewModel --}}
 @php
   $form = $viewModel->form();
-  $editing = ! $viewModel->isSetUp() || $errors->any();
   $selectClasses = 'block w-full cursor-pointer appearance-none rounded-[10px] border-[1.5px] border-control bg-input px-3.25 py-2.75 text-base text-ink transition-colors duration-150 hover:border-ink hover:bg-hover focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none disabled:cursor-default disabled:opacity-60 aria-invalid:border-error';
 @endphp
 
@@ -12,7 +11,6 @@
   <div
     class="mt-7"
     x-data="{
-      editing: @js($editing),
       country: @js($form['country']),
       timezone: @js($form['timezone']),
       timezones: @js($viewModel->timezonesByCountry()),
@@ -69,21 +67,8 @@
       },
     }"
   >
-    <!-- confirmation -->
-    <div x-show="! editing" @if ($editing) x-cloak @endif class="max-w-180 space-y-4.5 rounded-[18px] bg-canvas p-7 ring-[1.5px] ring-hairline">
-      <div class="space-y-1.5">
-        <h2 class="text-[22px] font-bold tracking-[-0.025em] text-ink">{{ __(':name is ready', ['name' => $viewModel->salonName()]) }}</h2>
-        <p class="text-sm leading-normal text-pretty text-body">{{ __('This is your first location. You can add more later from Settings. Next, list the services your salon offers.') }}</p>
-      </div>
-
-      <div class="flex flex-wrap gap-2.5">
-        <x-button :href="route('onboarding.services.index')">{{ __('Continue to services') }}</x-button>
-        <x-button.secondary type="button" @click="editing = true">{{ __('Edit the salon') }}</x-button.secondary>
-      </div>
-    </div>
-
     <!-- salon form -->
-    <div x-show="editing" @unless ($editing) x-cloak @endunless class="max-w-180 rounded-[18px] bg-canvas p-7 ring-[1.5px] ring-hairline">
+    <div class="max-w-180 rounded-[18px] bg-canvas p-7 ring-[1.5px] ring-hairline">
       <x-form method="put" :action="route('onboarding.location.update')" novalidate class="space-y-5" x-ref="salonForm" @submit="submitSalon($event)">
         <div class="flex items-start gap-3.5 border-b border-hairline-soft pb-5.5">
           <span class="accent-tile flex size-9.5 shrink-0 items-center justify-center rounded-xl" style="--tile-hue: 30" aria-hidden="true">
