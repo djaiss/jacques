@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Enums\OnboardingStepEnum;
+use App\Http\Controllers\App\Onboarding\AppointmentController as OnboardingAppointmentController;
+use App\Http\Controllers\App\Onboarding\LocationController as OnboardingLocationController;
+use App\Http\Controllers\App\Onboarding\OnboardingController;
+use App\Http\Controllers\App\Onboarding\ServiceController as OnboardingServiceController;
+use App\Http\Controllers\App\Onboarding\StaffController as OnboardingStaffController;
 use App\Http\Controllers\App\Settings\Account\Logs\EmailSentController;
 use App\Http\Controllers\App\Settings\Account\Logs\LogController;
 use App\Http\Controllers\App\Settings\Account\Preferences\PreferenceController;
@@ -31,6 +37,23 @@ Route::get('/', function () {
 Route::middleware(['auth', 'set.locale'])->group(function (): void {
     Route::get('welcome', [WelcomeController::class, 'index'])->name('welcome.index');
     Route::put('welcome', [WelcomeController::class, 'update'])->name('welcome.update');
+});
+
+// The four steps a new salon goes through once the welcome screen is behind it.
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
+    Route::get('onboarding', [OnboardingController::class, 'index'])->middleware('onboarding.step')->name('onboarding.index');
+
+    Route::get('onboarding/location', [OnboardingLocationController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Location->value)->name('onboarding.location.index');
+    Route::put('onboarding/location', [OnboardingLocationController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Location->value)->name('onboarding.location.update');
+
+    Route::get('onboarding/services', [OnboardingServiceController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Services->value)->name('onboarding.services.index');
+    Route::put('onboarding/services', [OnboardingServiceController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Services->value)->name('onboarding.services.update');
+
+    Route::get('onboarding/staff', [OnboardingStaffController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.index');
+    Route::put('onboarding/staff', [OnboardingStaffController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.update');
+
+    Route::get('onboarding/appointments', [OnboardingAppointmentController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.index');
+    Route::put('onboarding/appointments', [OnboardingAppointmentController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.update');
 });
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {

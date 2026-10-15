@@ -32,6 +32,6 @@ class WelcomeController extends Controller
             user: $request->user(),
         )->execute();
 
-        return redirect()->route('home.index');
+        return redirect()->route('onboarding.index');
     }
 }

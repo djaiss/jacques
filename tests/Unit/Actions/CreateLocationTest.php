@@ -174,4 +174,28 @@ class CreateLocationTest extends TestCase
 
         new CreateLocation(author: $michael, company: $company, name: 'Scranton branch')->execute();
     }
+
+    #[Test]
+    public function it_makes_the_new_location_the_only_headquarters(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+        $stamford = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Stamford branch',
+            'is_headquarters' => true,
+        ]);
+
+        $scranton = new CreateLocation(
+            author: $author,
+            company: $company,
+            name: 'Scranton branch',
+            isHeadquarters: true,
+        )->execute();
+
+        $this->assertTrue($scranton->refresh()->is_headquarters);
+        $this->assertFalse($stamford->refresh()->is_headquarters);
+    }
 }

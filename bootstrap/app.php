@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\OnboardingStepGate;
 use App\Http\Middleware\RedirectToWelcomeScreen;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'set.locale' => SetLocale::class,
             'welcome.screen' => RedirectToWelcomeScreen::class,
+            'onboarding.step' => OnboardingStepGate::class,
         ]);
 
         // The framework looks for routes named `login` and `home`; ours are

@@ -50,4 +50,14 @@ class CompanyFactory extends Factory
             'is_welcome_screen_pending' => true,
         ]);
     }
+
+    /**
+     * Indicate that the company has not gone through the onboarding yet.
+     */
+    public function onboardingPending(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_onboarding_pending' => true,
+        ]);
+    }
 }
