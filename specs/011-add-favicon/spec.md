@@ -8,6 +8,8 @@
 
 **Input**: User description: "add favicon", with a 32 by 32 pixel image attached: a white portrait of
 a man in a hat, on a black disc. The image is kept as [favicon-source.png](favicon-source.png).
+The same portrait was then supplied as a 96 by 96 pixel PNG and as an SVG, with the three links
+the page head must carry.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -49,19 +51,21 @@ the tab.
   bar, so one icon serves both themes.
 - A page is served without the shared page head (the root page today): the icon still appears,
   because browsers fall back to the conventional address.
-- The screen has a high pixel density: the 32 pixel source is shown scaled, which is accepted for
-  this feature (see Assumptions).
+- The screen has a high pixel density: the browser takes the SVG, or the 96 pixel PNG, and the
+  portrait stays sharp.
+- The browser cannot read an SVG icon: it takes the PNG, or the ICO when it reads neither.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Every page the application serves MUST announce the portrait as its icon.
+- **FR-001**: Every page the application serves MUST announce the portrait in three formats: a
+  96 by 96 pixel PNG, an SVG, and an ICO as the shortcut icon.
 - **FR-002**: The icon at the conventional address browsers request on their own MUST be the
   portrait and MUST NOT be empty.
-- **FR-003**: The icon MUST be the attached image, unchanged in drawing and colour.
-- **FR-004**: An automated test MUST fail if the icon file is missing or empty, or if a page stops
-  announcing it.
+- **FR-003**: Every format MUST show the supplied portrait, unchanged in drawing and colour.
+- **FR-004**: An automated test MUST fail if any of the three files is missing or not in its
+  format, or if a page stops announcing one of them.
 
 ## Success Criteria *(mandatory)*
 
@@ -75,8 +79,8 @@ the tab.
 
 ## Assumptions
 
-- The attached 32 by 32 pixel image is the only source. A home screen icon for phones and a high
-  density version need a larger source and are out of scope until one is supplied.
+- The three supplied files are the only sources. A home screen icon for phones (and a web app
+  manifest) is out of scope.
 - The colourful logo used inside the application stays as it is. The favicon is the monochrome
   portrait, which reads better at tab size.
 - No translation is involved: the feature adds no visible text.
