@@ -76,30 +76,30 @@ JACQUES_SCREENSHOT_LINK_ENABLED=true
 2. Mint a link for the screen you want:
 
 ```bash
-php artisan jacques:screenshot-link michael.scott@dundermifflin.example --to=/settings/account/relationship-types
+php artisan jacques:screenshot-link michael.scott@dundermifflin.com --to=/settings/administration/locations
 ```
 
 3. Give the link to Iris, exactly as it was printed:
 
 ```bash
-iris --scale 1 --size 1440x1420 '<the link>' -o /tmp/relationship-types.png
+iris --scale 1 --size 1440x1000 '<the link>' -o /tmp/locations.png
 ```
 
 The signature covers the host, so `APP_URL` has to name the host you are opening. Herd serves the
-project directory, `http://erica.test`, and a link minted for any other host answers
+project directory, `http://jacques.test`, and a link minted for any other host answers
 `403 Invalid signature`.
 
 The link expires in five minutes, so mint a new one when it goes stale. It only works on a
-development instance: the route is registered outside production only, the setting is off unless
-somebody writes it, the host has to be `localhost`, a loopback address or a `.test` one, and the
-link is signed with the application key, so nobody who cannot already run the application can mint
-one.
+development instance: it answers `404` in production, the setting is off unless somebody writes
+it, the host has to be `localhost`, a loopback address, or a name ending in `.localhost` or `.test`,
+and the link is signed with the application key, so nobody who cannot already run the application
+can mint one. Any edit to the link, or opening it after it expired, answers `403`.
 
 Turn the setting back off when you are done anyway. It costs nothing and it is one fewer thing
 resting on the other three.
 
-The example account signs in as `michael.scott@dundermifflin.example`. Rebuild it with
-`php artisan migrate:fresh --seed` if the instance holds nothing.
+The seeded account is Michael Scott, `michael.scott@dundermifflin.com`. Rebuild it with
+`php artisan migrate:fresh --seed --quiet` if the instance holds nothing.
 
 ## Screens that scroll
 

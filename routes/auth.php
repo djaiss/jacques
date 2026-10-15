@@ -9,6 +9,7 @@ use App\Http\Controllers\App\Auth\MagicLinkController;
 use App\Http\Controllers\App\Auth\NewPasswordController;
 use App\Http\Controllers\App\Auth\PasswordResetLinkController;
 use App\Http\Controllers\App\Auth\RegistrationController;
+use App\Http\Controllers\App\Auth\ScreenshotLinkController;
 use App\Http\Controllers\App\Auth\SignInController;
 use App\Http\Controllers\App\Auth\TwoFactorChallengeController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,11 @@ Route::middleware(['guest', 'set.locale'])->group(function (): void {
 // Only ever registered on a machine somebody develops on.
 Route::middleware(['guest', 'set.locale'])->group(function (): void {
     Route::post('local-sign-in', [LocalSignInController::class, 'create'])->name('auth.localSignIn.create');
+});
+
+// Answers only on a development instance with screenshot links switched on.
+Route::middleware(['signed', 'set.locale'])->group(function (): void {
+    Route::get('screenshot-link', [ScreenshotLinkController::class, 'show'])->name('auth.screenshotLink.show');
 });
 
 Route::middleware(['guest', 'set.locale'])->group(function (): void {

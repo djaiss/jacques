@@ -163,6 +163,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Screenshot link
+    |--------------------------------------------------------------------------
+    |
+    | A signed link that signs somebody in without a password, so a screenshot
+    | tool that carries no session can capture a screen behind the sign in. It
+    | is off unless switched on here, never works in production, and only
+    | answers on a development host.
+    |
+    */
+
+    'screenshot_link_enabled' => (bool) env('JACQUES_SCREENSHOT_LINK_ENABLED', false),
+
+    'screenshot_link_duration_minutes' => env('JACQUES_SCREENSHOT_LINK_DURATION_MINUTES', 5),
+
+    /*
+    |--------------------------------------------------------------------------
     | Legal pages
     |--------------------------------------------------------------------------
     |
