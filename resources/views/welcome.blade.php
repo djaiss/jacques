@@ -6,6 +6,8 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+
         @fonts
 
         <!-- Styles / Scripts -->
