@@ -10,6 +10,7 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -55,6 +56,26 @@ class RemoveLocationTest extends TestCase
                     'email' => 'dwight.schrute@dundermifflin.com',
                 ],
         );
+    }
+
+    #[Test]
+    public function it_forgets_the_services_they_performed_at_that_location_only(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $stamford = Location::factory()->create(['company_id' => $company->id]);
+        $atScranton = LocationService::factory()->create(['location_id' => $scranton->id]);
+        $atStamford = LocationService::factory()->create(['location_id' => $stamford->id, 'service_id' => $atScranton->service_id]);
+        $jim = User::factory()->create(['company_id' => $company->id]);
+        $jim->locations()->attach([$scranton->id, $stamford->id]);
+        $jim->locationServices()->attach([$atScranton->id, $atStamford->id]);
+
+        new RemoveLocation(author: $author, user: $jim, location: $scranton)->execute();
+
+        $this->assertEquals([$atStamford->id], $jim->locationServices()->pluck('location_services.id')->all());
     }
 
     #[Test]

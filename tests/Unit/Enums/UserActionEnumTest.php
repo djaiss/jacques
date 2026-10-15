@@ -25,5 +25,7 @@ class UserActionEnumTest extends TestCase
         $this->assertEquals('Changed the avatar of :name', UserActionEnum::EmployeeAvatarUpdated->description());
         $this->assertEquals('Removed the avatar of :name', UserActionEnum::EmployeeAvatarDeleted->description());
         $this->assertEquals('Assigned :email to the location called :name', UserActionEnum::UserAssignedToLocation->description());
+        $this->assertEquals('Offered the service called :name at the location called :location', UserActionEnum::LocationServiceCreated->description());
+        $this->assertEquals('Let :email perform the service called :name at the location called :location', UserActionEnum::TeamMemberServiceAssigned->description());
     }
 }

@@ -10,11 +10,12 @@ use App\Jobs\LogUserAction;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Take somebody off a location. What their roles grant at location scope stops
- * reaching it, and taking somebody off a location they were never assigned to
- * changes nothing.
+ * reaching it, the services they performed there are forgotten, and taking
+ * somebody off a location they were never assigned to changes nothing.
  */
 class RemoveLocation
 {
@@ -51,7 +52,10 @@ class RemoveLocation
 
     private function remove(): void
     {
-        $this->user->locations()->detach($this->location->id);
+        DB::transaction(function (): void {
+            $this->user->locations()->detach($this->location->id);
+            $this->user->locationServices()->detach($this->location->locationServices()->pluck('id'));
+        });
     }
 
     private function log(): void

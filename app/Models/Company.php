@@ -94,6 +94,26 @@ class Company extends Model
     }
 
     /**
+     * Get the service categories of the company, in the order of their position.
+     *
+     * @return HasMany<ServiceCategory, $this>
+     */
+    public function serviceCategories(): HasMany
+    {
+        return $this->hasMany(ServiceCategory::class)->orderBy('position');
+    }
+
+    /**
+     * Get the services of the company.
+     *
+     * @return HasMany<Service, $this>
+     */
+    public function services(): HasMany
+    {
+        return $this->hasMany(Service::class);
+    }
+
+    /**
      * Get whether the company is still within its trial period.
      */
     public function isOnTrial(): bool

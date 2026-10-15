@@ -161,6 +161,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the services the user performs, each as offered at one location.
+     *
+     * @return BelongsToMany<LocationService, $this>
+     */
+    public function locationServices(): BelongsToMany
+    {
+        return $this->belongsToMany(LocationService::class, 'team_member_services')->withTimestamps();
+    }
+
+    /**
      * Get whether the user holds the Owner role, which grants everything and
      * which a company never runs out of.
      */

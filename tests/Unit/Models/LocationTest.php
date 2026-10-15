@@ -6,6 +6,8 @@ namespace Tests\Unit\Models;
 
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\LocationService;
+use App\Models\Service;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,6 +37,27 @@ class LocationTest extends TestCase
 
         $this->assertTrue($location->users()->exists());
         $this->assertEquals($user->id, $location->users->first()->id);
+    }
+
+    #[Test]
+    public function it_has_many_location_services(): void
+    {
+        $location = Location::factory()->create();
+        LocationService::factory()->create(['location_id' => $location->id]);
+
+        $this->assertTrue($location->locationServices()->exists());
+    }
+
+    #[Test]
+    public function it_belongs_to_many_services(): void
+    {
+        $location = Location::factory()->create();
+        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'name' => 'Haircut']);
+        $location->services()->attach($haircut->id);
+
+        $this->assertTrue($location->services()->exists());
+        $this->assertEquals('Haircut', $location->services->first()->name);
+        $this->assertTrue((bool) $location->services->first()->pivot->is_active);
     }
 
     #[Test]

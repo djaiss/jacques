@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\EmailSent;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
@@ -52,6 +53,18 @@ class UserTest extends TestCase
 
         $this->assertTrue($user->locations()->exists());
         $this->assertEquals('Scranton', $user->locations->first()->name);
+    }
+
+    #[Test]
+    public function it_has_many_location_services(): void
+    {
+        $user = User::factory()->create();
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+        $locationService = LocationService::factory()->create(['location_id' => $location->id]);
+        $user->locationServices()->attach($locationService);
+
+        $this->assertTrue($user->locationServices()->exists());
+        $this->assertEquals($locationService->id, $user->locationServices->first()->id);
     }
 
     #[Test]
