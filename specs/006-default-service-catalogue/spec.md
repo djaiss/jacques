@@ -75,7 +75,7 @@ Once step 1 creates the first location, it offers all 17 services at the company
 - **FR-006**: A service the table gives no steps MUST be stored as one step of its whole duration, since a service without a step is refused (003, FR-004).
 - **FR-007**: A stretch the request marks as not requiring staff MUST be stored as the processing duration of the step before it, as the step table shows.
 - **FR-008**: Each step layout MUST total the duration of its service.
-- **FR-009**: Default prices MUST be the CAD amounts in cents, for every company whatever its currency.
+- **FR-009**: Default prices MUST be the amounts of the Default catalogue table in cents, written as the same number in every offered currency (007, FR-015).
 - **FR-010**: Every default category and service name MUST be stored in English, French, German and Spanish, whatever the salon languages are at the time.
 - **FR-011**: The default names MUST be written by the product team in each language, never machine translated at runtime.
 - **FR-012**: When the first location of a company is created, and only then, every default service still existing MUST be offered there once, active, with no price override.

@@ -35,6 +35,7 @@ each table is in [003](../003-service-management/data-model.md),
 ## Rules on a price
 
 - A key that is not a current company currency is never written by an action, and never removed.
+  The default catalogue is the exception: it writes every offered currency (R6).
 - A service misses a currency when its `prices` has no key for it.
 - The price of a service at a location in a currency is the location's replacement, else the
   service's price, else none (R5).

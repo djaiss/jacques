@@ -51,9 +51,14 @@
 
 ## R6. The default catalogue
 
-- **Decision**: `CreateDefaultCatalogue` writes `['CAD' => amount]` (FR-015). It runs at sign up,
-  when the company holds `["CAD"]` only. A salon choosing euro on step 1 gets services missing
-  their euro price, which the services step will ask for.
+- **Decision**: `CreateDefaultCatalogue` writes the same amount under every code of
+  `jacques.currencies` (FR-015). It runs at sign up, when the company holds `["CAD"]` only, so it
+  cannot know what step 1 will choose: writing every offered currency means a salon choosing euro
+  finds its default services already priced. Keys outside the salon currencies stay hidden, as for
+  a removed currency.
+- **Rejected**: converted or per market amounts (D22, nothing is converted, and a table of five
+  price lists to maintain); Canadian dollar only (every non Canadian salon starts with 17 services
+  missing a price).
 
 ## R7. Warning before a currency is removed
 

@@ -14,8 +14,9 @@ use Illuminate\Support\Str;
 
 /**
  * Copy the catalogue every new salon starts with into a company, once: its
- * categories, services and steps, named in every interface locale, then offer
- * them at the headquarters when the company already has one.
+ * categories, services and steps, named in every interface locale and priced
+ * in every offered currency, then offer them at the headquarters when the
+ * company already has one.
  */
 class CreateDefaultCatalogue
 {
@@ -67,7 +68,7 @@ class CreateDefaultCatalogue
                     'service_category_id' => $serviceCategory->id,
                     'name' => array_map(fn (array $catalogue): string => $catalogue[$categoryIndex]['services'][$serviceIndex]['name'], $catalogues),
                     'description' => null,
-                    'prices' => ['CAD' => $service['price']],
+                    'prices' => array_fill_keys(config('jacques.currencies'), $service['price']),
                     'is_active' => true,
                     'position' => $serviceIndex + 1,
                 ]);

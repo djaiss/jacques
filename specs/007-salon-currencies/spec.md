@@ -92,7 +92,7 @@ each time.
 - **FR-012**: The salon currencies MUST be readable and writable through the public API, and the prices through the same operations as the back office.
 - **FR-013**: Existing companies MUST be migrated to one currency, their current one or Canadian dollar when none is set, and their current prices kept in it.
 - **FR-014**: Only an Owner MUST be able to change the salon currencies.
-- **FR-015**: The default catalogue (006) MUST keep its Canadian dollar amounts as prices in Canadian dollar; a salon choosing other currencies sees those services miss a price in them.
+- **FR-015**: The default catalogue (006) MUST write its amounts as a price in every offered currency, the same number in each, so no default service misses a price whatever currencies the salon chooses.
 - **FR-016**: Every new interface text MUST be translated in every configured locale, and the screens MUST meet WCAG 2.2 AA.
 
 ### Key Entities
