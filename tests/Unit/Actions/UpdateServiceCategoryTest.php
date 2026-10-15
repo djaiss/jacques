@@ -27,16 +27,15 @@ class UpdateServiceCategoryTest extends TestCase
     {
         Queue::fake();
 
-        $category = ServiceCategory::factory()->create(['name' => 'Cuts']);
+        $category = ServiceCategory::factory()->create(['name' => ['en' => 'Cuts']]);
         $michael = $this->grant(User::factory()->create(['company_id' => $category->company_id]), PermissionEnum::ServiceManage);
 
-        $category = new UpdateServiceCategory(author: $michael, category: $category, name: 'Haircuts')->execute();
+        $category = new UpdateServiceCategory(author: $michael, category: $category, name: ['en' => 'Haircuts'])->execute();
 
-        $this->assertDatabaseHas('service_categories', [
-            'id' => $category->id,
-            'name' => 'Haircuts',
-            'description' => null,
-        ]);
+        $category->refresh();
+
+        $this->assertEquals(['en' => 'Haircuts'], $category->name);
+        $this->assertNull($category->description);
 
         Queue::assertPushedOn(
             queue: 'low',
@@ -51,12 +50,12 @@ class UpdateServiceCategoryTest extends TestCase
     {
         Queue::fake();
 
-        $category = ServiceCategory::factory()->create(['name' => 'Cuts']);
+        $category = ServiceCategory::factory()->create(['name' => ['en' => 'Cuts']]);
         $michael = $this->grant(User::factory()->create(['company_id' => $category->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateServiceCategory(author: $michael, category: $category, name: 'Cuts', description: 'Short and long')->execute();
+        new UpdateServiceCategory(author: $michael, category: $category, name: ['en' => 'Cuts'], description: ['en' => 'Short and long'])->execute();
 
-        $this->assertEquals('Short and long', $category->refresh()->description);
+        $this->assertEquals(['en' => 'Short and long'], $category->refresh()->description);
     }
 
     #[Test]
@@ -64,11 +63,11 @@ class UpdateServiceCategoryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $category = ServiceCategory::factory()->create(['name' => 'Cuts']);
-        ServiceCategory::factory()->create(['company_id' => $category->company_id, 'name' => 'Colours']);
+        $category = ServiceCategory::factory()->create(['name' => ['en' => 'Cuts']]);
+        ServiceCategory::factory()->create(['company_id' => $category->company_id, 'name' => ['en' => 'Colours']]);
         $michael = $this->grant(User::factory()->create(['company_id' => $category->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateServiceCategory(author: $michael, category: $category, name: 'Colours')->execute();
+        new UpdateServiceCategory(author: $michael, category: $category, name: ['en' => 'Colours'])->execute();
     }
 
     #[Test]
@@ -79,7 +78,7 @@ class UpdateServiceCategoryTest extends TestCase
         $category = ServiceCategory::factory()->create();
         $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $category->company_id]), Role::MANAGER);
 
-        new UpdateServiceCategory(author: $dwight, category: $category, name: 'Cuts')->execute();
+        new UpdateServiceCategory(author: $dwight, category: $category, name: ['en' => 'Cuts'])->execute();
     }
 
     #[Test]
@@ -89,6 +88,6 @@ class UpdateServiceCategoryTest extends TestCase
 
         $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
 
-        new UpdateServiceCategory(author: $michael, category: ServiceCategory::factory()->create(), name: 'Cuts')->execute();
+        new UpdateServiceCategory(author: $michael, category: ServiceCategory::factory()->create(), name: ['en' => 'Cuts'])->execute();
     }
 }

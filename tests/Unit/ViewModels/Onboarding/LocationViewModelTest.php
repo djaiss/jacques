@@ -7,6 +7,8 @@ namespace Tests\Unit\ViewModels\Onboarding;
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\User;
 use App\ViewModels\Onboarding\LocationViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,6 +84,70 @@ class LocationViewModelTest extends TestCase
         $this->assertContains('America/Toronto', array_column($timezones['CA'], 'value'));
         $this->assertNotContains('America/New_York', array_column($timezones['CA'], 'value'));
         $this->assertEquals([['value' => 'Europe/Paris', 'label' => 'Central European Time · Paris']], $timezones['FR']);
+    }
+
+    #[Test]
+    public function it_prefills_the_languages_of_the_company(): void
+    {
+        $user = $this->user();
+        $user->company->update(['languages' => ['fr', 'en']]);
+
+        $viewModel = new LocationViewModel(user: $user);
+
+        $this->assertEquals(['fr', 'en'], $viewModel->form()['languages']);
+    }
+
+    #[Test]
+    public function it_offers_every_catalogue_language_by_its_own_name(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $languages = collect($viewModel->languages());
+
+        $this->assertEquals(['en', 'fr', 'es', 'pt', 'it', 'de', 'ar', 'zh'], $languages->pluck('code')->all());
+        $this->assertEquals('Français', $languages->firstWhere('code', 'fr')['label']);
+        $this->assertNotEmpty($languages->firstWhere('code', 'fr')['flag']);
+    }
+
+    #[Test]
+    public function it_chooses_the_usual_languages_of_each_country(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $languages = $viewModel->languagesByCountry();
+
+        $this->assertEquals(['en', 'fr'], $languages['CA']);
+        $this->assertEquals(['fr', 'de'], $languages['CH']);
+        $this->assertEquals(['en'], $languages['US']);
+        $this->assertEquals(['en'], $languages['JP']);
+    }
+
+    #[Test]
+    public function it_counts_the_languages_chosen(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $counters = $viewModel->languageCounters();
+
+        $this->assertEquals('1 language', $counters[1]);
+        $this->assertEquals('2 languages', $counters[2]);
+        $this->assertCount(8, $counters);
+    }
+
+    #[Test]
+    public function it_lists_the_languages_holding_texts_of_the_catalogue(): void
+    {
+        $user = $this->user();
+        $user->company->update(['languages' => ['en', 'fr', 'es']]);
+        ServiceCategory::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Cuts'], 'description' => ['es' => 'Cortes']]);
+        Service::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Haircut', 'fr' => '', 'de' => 'Haarschnitt']]);
+
+        $viewModel = new LocationViewModel(user: $user->refresh());
+
+        $this->assertEquals([
+            ['code' => 'en', 'label' => 'English'],
+            ['code' => 'es', 'label' => 'Español'],
+        ], $viewModel->languagesWithTexts());
     }
 
     private function user(OnboardingStepEnum $reached = OnboardingStepEnum::Location): User

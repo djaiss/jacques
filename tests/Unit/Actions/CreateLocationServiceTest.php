@@ -33,7 +33,7 @@ class CreateLocationServiceTest extends TestCase
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
-        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => 'Haircut', 'price' => 3500]);
+        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'price' => 3500]);
 
         $locationService = new CreateLocationService(author: $michael, location: $scranton, service: $haircut, price: 4000)->execute();
 

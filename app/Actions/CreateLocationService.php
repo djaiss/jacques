@@ -68,7 +68,7 @@ class CreateLocationService
             ->exists();
 
         if ($offered) {
-            throw new InvalidArgumentException('The location already offers the service called '.$this->service->name);
+            throw new InvalidArgumentException('The location already offers the service called '.$this->service->localizedName($this->service->company->languages[0]));
         }
     }
 
@@ -89,7 +89,7 @@ class CreateLocationService
             user: $this->author,
             action: UserActionEnum::LocationServiceCreated,
             parameters: [
-                'name' => $this->service->name,
+                'name' => $this->service->localizedName($this->service->company->languages[0]),
                 'location' => $this->location->name,
             ],
         )->onQueue('low');

@@ -35,4 +35,29 @@ class ServiceCategoryTest extends TestCase
         $this->assertTrue($category->services()->exists());
         $this->assertEquals([$haircut->id, $colour->id], $category->services->pluck('id')->all());
     }
+
+    #[Test]
+    public function it_reads_its_name_in_the_language_of_the_interface(): void
+    {
+        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+        $cuts = ServiceCategory::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['fr' => 'Coupes', 'en' => 'Cuts'],
+        ]);
+
+        $this->assertEquals('Cuts', $cuts->localizedName('en'));
+        $this->assertEquals('Coupes', $cuts->localizedName('de_DE'));
+    }
+
+    #[Test]
+    public function it_lists_the_languages_its_name_is_missing_in(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
+        $cuts = ServiceCategory::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['en' => 'Cuts', 'es' => 'Algo'],
+        ]);
+
+        $this->assertEquals(['fr', 'de'], $cuts->missingLanguages());
+    }
 }

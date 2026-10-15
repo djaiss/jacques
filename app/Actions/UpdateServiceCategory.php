@@ -18,11 +18,15 @@ use InvalidArgumentException;
  */
 class UpdateServiceCategory
 {
+    /**
+     * @param  array<string, string>  $name
+     * @param  array<string, string|null>  $description
+     */
     public function __construct(
         private readonly User $author,
         private readonly ServiceCategory $category,
-        private string $name,
-        private ?string $description = null,
+        private array $name,
+        private array $description = [],
     ) {}
 
     public function execute(): ServiceCategory
@@ -46,31 +50,43 @@ class UpdateServiceCategory
 
     private function sanitize(): void
     {
-        $this->name = TextSanitizer::plainText($this->name);
-        $this->description = TextSanitizer::nullablePlainText($this->description);
+        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
+        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
     }
 
     private function validate(): void
     {
-        if ($this->name === '') {
-            throw new InvalidArgumentException('A service category needs a name');
+        foreach (array_keys($this->name + $this->description) as $language) {
+            if (! in_array($language, $this->category->company->languages, true)) {
+                throw new InvalidArgumentException("{$language} is not a language of the company");
+            }
         }
 
-        $taken = ServiceCategory::query()
-            ->where('company_id', $this->category->company_id)
-            ->where('name', $this->name)
-            ->whereKeyNot($this->category->id)
-            ->exists();
+        foreach ($this->category->company->languages as $language) {
+            if (($this->name[$language] ?? '') === '') {
+                throw new InvalidArgumentException("A name is needed in {$language}");
+            }
 
-        if ($taken) {
-            throw new InvalidArgumentException('The company already has a service category called '.$this->name);
+            $taken = ServiceCategory::query()
+                ->where('company_id', $this->category->company->id)
+                ->where("name->{$language}", $this->name[$language])
+                ->whereKeyNot($this->category->id)
+                ->exists();
+
+            if ($taken) {
+                throw new InvalidArgumentException('The company already has a service category called '.$this->name[$language]);
+            }
         }
     }
 
     private function update(): void
     {
-        $this->category->name = $this->name;
-        $this->category->description = $this->description;
+        $removedLanguages = array_diff_key($this->category->name, array_flip($this->category->company->languages));
+        $this->category->name = [...$removedLanguages, ...$this->name];
+
+        $removedDescriptions = array_diff_key($this->category->description ?? [], array_flip($this->category->company->languages));
+        $description = [...$removedDescriptions, ...$this->description];
+        $this->category->description = $description === [] ? null : $description;
         $this->category->save();
     }
 
@@ -80,7 +96,7 @@ class UpdateServiceCategory
             company: $this->category->company,
             user: $this->author,
             action: UserActionEnum::ServiceCategoryUpdated,
-            parameters: ['name' => $this->category->name],
+            parameters: ['name' => $this->name[$this->category->company->languages[0]]],
         )->onQueue('low');
     }
 }

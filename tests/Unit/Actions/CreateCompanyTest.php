@@ -176,6 +176,22 @@ class CreateCompanyTest extends TestCase
     }
 
     #[Test]
+    public function it_writes_the_catalogue_in_english_until_the_salon_chooses_its_languages(): void
+    {
+        Queue::fake();
+
+        $company = new CreateCompany(
+            name: 'Dunder Mifflin',
+            firstName: 'Michael',
+            lastName: 'Scott',
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        $this->assertEquals(['en'], $company->refresh()->languages);
+    }
+
+    #[Test]
     public function it_makes_the_slug_unique(): void
     {
         Queue::fake();

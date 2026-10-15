@@ -30,7 +30,7 @@ class AssignTeamMemberServiceTest extends TestCase
         Queue::fake();
 
         $scranton = Location::factory()->create(['name' => 'Scranton']);
-        $haircut = Service::factory()->create(['company_id' => $scranton->company_id, 'name' => 'Haircut']);
+        $haircut = Service::factory()->create(['company_id' => $scranton->company_id, 'name' => ['en' => 'Haircut']]);
         $locationService = LocationService::factory()->create(['location_id' => $scranton->id, 'service_id' => $haircut->id]);
         $michael = $this->grant(User::factory()->create(['company_id' => $scranton->company_id]), PermissionEnum::ServiceManage);
         $jim = User::factory()->create(['company_id' => $scranton->company_id, 'email' => 'jim.halpert@dundermifflin.com']);

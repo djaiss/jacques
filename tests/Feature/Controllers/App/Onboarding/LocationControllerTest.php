@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
+use App\ViewModels\Onboarding\LocationViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
@@ -50,6 +51,7 @@ class LocationControllerTest extends TestCase
             'phone' => '+1 570 555 0100',
             'country' => 'US',
             'timezone' => 'America/New_York',
+            'languages' => ['en'],
         ]);
 
         $response->assertRedirect(route('onboarding.location.index'));
@@ -81,6 +83,7 @@ class LocationControllerTest extends TestCase
             'name' => '',
             'country' => 'US',
             'timezone' => 'America/New_York',
+            'languages' => ['en'],
         ]);
 
         $response->assertSessionHasErrors(['name' => 'The salon needs a name.']);
@@ -96,6 +99,7 @@ class LocationControllerTest extends TestCase
             'name' => 'Dunder Mifflin',
             'country' => 'CA',
             'timezone' => 'Europe/Paris',
+            'languages' => ['en'],
         ]);
 
         $response->assertSessionHasErrors('timezone');
@@ -108,13 +112,79 @@ class LocationControllerTest extends TestCase
         Queue::fake();
 
         $user = $this->owner();
-        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York'];
+        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York', 'languages' => ['en']];
 
         $this->actingAs($user)->put(route('onboarding.location.update'), $payload);
         $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'city' => 'Scranton']);
 
         $this->assertEquals(1, Location::query()->where('company_id', $user->company_id)->count());
         $this->assertDatabaseHas('locations', ['company_id' => $user->company_id, 'city' => 'Scranton']);
+    }
+
+    #[Test]
+    public function it_saves_the_languages_in_the_order_they_were_chosen(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin Montreal',
+            'country' => 'CA',
+            'timezone' => 'America/Toronto',
+            'languages' => ['fr', 'en', 'es'],
+        ])->assertRedirect(route('onboarding.location.index'));
+
+        $this->assertEquals(['fr', 'en', 'es'], $user->company->refresh()->languages);
+    }
+
+    #[Test]
+    public function it_asks_for_at_least_one_language(): void
+    {
+        $user = $this->owner();
+
+        $response = $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin',
+            'country' => 'US',
+            'timezone' => 'America/New_York',
+            'languages' => [],
+        ]);
+
+        $response->assertSessionHasErrors(['languages' => 'Choose at least one language.']);
+        $this->assertEquals(0, Location::query()->count());
+    }
+
+    #[Test]
+    public function it_refuses_an_unknown_language_and_a_language_chosen_twice(): void
+    {
+        $user = $this->owner();
+
+        $payload = ['name' => 'Dunder Mifflin', 'country' => 'US', 'timezone' => 'America/New_York'];
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'languages' => ['en', 'tlh']])
+            ->assertSessionHasErrors('languages.1');
+        $this->actingAs($user)->put(route('onboarding.location.update'), [...$payload, 'languages' => ['en', 'en']])
+            ->assertSessionHasErrors('languages.0');
+    }
+
+    #[Test]
+    public function it_shows_the_languages_saved_when_the_salon_is_edited(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+
+        $this->actingAs($user)->put(route('onboarding.location.update'), [
+            'name' => 'Dunder Mifflin Montreal',
+            'country' => 'CA',
+            'timezone' => 'America/Toronto',
+            'languages' => ['fr', 'es'],
+        ]);
+
+        $response = $this->actingAs($user->refresh())->get(route('onboarding.location.index'));
+
+        $response->assertSee('Languages spoken at the salon');
+        $response->assertViewHas('viewModel', fn (LocationViewModel $viewModel): bool => $viewModel->form()['languages'] === ['fr', 'es']);
     }
 
     #[Test]

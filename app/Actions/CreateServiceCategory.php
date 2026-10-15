@@ -22,11 +22,15 @@ class CreateServiceCategory
 {
     private ServiceCategory $category;
 
+    /**
+     * @param  array<string, string>  $name
+     * @param  array<string, string|null>  $description
+     */
     public function __construct(
         private readonly User $author,
         private readonly Company $company,
-        private string $name,
-        private ?string $description = null,
+        private array $name,
+        private array $description = [],
     ) {}
 
     public function execute(): ServiceCategory
@@ -50,23 +54,31 @@ class CreateServiceCategory
 
     private function sanitize(): void
     {
-        $this->name = TextSanitizer::plainText($this->name);
-        $this->description = TextSanitizer::nullablePlainText($this->description);
+        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
+        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
     }
 
     private function validate(): void
     {
-        if ($this->name === '') {
-            throw new InvalidArgumentException('A service category needs a name');
+        foreach (array_keys($this->name + $this->description) as $language) {
+            if (! in_array($language, $this->company->languages, true)) {
+                throw new InvalidArgumentException("{$language} is not a language of the company");
+            }
         }
 
-        $taken = ServiceCategory::query()
-            ->where('company_id', $this->company->id)
-            ->where('name', $this->name)
-            ->exists();
+        foreach ($this->company->languages as $language) {
+            if (($this->name[$language] ?? '') === '') {
+                throw new InvalidArgumentException("A name is needed in {$language}");
+            }
 
-        if ($taken) {
-            throw new InvalidArgumentException('The company already has a service category called '.$this->name);
+            $taken = ServiceCategory::query()
+                ->where('company_id', $this->company->id)
+                ->where("name->{$language}", $this->name[$language])
+                ->exists();
+
+            if ($taken) {
+                throw new InvalidArgumentException('The company already has a service category called '.$this->name[$language]);
+            }
         }
     }
 
@@ -79,7 +91,7 @@ class CreateServiceCategory
         $this->category = ServiceCategory::query()->create([
             'company_id' => $this->company->id,
             'name' => $this->name,
-            'description' => $this->description,
+            'description' => $this->description === [] ? null : $this->description,
             'position' => (int) $lastPosition + 1,
         ]);
     }
@@ -90,7 +102,7 @@ class CreateServiceCategory
             company: $this->company,
             user: $this->author,
             action: UserActionEnum::ServiceCategoryCreated,
-            parameters: ['name' => $this->category->name],
+            parameters: ['name' => $this->name[$this->company->languages[0]]],
         )->onQueue('low');
     }
 }

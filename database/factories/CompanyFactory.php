@@ -28,6 +28,7 @@ class CompanyFactory extends Factory
             'legal_name' => $name.' Inc.',
             'website_url' => fake()->url(),
             'currency' => 'USD',
+            'languages' => ['en'],
         ];
     }
 

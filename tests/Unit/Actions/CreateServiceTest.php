@@ -37,13 +37,13 @@ class CreateServiceTest extends TestCase
         $service = new CreateService(
             author: $michael,
             company: $company,
-            name: 'Colour',
+            name: ['en' => 'Colour'],
             price: 3500,
             steps: [
                 ['active_duration' => 20, 'processing_duration' => 30],
                 ['active_duration' => 15, 'processing_duration' => 0],
             ],
-            description: 'Roots and lengths',
+            description: ['en' => 'Roots and lengths'],
             category: $colours,
         )->execute();
 
@@ -52,12 +52,12 @@ class CreateServiceTest extends TestCase
             'id' => $service->id,
             'company_id' => $company->id,
             'service_category_id' => $colours->id,
-            'name' => 'Colour',
-            'description' => 'Roots and lengths',
             'price' => 3500,
             'is_active' => true,
             'position' => 2,
         ]);
+        $this->assertEquals(['en' => 'Colour'], $service->refresh()->name);
+        $this->assertEquals(['en' => 'Roots and lengths'], $service->description);
         $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 1, 'active_duration' => 20, 'processing_duration' => 30]);
         $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 2, 'active_duration' => 15, 'processing_duration' => 0]);
         $this->assertEquals(65, $service->duration);
@@ -82,7 +82,7 @@ class CreateServiceTest extends TestCase
         $service = new CreateService(
             author: $michael,
             company: $company,
-            name: 'Beard trim',
+            name: ['en' => 'Beard trim'],
             price: 0,
             steps: [['active_duration' => 10, 'processing_duration' => 0]],
         )->execute();
@@ -99,7 +99,7 @@ class CreateServiceTest extends TestCase
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        new CreateService(author: $michael, company: $company, name: 'Colour', price: 3500, steps: [])->execute();
+        new CreateService(author: $michael, company: $company, name: ['en' => 'Colour'], price: 3500, steps: [])->execute();
     }
 
     #[Test]
@@ -113,7 +113,7 @@ class CreateServiceTest extends TestCase
         new CreateService(
             author: $michael,
             company: $company,
-            name: 'Colour',
+            name: ['en' => 'Colour'],
             price: 3500,
             steps: [['active_duration' => 0, 'processing_duration' => 30]],
         )->execute();
@@ -130,7 +130,7 @@ class CreateServiceTest extends TestCase
         new CreateService(
             author: $michael,
             company: $company,
-            name: 'Colour',
+            name: ['en' => 'Colour'],
             price: -1,
             steps: [['active_duration' => 20, 'processing_duration' => 0]],
         )->execute();
@@ -143,12 +143,12 @@ class CreateServiceTest extends TestCase
 
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        Service::factory()->create(['company_id' => $company->id, 'name' => 'Haircut']);
+        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut']]);
 
         new CreateService(
             author: $michael,
             company: $company,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
@@ -165,7 +165,7 @@ class CreateServiceTest extends TestCase
         new CreateService(
             author: $michael,
             company: $company,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
             category: ServiceCategory::factory()->create(),
@@ -183,9 +183,80 @@ class CreateServiceTest extends TestCase
         new CreateService(
             author: $dwight,
             company: $company,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
+    }
+
+    #[Test]
+    public function it_writes_the_name_in_every_language_of_the_salon(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+
+        $result = new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], price: 3500, steps: [['active_duration' => 30, 'processing_duration' => 0]], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
+
+        $this->assertEquals(['fr' => 'Coupe', 'en' => 'Haircut'], $result->refresh()->name);
+        $this->assertEquals(['fr' => 'Courte ou longue', 'en' => null], $result->description);
+
+        Queue::assertPushedOn(
+            queue: 'low',
+            job: LogUserAction::class,
+            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
+        );
+    }
+
+    #[Test]
+    public function it_throws_when_the_name_is_missing_in_a_language_of_the_salon(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A name is needed in en');
+
+        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+
+        new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => ''], price: 3500, steps: [['active_duration' => 30, 'processing_duration' => 0]])->execute();
+    }
+
+    #[Test]
+    public function it_throws_when_a_text_is_written_in_a_language_the_salon_does_not_use(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('es is not a language of the company');
+
+        $company = Company::factory()->create(['languages' => ['en']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+
+        new CreateService(author: $michael, company: $company, name: ['en' => 'Haircut', 'es' => 'Corte'], price: 3500, steps: [['active_duration' => 30, 'processing_duration' => 0]])->execute();
+    }
+
+    #[Test]
+    public function it_allows_the_same_name_in_two_different_languages(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage', 'fr' => 'Mèches']]);
+
+        $result = new CreateService(author: $michael, company: $company, name: ['en' => 'Highlights', 'fr' => 'Balayage'], price: 3500, steps: [['active_duration' => 30, 'processing_duration' => 0]])->execute();
+
+        $this->assertEquals(['en' => 'Highlights', 'fr' => 'Balayage'], $result->name);
+    }
+
+    #[Test]
+    public function it_throws_when_the_name_is_taken_in_the_same_language(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The company already has a service called Coupe');
+
+        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe']]);
+
+        new CreateService(author: $michael, company: $company, name: ['en' => 'Trim', 'fr' => 'Coupe'], price: 3500, steps: [['active_duration' => 30, 'processing_duration' => 0]])->execute();
     }
 }

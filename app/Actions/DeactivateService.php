@@ -51,7 +51,7 @@ class DeactivateService
             company: $this->service->company,
             user: $this->author,
             action: UserActionEnum::ServiceDeactivated,
-            parameters: ['name' => $this->service->name],
+            parameters: ['name' => $this->service->localizedName($this->service->company->languages[0])],
         )->onQueue('low');
     }
 }

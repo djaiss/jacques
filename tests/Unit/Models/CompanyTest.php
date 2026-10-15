@@ -91,4 +91,14 @@ class CompanyTest extends TestCase
         $this->assertTrue($pending->refresh()->is_onboarding_pending);
         $this->assertEquals(OnboardingStepEnum::Location, $pending->onboarding_step);
     }
+
+    #[Test]
+    public function it_keeps_its_languages_in_the_order_they_were_chosen(): void
+    {
+        $company = Company::factory()->create([
+            'languages' => ['fr', 'en'],
+        ]);
+
+        $this->assertEquals(['fr', 'en'], $company->refresh()->languages);
+    }
 }

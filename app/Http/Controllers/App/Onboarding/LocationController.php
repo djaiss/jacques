@@ -34,8 +34,12 @@ class LocationController extends Controller
             'postal_code' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:50'],
             'country' => ['required', 'string', 'size:2', 'alpha'],
+            'languages' => ['required', 'array', 'min:1'],
+            'languages.*' => ['required', 'string', 'distinct', Rule::in(array_keys(config('jacques.content_languages')))],
         ], [
             'name.required' => __('The salon needs a name.'),
+            'languages.required' => __('Choose at least one language.'),
+            'languages.min' => __('Choose at least one language.'),
         ]);
 
         $country = mb_strtoupper($validated['country']);
@@ -49,6 +53,7 @@ class LocationController extends Controller
             name: $validated['name'],
             country: $country,
             timezone: $request->input('timezone'),
+            languages: array_values($validated['languages']),
             region: $validated['region'] ?? null,
             city: $validated['city'] ?? null,
             postalCode: $validated['postal_code'] ?? null,

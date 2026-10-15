@@ -95,4 +95,29 @@ class ServiceTest extends TestCase
         $this->assertSame(3500, $service->refresh()->price);
         $this->assertFalse($service->is_active);
     }
+
+    #[Test]
+    public function it_reads_its_name_in_the_language_of_the_interface(): void
+    {
+        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+        $haircut = Service::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['fr' => 'Coupe femme', 'en' => "Women's haircut"],
+        ]);
+
+        $this->assertEquals("Women's haircut", $haircut->localizedName('en'));
+        $this->assertEquals('Coupe femme', $haircut->localizedName('de_DE'));
+    }
+
+    #[Test]
+    public function it_lists_the_languages_its_name_is_missing_in(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
+        $haircut = Service::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['en' => "Women's haircut", 'es' => 'Algo'],
+        ]);
+
+        $this->assertEquals(['fr', 'de'], $haircut->missingLanguages());
+    }
 }
