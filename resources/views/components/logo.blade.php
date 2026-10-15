@@ -1,11 +1,9 @@
-{{-- The mark of the application: the first letter of its name in a rounded square. --}}
-{{-- @var int $size --}}
-@props([
-  'size' => 30,
-])
-
-<span
-  {{ $attributes->class(['flex shrink-0 items-center justify-center rounded-md bg-primary font-semibold tracking-tight text-on-primary']) }}
-  style="width: {{ $size }}px; height: {{ $size }}px; font-size: {{ round($size * 0.47) }}px;"
-  aria-hidden="true"
->O</span>
+{{-- The logo of the application, drawn at its own size with a sharper copy for dense screens. --}}
+<img
+  {{ $attributes->class(['shrink-0']) }}
+  src="{{ asset('img/logo.webp') }}"
+  srcset="{{ asset('img/logo.webp') }} 1x, {{ asset('img/logo@2x.webp') }} 2x"
+  width="64"
+  height="64"
+  alt="{{ config('app.name') }}"
+/>

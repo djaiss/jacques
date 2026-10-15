@@ -134,7 +134,7 @@
     </div>
 
     <!-- the tab being read -->
-    <div class="mx-auto max-w-180">
+    <div @class(['mx-auto max-w-180' => $onPeopleTab])>
       @if ($onPeopleTab)
         @include('app.settings.administration.roles._people', ['viewModel' => $viewModel, 'role' => $role])
       @else

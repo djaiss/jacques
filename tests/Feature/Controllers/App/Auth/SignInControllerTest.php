@@ -99,6 +99,15 @@ class SignInControllerTest extends TestCase
     }
 
     #[Test]
+    public function it_shows_the_logo_with_a_sharper_copy_for_dense_screens(): void
+    {
+        $response = $this->get(route('auth.signIn.new'));
+
+        $response->assertSee('img/logo.webp', false);
+        $response->assertSee('img/logo@2x.webp 2x', false);
+    }
+
+    #[Test]
     public function it_shows_the_human_check_when_it_is_turned_on(): void
     {
         config(['turnstile.enabled' => true]);

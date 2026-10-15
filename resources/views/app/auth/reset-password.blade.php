@@ -7,7 +7,7 @@
 
         <!-- logo -->
         <div class="flex items-center gap-3">
-          <x-logo :size="30" />
+          <x-logo />
 
           <h1 class="text-2xl font-semibold tracking-tight text-ink">{{ __('Choose a new password') }}</h1>
 
