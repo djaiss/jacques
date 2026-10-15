@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\LocationStaff;
 use App\Models\Staff;
+use App\Models\StaffInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -87,6 +88,15 @@ class StaffTest extends TestCase
 
         $this->assertTrue($staff->locationServices()->exists());
         $this->assertEquals([$locationService->id], $staff->locationServices()->pluck('location_services.id')->all());
+    }
+
+    #[Test]
+    public function it_has_one_invitation(): void
+    {
+        $staff = Staff::factory()->create();
+        StaffInvitation::factory()->create(['staff_id' => $staff->id]);
+
+        $this->assertTrue($staff->invitation()->exists());
     }
 
     #[Test]

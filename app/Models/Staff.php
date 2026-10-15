@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Class Staff
@@ -143,6 +144,17 @@ class Staff extends Model
     public function locationServices(): BelongsToMany
     {
         return $this->belongsToMany(LocationService::class, 'staff_location_services')->withTimestamps();
+    }
+
+    /**
+     * Get the invitation to create an account prepared for the staff member,
+     * when there is one.
+     *
+     * @return HasOne<StaffInvitation, $this>
+     */
+    public function invitation(): HasOne
+    {
+        return $this->hasOne(StaffInvitation::class);
     }
 
     /**

@@ -10,12 +10,14 @@ use App\Helpers\TextSanitizer;
 use App\Jobs\LogUserAction;
 use App\Models\Staff;
 use App\Models\User;
+use InvalidArgumentException;
 
 /**
  * Update the information a staff member shows their colleagues and clients.
  * Who may do it to whom comes from the roles of the author: a member gets
  * their own record and nobody else's, while somebody who looks after people
- * gets everybody.
+ * gets everybody. An email address belongs to one staff member of the company
+ * at most, and removing it drops the invitation prepared for that address.
  */
 class UpdateStaffInformation
 {
@@ -36,7 +38,9 @@ class UpdateStaffInformation
     {
         $this->authorize();
         $this->sanitize();
+        $this->validateEmail();
         $this->update();
+        $this->forgetInvitation();
         $this->log();
 
         return $this->staff;
@@ -61,6 +65,32 @@ class UpdateStaffInformation
 
         $email = TextSanitizer::nullablePlainText($this->email);
         $this->email = $email === null ? null : mb_strtolower($email);
+    }
+
+    private function validateEmail(): void
+    {
+        if ($this->email === null) {
+            return;
+        }
+
+        $taken = Staff::query()
+            ->where('company_id', $this->staff->company_id)
+            ->where('email', $this->email)
+            ->whereKeyNot($this->staff->id)
+            ->exists();
+
+        if ($taken) {
+            throw new InvalidArgumentException('Another staff member of the company already uses this email address');
+        }
+    }
+
+    private function forgetInvitation(): void
+    {
+        if ($this->email !== null) {
+            return;
+        }
+
+        $this->staff->invitation()->delete();
     }
 
     private function update(): void

@@ -74,6 +74,9 @@ enum UserActionEnum: string implements Translatable
     case StaffAbsenceCreated = 'staff_absence_created';
     case StaffAbsenceUpdated = 'staff_absence_updated';
     case StaffAbsenceDeleted = 'staff_absence_deleted';
+    case StaffServicesUpdated = 'staff_services_updated';
+    case StaffInvitationPrepared = 'staff_invitation_prepared';
+    case StaffInvitationDeleted = 'staff_invitation_deleted';
 
     public function description(): string
     {
@@ -144,6 +147,9 @@ enum UserActionEnum: string implements Translatable
             self::StaffAbsenceCreated => 'Recorded an absence of :name',
             self::StaffAbsenceUpdated => 'Changed an absence of :name',
             self::StaffAbsenceDeleted => 'Removed an absence of :name',
+            self::StaffServicesUpdated => 'Changed the services :name performs at the location called :location',
+            self::StaffInvitationPrepared => 'Prepared an invitation for :name with the :role role',
+            self::StaffInvitationDeleted => 'Withdrew the invitation prepared for :name',
         };
     }
 

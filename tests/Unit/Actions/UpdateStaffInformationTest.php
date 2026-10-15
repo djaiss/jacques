@@ -11,10 +11,12 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Staff;
+use App\Models\StaffInvitation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -237,5 +239,83 @@ class UpdateStaffInformationTest extends TestCase
             bio: null,
             isBookable: true,
         )->execute();
+    }
+
+    #[Test]
+    public function it_throws_when_another_staff_member_of_the_company_uses_the_email(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $company = Company::factory()->create();
+        Staff::factory()->create(['company_id' => $company->id, 'email' => 'dwight.schrute@dundermifflin.com']);
+        $mose = Staff::factory()->create(['company_id' => $company->id, 'email' => null]);
+        $author = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($author, PermissionEnum::StaffUpdate, ScopeEnum::Company);
+
+        new UpdateStaffInformation(
+            author: $author,
+            staff: $mose,
+            firstName: 'Mose',
+            lastName: 'Schrute',
+            displayName: null,
+            email: 'Dwight.Schrute@DunderMifflin.com',
+            phone: null,
+            jobTitle: null,
+            bio: null,
+            isBookable: true,
+        )->execute();
+    }
+
+    #[Test]
+    public function it_keeps_the_email_the_staff_member_already_uses(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $dwight = Staff::factory()->create(['company_id' => $company->id, 'email' => 'dwight.schrute@dundermifflin.com']);
+        $author = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($author, PermissionEnum::StaffUpdate, ScopeEnum::Company);
+
+        new UpdateStaffInformation(
+            author: $author,
+            staff: $dwight,
+            firstName: 'Dwight',
+            lastName: 'Schrute',
+            displayName: null,
+            email: 'dwight.schrute@dundermifflin.com',
+            phone: null,
+            jobTitle: null,
+            bio: null,
+            isBookable: true,
+        )->execute();
+
+        $this->assertEquals('dwight.schrute@dundermifflin.com', $dwight->refresh()->email);
+    }
+
+    #[Test]
+    public function it_deletes_the_invitation_when_the_email_is_removed(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $dwight = Staff::factory()->create(['company_id' => $company->id, 'email' => 'dwight.schrute@dundermifflin.com']);
+        $invitation = StaffInvitation::factory()->create(['staff_id' => $dwight->id]);
+        $author = User::factory()->create(['company_id' => $company->id]);
+        $this->grant($author, PermissionEnum::StaffUpdate, ScopeEnum::Company);
+
+        new UpdateStaffInformation(
+            author: $author,
+            staff: $dwight,
+            firstName: 'Dwight',
+            lastName: 'Schrute',
+            displayName: null,
+            email: null,
+            phone: null,
+            jobTitle: null,
+            bio: null,
+            isBookable: true,
+        )->execute();
+
+        $this->assertModelMissing($invitation);
     }
 }

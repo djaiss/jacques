@@ -15,6 +15,7 @@ use App\Http\Controllers\App\Onboarding\LocationController as OnboardingLocation
 use App\Http\Controllers\App\Onboarding\OnboardingController;
 use App\Http\Controllers\App\Onboarding\ServiceController as OnboardingServiceController;
 use App\Http\Controllers\App\Onboarding\StaffController as OnboardingStaffController;
+use App\Http\Controllers\App\Onboarding\Team\StaffController as OnboardingTeamStaffController;
 use App\Http\Controllers\App\Settings\Account\Logs\EmailSentController;
 use App\Http\Controllers\App\Settings\Account\Logs\LogController;
 use App\Http\Controllers\App\Settings\Account\Preferences\PreferenceController;
@@ -77,6 +78,15 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
     Route::get('onboarding/staff', [OnboardingStaffController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.index');
     Route::put('onboarding/staff', [OnboardingStaffController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.update');
+
+    // The team as step 3 edits it, one person at a time, in a side panel.
+    Route::middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->group(function (): void {
+        Route::get('onboarding/staff/members/new', [OnboardingTeamStaffController::class, 'new'])->name('onboarding.staff.members.new');
+        Route::post('onboarding/staff/members', [OnboardingTeamStaffController::class, 'create'])->name('onboarding.staff.members.create');
+        Route::get('onboarding/staff/members/{staff}/edit', [OnboardingTeamStaffController::class, 'edit'])->name('onboarding.staff.members.edit');
+        Route::put('onboarding/staff/members/{staff}', [OnboardingTeamStaffController::class, 'update'])->name('onboarding.staff.members.update');
+        Route::delete('onboarding/staff/members/{staff}', [OnboardingTeamStaffController::class, 'destroy'])->name('onboarding.staff.members.destroy');
+    });
 
     Route::get('onboarding/appointments', [OnboardingAppointmentController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.index');
     Route::put('onboarding/appointments', [OnboardingAppointmentController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.update');

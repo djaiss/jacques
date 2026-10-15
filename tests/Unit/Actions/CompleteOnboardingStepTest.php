@@ -13,6 +13,7 @@ use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Role;
 use App\Models\Service;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,6 +136,60 @@ class CompleteOnboardingStepTest extends TestCase
 
         $this->assertEquals(1, LocationService::query()->where('location_id', $scranton->id)->where('service_id', $haircut->id)->count());
         $this->assertDatabaseMissing('location_services', ['location_id' => $stamford->id]);
+    }
+
+    #[Test]
+    public function it_puts_the_owner_on_the_team_at_the_headquarters_performing_every_service(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        $michael = Staff::factory()->create(['company_id' => $user->company_id, 'user_id' => $user->id]);
+        $scranton = Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => true]);
+        Service::factory()->count(2)->create(['company_id' => $user->company_id]);
+
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+
+        $this->assertTrue($michael->activeLocations()->whereKey($scranton->id)->exists());
+        $this->assertEquals(2, $michael->locationServices()->count());
+    }
+
+    #[Test]
+    public function it_gives_the_owner_the_services_offered_since_the_first_step(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        $michael = Staff::factory()->create(['company_id' => $user->company_id, 'user_id' => $user->id]);
+        $scranton = Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => true]);
+        $haircut = Service::factory()->create(['company_id' => $user->company_id]);
+        LocationService::factory()->create(['location_id' => $scranton->id, 'service_id' => $haircut->id]);
+
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+
+        $this->assertEquals([$haircut->id], $michael->locationServices()->pluck('service_id')->all());
+    }
+
+    #[Test]
+    public function it_does_not_give_the_owner_back_a_service_they_took_off(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        $michael = Staff::factory()->create(['company_id' => $user->company_id, 'user_id' => $user->id]);
+        Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => true]);
+        $haircut = Service::factory()->create(['company_id' => $user->company_id]);
+        $beardTrim = Service::factory()->create(['company_id' => $user->company_id]);
+
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+        $michael->locationServices()->detach(LocationService::query()->where('service_id', $haircut->id)->value('id'));
+        $balayage = Service::factory()->create(['company_id' => $user->company_id]);
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+
+        $this->assertEqualsCanonicalizing(
+            [$beardTrim->id, $balayage->id],
+            $michael->locationServices()->pluck('service_id')->all(),
+        );
     }
 
     private function owner(): User

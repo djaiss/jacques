@@ -25,8 +25,9 @@ class OfferServicesAtLocationTest extends TestCase
         $haircut = Service::factory()->create(['company_id' => $company->id]);
         $beardTrim = Service::factory()->create(['company_id' => $company->id]);
 
-        new OfferServicesAtLocation(location: $scranton)->execute();
+        $offered = new OfferServicesAtLocation(location: $scranton)->execute();
 
+        $this->assertEqualsCanonicalizing([$haircut->id, $beardTrim->id], $offered->pluck('service_id')->all());
         $this->assertEquals(2, LocationService::query()->where('location_id', $scranton->id)->count());
         $this->assertDatabaseHas('location_services', [
             'location_id' => $scranton->id,
@@ -64,8 +65,9 @@ class OfferServicesAtLocationTest extends TestCase
             'prices' => ['CAD' => 4000],
         ]);
 
-        new OfferServicesAtLocation(location: $scranton)->execute();
+        $offered = new OfferServicesAtLocation(location: $scranton)->execute();
 
+        $this->assertTrue($offered->isEmpty());
         $this->assertEquals(1, LocationService::query()->where('location_id', $scranton->id)->count());
         $this->assertEquals(['CAD' => 4000], LocationService::query()->where('location_id', $scranton->id)->first()->prices);
     }
