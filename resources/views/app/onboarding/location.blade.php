@@ -16,8 +16,37 @@
       country: @js($form['country']),
       timezone: @js($form['timezone']),
       timezones: @js($viewModel->timezonesByCountry()),
+      languages: @js($form['languages']),
+      languagesByCountry: @js($viewModel->languagesByCountry()),
+      languageCounters: @js($viewModel->languageCounters()),
+      languagesWithTexts: @js($viewModel->languagesWithTexts()),
+      confirmingRemoval: false,
+      removalConfirmed: false,
+      removedLanguages() {
+        return this.languagesWithTexts.filter((language) => ! this.languages.includes(language.code))
+      },
+      submitSalon(event) {
+        if (this.removalConfirmed || this.removedLanguages().length === 0) {
+          return
+        }
+
+        event.preventDefault()
+        this.confirmingRemoval = true
+      },
       chooseCountry() {
         this.timezone = this.timezones[this.country]?.[0]?.value ?? ''
+        this.languages = [...(this.languagesByCountry[this.country] ?? ['en'])]
+      },
+      toggleLanguage(code) {
+        if (! this.languages.includes(code)) {
+          this.languages.push(code)
+
+          return
+        }
+
+        if (this.languages.length > 1) {
+          this.languages = this.languages.filter((language) => language !== code)
+        }
       },
     }"
   >
@@ -36,7 +65,7 @@
 
     <!-- salon form -->
     <div x-show="editing" @unless ($editing) x-cloak @endunless class="max-w-180 rounded-[18px] bg-canvas p-7 ring-[1.5px] ring-hairline">
-      <x-form method="put" :action="route('onboarding.location.update')" novalidate class="space-y-5">
+      <x-form method="put" :action="route('onboarding.location.update')" novalidate class="space-y-5" x-ref="salonForm" @submit="submitSalon($event)">
         <div class="flex items-start gap-3.5 border-b border-hairline-soft pb-5.5">
           <span class="accent-tile flex size-9.5 shrink-0 items-center justify-center rounded-xl" style="--tile-hue: 30" aria-hidden="true">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -111,6 +140,42 @@
           </div>
         </div>
 
+        <!-- languages of the salon -->
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <span id="languages-label" class="block text-sm leading-tight font-semibold text-ink">{{ __('Languages spoken at the salon') }} <span class="text-error" aria-hidden="true">*</span></span>
+            <span class="text-xs text-muted" aria-live="polite">
+              <span x-text="languageCounters[languages.length]"></span><span x-show="languages.length === 1">. {{ __('Keep at least one.') }}</span>
+            </span>
+          </div>
+
+          <div role="group" aria-labelledby="languages-label" aria-describedby="languages-help{{ $errors->has('languages') ? ' languages-error' : '' }}" class="flex flex-wrap gap-2">
+            @foreach ($viewModel->languages() as $language)
+              <button
+                type="button"
+                @click="toggleLanguage(@js($language['code']))"
+                :aria-pressed="languages.includes(@js($language['code'])).toString()"
+                class="flex h-9.5 cursor-pointer items-center gap-2 rounded-[10px] border border-hairline-strong bg-input pr-3.5 pl-2.5 text-[15px] text-ink transition-colors duration-150 hover:border-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-canvas motion-reduce:transition-none"
+              >
+                <span class="flex size-4 items-center justify-center rounded-sm" :class="languages.includes(@js($language['code'])) ? 'bg-canvas' : 'ring-[1.5px] ring-hairline-strong ring-inset'" aria-hidden="true">
+                  <svg x-show="languages.includes(@js($language['code']))" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-ink">
+                    <path d="M3.5 8.5l3 3 6-7" />
+                  </svg>
+                </span>
+                <span class="block h-3.5 w-5.25 rounded-[3px] ring-1 ring-black/10" style="background: {{ $language['flag'] }}" aria-hidden="true"></span>
+                <span lang="{{ $language['code'] }}">{{ $language['label'] }}</span>
+              </button>
+            @endforeach
+          </div>
+
+          <template x-for="code in languages" :key="code">
+            <input type="hidden" name="languages[]" :value="code" />
+          </template>
+
+          <p id="languages-help" class="text-xs text-muted">{{ __('Clients can book in these languages, and your team can say which ones they speak.') }}</p>
+          <x-error id="languages-error" :messages="$errors->get('languages')" />
+        </div>
+
         <x-button class="w-full">
           {{ __('Create my salon') }}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -119,5 +184,19 @@
         </x-button>
       </x-form>
     </div>
+
+    <x-confirm-dialog
+      show="confirmingRemoval"
+      close="confirmingRemoval = false"
+      labelledby="remove-languages-title"
+      :title="__('Change the languages of the salon?')"
+      :cancel="__('Keep them')"
+    >
+      {{ __('Your catalogue has texts in:') }} <span class="font-semibold text-ink" x-text="removedLanguages().map((language) => language.label).join(', ')"></span>. {{ __('Their texts stay saved, and come back if you add the language again.') }}
+
+      <x-slot:actions>
+        <x-button.danger type="button" x-on:click="removalConfirmed = true; confirmingRemoval = false; $refs.salonForm.requestSubmit()">{{ __('Change the languages') }}</x-button.danger>
+      </x-slot:actions>
+    </x-confirm-dialog>
   </div>
 </x-top-bar-layout>

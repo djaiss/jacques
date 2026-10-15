@@ -76,7 +76,7 @@ class DestroyServiceCategory
             company: $this->category->company,
             user: $this->author,
             action: UserActionEnum::ServiceCategoryDeleted,
-            parameters: ['name' => $this->category->name],
+            parameters: ['name' => $this->category->localizedName($this->category->company->languages[0])],
         )->onQueue('low');
     }
 }

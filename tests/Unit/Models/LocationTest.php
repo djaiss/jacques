@@ -52,11 +52,11 @@ class LocationTest extends TestCase
     public function it_belongs_to_many_services(): void
     {
         $location = Location::factory()->create();
-        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'name' => 'Haircut']);
+        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'name' => ['en' => 'Haircut']]);
         $location->services()->attach($haircut->id);
 
         $this->assertTrue($location->services()->exists());
-        $this->assertEquals('Haircut', $location->services->first()->name);
+        $this->assertEquals(['en' => 'Haircut'], $location->services->first()->name);
         $this->assertTrue((bool) $location->services->first()->pivot->is_active);
     }
 

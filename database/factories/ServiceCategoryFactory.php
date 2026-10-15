@@ -22,8 +22,8 @@ class ServiceCategoryFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'name' => fake()->unique()->words(2, true),
-            'description' => fake()->sentence(),
+            'name' => ['en' => fake()->unique()->words(2, true)],
+            'description' => ['en' => fake()->sentence()],
             'position' => 1,
         ];
     }

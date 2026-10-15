@@ -60,7 +60,7 @@ class RemoveTeamMemberService
             user: $this->author,
             action: UserActionEnum::TeamMemberServiceRemoved,
             parameters: [
-                'name' => $this->locationService->service->name,
+                'name' => $this->locationService->service->localizedName($this->locationService->service->company->languages[0]),
                 'location' => $this->locationService->location->name,
                 'email' => $this->user->email,
             ],

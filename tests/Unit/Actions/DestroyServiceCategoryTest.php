@@ -30,7 +30,7 @@ class DestroyServiceCategoryTest extends TestCase
 
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        $colours = ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => 'Colours', 'position' => 1]);
+        $colours = ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Colours'], 'position' => 1]);
         $care = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 2]);
         $shave = Service::factory()->create(['company_id' => $company->id, 'position' => 1]);
         $colour = Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $colours->id, 'position' => 1]);

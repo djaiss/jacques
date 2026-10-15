@@ -29,13 +29,13 @@ class UpdateServiceTest extends TestCase
     {
         Queue::fake();
 
-        $service = Service::factory()->create(['name' => 'Colour', 'price' => 3500]);
+        $service = Service::factory()->create(['name' => ['en' => 'Colour'], 'price' => 3500]);
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
         $service = new UpdateService(
             author: $michael,
             service: $service,
-            name: 'Full colour',
+            name: ['en' => 'Full colour'],
             price: 4200,
             steps: [
                 ['active_duration' => 25, 'processing_duration' => 35],
@@ -43,7 +43,11 @@ class UpdateServiceTest extends TestCase
             ],
         )->execute();
 
-        $this->assertDatabaseHas('services', ['id' => $service->id, 'name' => 'Full colour', 'price' => 4200, 'description' => null]);
+        $service->refresh();
+
+        $this->assertEquals(['en' => 'Full colour'], $service->name);
+        $this->assertEquals(4200, $service->price);
+        $this->assertNull($service->description);
         $this->assertCount(2, $service->steps);
         $this->assertEquals(70, $service->duration);
 
@@ -89,7 +93,7 @@ class UpdateServiceTest extends TestCase
         $service = Service::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateService(author: $michael, service: $service, name: 'Colour', price: 3500, steps: [])->execute();
+        new UpdateService(author: $michael, service: $service, name: ['en' => 'Colour'], price: 3500, steps: [])->execute();
     }
 
     #[Test]
@@ -98,13 +102,13 @@ class UpdateServiceTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $service = Service::factory()->create();
-        Service::factory()->create(['company_id' => $service->company_id, 'name' => 'Haircut']);
+        Service::factory()->create(['company_id' => $service->company_id, 'name' => ['en' => 'Haircut']]);
         $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
         new UpdateService(
             author: $michael,
             service: $service,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
@@ -121,7 +125,7 @@ class UpdateServiceTest extends TestCase
         new UpdateService(
             author: $michael,
             service: $service,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
             category: ServiceCategory::factory()->create(),
@@ -139,9 +143,51 @@ class UpdateServiceTest extends TestCase
         new UpdateService(
             author: $dwight,
             service: $service,
-            name: 'Haircut',
+            name: ['en' => 'Haircut'],
             price: 3500,
             steps: [['active_duration' => 45, 'processing_duration' => 0]],
         )->execute();
+    }
+
+    #[Test]
+    public function it_keeps_the_texts_of_a_language_the_salon_stopped_using(): void
+    {
+        Queue::fake();
+
+        $company = Company::factory()->create(['languages' => ['en', 'es']]);
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        $service = Service::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['en' => 'Haircut', 'es' => 'Corte'],
+            'description' => ['en' => 'Short or long', 'es' => 'Corto o largo'],
+        ]);
+        $company->update(['languages' => ['en']]);
+
+        new UpdateService(
+            author: $michael,
+            service: $service->refresh(),
+            name: ['en' => 'Women\'s haircut'],
+            price: 3500,
+            steps: [['active_duration' => 45, 'processing_duration' => 0]],
+        )->execute();
+
+        $company->update(['languages' => ['en', 'es']]);
+        $service->refresh();
+
+        $this->assertEquals(['es' => 'Corte', 'en' => 'Women\'s haircut'], $service->name);
+        $this->assertEquals(['es' => 'Corto o largo'], $service->description);
+        $this->assertEquals([], $service->missingLanguages());
+    }
+
+    #[Test]
+    public function it_shows_a_language_added_to_the_salon_as_missing_until_it_is_written(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en']]);
+        $service = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut']]);
+
+        $company->update(['languages' => ['en', 'fr']]);
+
+        $this->assertEquals(['en' => 'Haircut'], $service->refresh()->name);
+        $this->assertEquals(['fr'], $service->missingLanguages());
     }
 }

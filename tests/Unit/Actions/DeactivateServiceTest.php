@@ -41,7 +41,7 @@ class DeactivateServiceTest extends TestCase
             queue: 'low',
             job: LogUserAction::class,
             callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceDeactivated
-                && $job->parameters === ['name' => $service->name],
+                && $job->parameters === ['name' => $service->name['en']],
         );
     }
 

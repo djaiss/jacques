@@ -43,7 +43,7 @@ class UpdateLocationServiceTest extends TestCase
             queue: 'low',
             job: LogUserAction::class,
             callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationServiceUpdated
-                && $job->parameters === ['name' => $atScranton->service->name, 'location' => 'Scranton'],
+                && $job->parameters === ['name' => $atScranton->service->name['en'], 'location' => 'Scranton'],
         );
     }
 

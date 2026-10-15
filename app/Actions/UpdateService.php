@@ -18,19 +18,24 @@ use InvalidArgumentException;
 
 /**
  * Change a service of the catalogue. What is passed in replaces what the service
- * had, steps included, so a step left out is a step removed. A service moved to
+ * had, steps included, so a step left out is a step removed. Texts written in a
+ * language the salon no longer uses are kept, for the day it uses it again. A service moved to
  * another category goes after the services already there.
  */
 class UpdateService
 {
-    /** @param  list<array{active_duration: int, processing_duration: int}>  $steps */
+    /**
+     * @param  array<string, string>  $name
+     * @param  list<array{active_duration: int, processing_duration: int}>  $steps
+     * @param  array<string, string|null>  $description
+     */
     public function __construct(
         private readonly User $author,
         private readonly Service $service,
-        private string $name,
+        private array $name,
         private readonly int $price,
         private readonly array $steps,
-        private ?string $description = null,
+        private array $description = [],
         private readonly ?ServiceCategory $category = null,
     ) {}
 
@@ -60,8 +65,8 @@ class UpdateService
 
     private function sanitize(): void
     {
-        $this->name = TextSanitizer::plainText($this->name);
-        $this->description = TextSanitizer::nullablePlainText($this->description);
+        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
+        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
     }
 
     private function validate(): void
@@ -70,18 +75,26 @@ class UpdateService
             throw new ModelNotFoundException('Service category not found');
         }
 
-        if ($this->name === '') {
-            throw new InvalidArgumentException('A service needs a name');
+        foreach (array_keys($this->name + $this->description) as $language) {
+            if (! in_array($language, $this->service->company->languages, true)) {
+                throw new InvalidArgumentException("{$language} is not a language of the company");
+            }
         }
 
-        $taken = Service::query()
-            ->where('company_id', $this->service->company_id)
-            ->where('name', $this->name)
-            ->whereKeyNot($this->service->id)
-            ->exists();
+        foreach ($this->service->company->languages as $language) {
+            if (($this->name[$language] ?? '') === '') {
+                throw new InvalidArgumentException("A name is needed in {$language}");
+            }
 
-        if ($taken) {
-            throw new InvalidArgumentException('The company already has a service called '.$this->name);
+            $taken = Service::query()
+                ->where('company_id', $this->service->company->id)
+                ->where("name->{$language}", $this->name[$language])
+                ->whereKeyNot($this->service->id)
+                ->exists();
+
+            if ($taken) {
+                throw new InvalidArgumentException('The company already has a service called '.$this->name[$language]);
+            }
         }
 
         if ($this->price < 0) {
@@ -121,8 +134,12 @@ class UpdateService
             $this->service->position = (int) $lastPosition + 1;
         }
 
-        $this->service->name = $this->name;
-        $this->service->description = $this->description;
+        $removedLanguages = array_diff_key($this->service->name, array_flip($this->service->company->languages));
+        $this->service->name = [...$removedLanguages, ...$this->name];
+
+        $removedDescriptions = array_diff_key($this->service->description ?? [], array_flip($this->service->company->languages));
+        $description = [...$removedDescriptions, ...$this->description];
+        $this->service->description = $description === [] ? null : $description;
         $this->service->price = $this->price;
         $this->service->save();
     }
@@ -149,7 +166,7 @@ class UpdateService
             company: $this->service->company,
             user: $this->author,
             action: UserActionEnum::ServiceUpdated,
-            parameters: ['name' => $this->service->name],
+            parameters: ['name' => $this->name[$this->service->company->languages[0]]],
         )->onQueue('low');
     }
 }

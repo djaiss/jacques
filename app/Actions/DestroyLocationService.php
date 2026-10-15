@@ -48,7 +48,7 @@ class DestroyLocationService
             user: $this->author,
             action: UserActionEnum::LocationServiceDeleted,
             parameters: [
-                'name' => $this->locationService->service->name,
+                'name' => $this->locationService->service->localizedName($this->locationService->service->company->languages[0]),
                 'location' => $this->locationService->location->name,
             ],
         )->onQueue('low');

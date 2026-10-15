@@ -25,8 +25,8 @@ class ServiceFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'service_category_id' => null,
-            'name' => fake()->unique()->words(3, true),
-            'description' => fake()->sentence(),
+            'name' => ['en' => fake()->unique()->words(3, true)],
+            'description' => ['en' => fake()->sentence()],
             'price' => 3500,
             'is_active' => true,
             'position' => 1,

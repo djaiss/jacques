@@ -10,6 +10,7 @@ enum UserActionEnum: string implements Translatable
 {
     case CompanyCreated = 'company_created';
     case CompanyUpdated = 'company_updated';
+    case CompanyLanguagesUpdated = 'company_languages_updated';
     case UserInformationUpdated = 'user_information_updated';
     case UserPasswordUpdated = 'user_password_updated';
     case UserPreferencesUpdated = 'user_preferences_updated';
@@ -61,6 +62,7 @@ enum UserActionEnum: string implements Translatable
         return match ($this) {
             self::CompanyCreated => 'Created the company called :name',
             self::CompanyUpdated => 'Updated the company called :name',
+            self::CompanyLanguagesUpdated => 'Changed the languages of the salon to :languages',
             self::UserInformationUpdated => 'Updated the account of :email',
             self::UserPasswordUpdated => 'Changed their password',
             self::UserPreferencesUpdated => 'Changed their preferences',

@@ -50,7 +50,7 @@ class ActivateService
             company: $this->service->company,
             user: $this->author,
             action: UserActionEnum::ServiceActivated,
-            parameters: ['name' => $this->service->name],
+            parameters: ['name' => $this->service->localizedName($this->service->company->languages[0])],
         )->onQueue('low');
     }
 }

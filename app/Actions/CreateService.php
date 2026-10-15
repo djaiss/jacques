@@ -26,14 +26,18 @@ class CreateService
 {
     private Service $service;
 
-    /** @param  list<array{active_duration: int, processing_duration: int}>  $steps */
+    /**
+     * @param  array<string, string>  $name
+     * @param  list<array{active_duration: int, processing_duration: int}>  $steps
+     * @param  array<string, string|null>  $description
+     */
     public function __construct(
         private readonly User $author,
         private readonly Company $company,
-        private string $name,
+        private array $name,
         private readonly int $price,
         private readonly array $steps,
-        private ?string $description = null,
+        private array $description = [],
         private readonly ?ServiceCategory $category = null,
     ) {}
 
@@ -63,8 +67,8 @@ class CreateService
 
     private function sanitize(): void
     {
-        $this->name = TextSanitizer::plainText($this->name);
-        $this->description = TextSanitizer::nullablePlainText($this->description);
+        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
+        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
     }
 
     private function validate(): void
@@ -73,17 +77,25 @@ class CreateService
             throw new ModelNotFoundException('Service category not found');
         }
 
-        if ($this->name === '') {
-            throw new InvalidArgumentException('A service needs a name');
+        foreach (array_keys($this->name + $this->description) as $language) {
+            if (! in_array($language, $this->company->languages, true)) {
+                throw new InvalidArgumentException("{$language} is not a language of the company");
+            }
         }
 
-        $taken = Service::query()
-            ->where('company_id', $this->company->id)
-            ->where('name', $this->name)
-            ->exists();
+        foreach ($this->company->languages as $language) {
+            if (($this->name[$language] ?? '') === '') {
+                throw new InvalidArgumentException("A name is needed in {$language}");
+            }
 
-        if ($taken) {
-            throw new InvalidArgumentException('The company already has a service called '.$this->name);
+            $taken = Service::query()
+                ->where('company_id', $this->company->id)
+                ->where("name->{$language}", $this->name[$language])
+                ->exists();
+
+            if ($taken) {
+                throw new InvalidArgumentException('The company already has a service called '.$this->name[$language]);
+            }
         }
 
         if ($this->price < 0) {
@@ -116,7 +128,7 @@ class CreateService
             'company_id' => $this->company->id,
             'service_category_id' => $this->category?->id,
             'name' => $this->name,
-            'description' => $this->description,
+            'description' => $this->description === [] ? null : $this->description,
             'price' => $this->price,
             'is_active' => true,
             'position' => (int) $lastPosition + 1,
@@ -141,7 +153,7 @@ class CreateService
             company: $this->company,
             user: $this->author,
             action: UserActionEnum::ServiceCreated,
-            parameters: ['name' => $this->service->name],
+            parameters: ['name' => $this->name[$this->company->languages[0]]],
         )->onQueue('low');
     }
 }

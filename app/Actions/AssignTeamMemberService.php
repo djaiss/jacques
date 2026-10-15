@@ -58,7 +58,7 @@ class AssignTeamMemberService
         }
 
         if (! $this->locationService->is_active || ! $this->locationService->service->is_active) {
-            throw new InvalidArgumentException('The location does not offer the service called '.$this->locationService->service->name);
+            throw new InvalidArgumentException('The location does not offer the service called '.$this->locationService->service->localizedName($this->locationService->service->company->languages[0]));
         }
     }
 
@@ -74,7 +74,7 @@ class AssignTeamMemberService
             user: $this->author,
             action: UserActionEnum::TeamMemberServiceAssigned,
             parameters: [
-                'name' => $this->locationService->service->name,
+                'name' => $this->locationService->service->localizedName($this->locationService->service->company->languages[0]),
                 'location' => $this->locationService->location->name,
                 'email' => $this->user->email,
             ],

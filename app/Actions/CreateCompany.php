@@ -71,6 +71,7 @@ class CreateCompany
             'is_welcome_screen_pending' => true,
             'is_onboarding_pending' => true,
             'onboarding_step' => OnboardingStepEnum::Location,
+            'languages' => ['en'],
         ]);
     }
 

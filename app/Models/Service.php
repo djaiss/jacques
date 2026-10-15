@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Helpers\CatalogueText;
 use Carbon\Carbon;
 use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -25,11 +26,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * through LocationService, which may also set another price for that location.
  * A deactivated service is offered nowhere, but its row stays.
  *
+ * Its name and description are written once per language of the salon, keyed
+ * by language code. Texts in a language the salon stopped using are kept.
+ *
  * @property int $id
  * @property int $company_id
  * @property int|null $service_category_id
- * @property string $name
- * @property string|null $description
+ * @property array<string, string> $name
+ * @property array<string, string|null>|null $description
  * @property int $price
  * @property bool $is_active
  * @property int $position
@@ -67,6 +71,8 @@ class Service extends Model
     protected function casts(): array
     {
         return [
+            'name' => 'array',
+            'description' => 'array',
             'price' => 'integer',
             'is_active' => 'boolean',
             'position' => 'integer',
@@ -136,5 +142,24 @@ class Service extends Model
         return Attribute::get(fn (): int => (int) $this->steps->sum(
             fn (ServiceStep $step): int => $step->active_duration + $step->processing_duration,
         ));
+    }
+
+    /**
+     * Get the name in the language of the interface, or in the first language of
+     * the salon that has one.
+     */
+    public function localizedName(string $locale): string
+    {
+        return CatalogueText::resolve($this->name, $this->company->languages, $locale);
+    }
+
+    /**
+     * Get the languages of the salon the name is not written in yet.
+     *
+     * @return list<string>
+     */
+    public function missingLanguages(): array
+    {
+        return CatalogueText::missingLanguages($this->name, $this->company->languages);
     }
 }

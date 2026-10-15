@@ -63,7 +63,7 @@ class UpdateLocationService
             user: $this->author,
             action: UserActionEnum::LocationServiceUpdated,
             parameters: [
-                'name' => $this->locationService->service->name,
+                'name' => $this->locationService->service->localizedName($this->locationService->service->company->languages[0]),
                 'location' => $this->locationService->location->name,
             ],
         )->onQueue('low');

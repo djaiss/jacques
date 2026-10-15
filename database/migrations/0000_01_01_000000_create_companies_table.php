@@ -23,6 +23,7 @@ return new class extends Migration
             $table->boolean('is_welcome_screen_pending')->default(false)->comment('whether the company still has to see the welcome screen shown after signing up');
             $table->boolean('is_onboarding_pending')->default(false)->comment('whether the company still has to go through the onboarding');
             $table->unsignedTinyInteger('onboarding_step')->default(1)->comment('furthest onboarding step the company reached, from 1 to 4');
+            $table->json('languages')->nullable()->comment('ordered list of the languages the salon writes its catalogue in, the first one being the fallback');
             $table->json('settings')->nullable()->comment('configuration that does not deserve a column of its own, starting with the modules the company has turned on');
             $table->timestamps();
         });

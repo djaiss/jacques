@@ -24,7 +24,7 @@ class LocationViewModel extends StepViewModel
         return $this->user->company->onboarding_step->value > OnboardingStepEnum::Location->value;
     }
 
-    /** @return array{name: string, addressLine1: string, city: string, region: string, postalCode: string, country: string, phone: string, timezone: string} */
+    /** @return array{name: string, addressLine1: string, city: string, region: string, postalCode: string, country: string, phone: string, timezone: string, languages: list<string>} */
     public function form(): array
     {
         $location = $this->firstLocation();
@@ -38,6 +38,7 @@ class LocationViewModel extends StepViewModel
             'country' => (string) old('country', $location->country ?? ''),
             'phone' => (string) old('phone', $location->phone ?? ''),
             'timezone' => (string) old('timezone', $location->timezone ?? ''),
+            'languages' => array_values((array) old('languages', $this->user->company->languages ?? ['en'])),
         ];
     }
 
@@ -81,6 +82,76 @@ class LocationViewModel extends StepViewModel
         }
 
         return $timezones;
+    }
+
+    /** @return list<array{code: string, label: string, flag: string}> */
+    public function languages(): array
+    {
+        $languages = [];
+
+        foreach (config('jacques.content_languages') as $code => $language) {
+            $languages[] = [
+                'code' => $code,
+                'label' => $language['label'],
+                'flag' => $language['flag'],
+            ];
+        }
+
+        return $languages;
+    }
+
+    /** @return array<string, list<string>> */
+    public function languagesByCountry(): array
+    {
+        $languages = [];
+
+        foreach (array_keys($this->countries()) as $code) {
+            $languages[$code] = config("jacques.country_languages.{$code}", ['en']);
+        }
+
+        return $languages;
+    }
+
+    /** @return list<array{code: string, label: string}> */
+    public function languagesWithTexts(): array
+    {
+        $company = $this->user->company;
+        $texts = [];
+
+        foreach ([...$company->serviceCategories, ...$company->services] as $item) {
+            foreach ([$item->name, $item->description ?? []] as $values) {
+                foreach ($values as $language => $text) {
+                    if ($text !== null && $text !== '') {
+                        $texts[$language] = true;
+                    }
+                }
+            }
+        }
+
+        $languages = [];
+
+        foreach ($company->languages as $code) {
+            if (isset($texts[$code])) {
+                $languages[] = [
+                    'code' => $code,
+                    'label' => config("jacques.content_languages.{$code}.label"),
+                ];
+            }
+        }
+
+        return $languages;
+    }
+
+    /** @return array<int, string> */
+    public function languageCounters(): array
+    {
+        $counters = [];
+
+        foreach (range(1, count(config('jacques.content_languages'))) as $count) {
+            $counters[$count] = trans_choice(':count language|:count languages', $count);
+        }
+
+        return $counters;
     }
 
     private function firstLocation(): ?Location
