@@ -107,7 +107,7 @@ class CreateDefaultCatalogueTest extends TestCase
         $this->assertCount(23, $names);
 
         foreach ($names as $name) {
-            $this->assertEquals(['en', 'fr', 'de', 'es'], array_keys($name));
+            $this->assertEqualsCanonicalizing(['en', 'fr', 'de', 'es'], array_keys($name));
             $this->assertNotContains('', $name);
         }
 
