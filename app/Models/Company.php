@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\OnboardingStepEnum;
 use Carbon\Carbon;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $billing_email
  * @property Carbon|null $trial_ends_at
  * @property bool $is_welcome_screen_pending
+ * @property bool $is_onboarding_pending
+ * @property OnboardingStepEnum $onboarding_step
  * @property array<string, mixed>|null $settings
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
@@ -49,6 +52,8 @@ class Company extends Model
         'billing_email',
         'trial_ends_at',
         'is_welcome_screen_pending',
+        'is_onboarding_pending',
+        'onboarding_step',
         'settings',
     ];
 
@@ -62,6 +67,8 @@ class Company extends Model
         return [
             'trial_ends_at' => 'datetime',
             'is_welcome_screen_pending' => 'boolean',
+            'is_onboarding_pending' => 'boolean',
+            'onboarding_step' => OnboardingStepEnum::class,
             'settings' => 'array',
         ];
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Models;
 
+use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Service;
@@ -78,5 +79,16 @@ class CompanyTest extends TestCase
 
         $this->assertFalse($company->refresh()->is_welcome_screen_pending);
         $this->assertTrue($pending->refresh()->is_welcome_screen_pending);
+    }
+
+    #[Test]
+    public function it_does_not_owe_the_onboarding_by_default(): void
+    {
+        $company = Company::factory()->create();
+        $pending = Company::factory()->onboardingPending()->create();
+
+        $this->assertFalse($company->refresh()->is_onboarding_pending);
+        $this->assertTrue($pending->refresh()->is_onboarding_pending);
+        $this->assertEquals(OnboardingStepEnum::Location, $pending->onboarding_step);
     }
 }

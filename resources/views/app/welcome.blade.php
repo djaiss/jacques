@@ -43,7 +43,7 @@
       </div>
 
       <!-- start button -->
-      <x-form method="put" :action="route('welcome.update')">
+      <x-form method="put" :action="route('welcome.update')" data-turbo="true">
         <x-button>
           {{ __('Let’s get started') }}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

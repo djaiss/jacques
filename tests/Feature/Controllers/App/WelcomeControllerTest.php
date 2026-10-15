@@ -27,6 +27,7 @@ class WelcomeControllerTest extends TestCase
         $response->assertSee('Hi Michael, welcome to Jacques.');
         $response->assertSee('Creator of Jacques');
         $response->assertSee(route('welcome.update'));
+        $response->assertSee('data-turbo="true"', false);
     }
 
     #[Test]
@@ -48,7 +49,7 @@ class WelcomeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->put(route('welcome.update'));
 
-        $response->assertRedirect(route('home.index'));
+        $response->assertRedirect(route('onboarding.index'));
         $this->assertFalse($user->company->refresh()->is_welcome_screen_pending);
     }
 

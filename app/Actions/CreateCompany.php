@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\OnboardingStepEnum;
 use App\Enums\UserActionEnum;
 use App\Helpers\TextSanitizer;
 use App\Jobs\LogUserAction;
@@ -68,6 +69,8 @@ class CreateCompany
             'slug' => $this->slug(),
             'trial_ends_at' => now()->addDays(30),
             'is_welcome_screen_pending' => true,
+            'is_onboarding_pending' => true,
+            'onboarding_step' => OnboardingStepEnum::Location,
         ]);
     }
 

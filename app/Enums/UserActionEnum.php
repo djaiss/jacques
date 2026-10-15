@@ -39,6 +39,7 @@ enum UserActionEnum: string implements Translatable
     case ApiKeyCreated = 'api_key_created';
     case ApiKeyDeleted = 'api_key_deleted';
     case WelcomeScreenDismissed = 'welcome_screen_dismissed';
+    case OnboardingCompleted = 'onboarding_completed';
     case ServiceCategoryCreated = 'service_category_created';
     case ServiceCategoryUpdated = 'service_category_updated';
     case ServiceCategoryMoved = 'service_category_moved';
@@ -89,6 +90,7 @@ enum UserActionEnum: string implements Translatable
             self::ApiKeyCreated => 'Created the API key called :name',
             self::ApiKeyDeleted => 'Revoked the API key called :name',
             self::WelcomeScreenDismissed => 'Dismissed the welcome screen',
+            self::OnboardingCompleted => 'Completed the onboarding',
             self::ServiceCategoryCreated => 'Created the service category called :name',
             self::ServiceCategoryUpdated => 'Updated the service category called :name',
             self::ServiceCategoryMoved => 'Moved the service category called :name',

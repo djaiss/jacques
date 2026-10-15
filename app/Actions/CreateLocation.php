@@ -34,6 +34,7 @@ class CreateLocation
         private ?string $phone = null,
         private ?string $email = null,
         private ?string $timezone = null,
+        private readonly bool $isHeadquarters = false,
     ) {}
 
     public function execute(): Location
@@ -89,6 +90,12 @@ class CreateLocation
 
     private function create(): void
     {
+        if ($this->isHeadquarters) {
+            Location::query()
+                ->where('company_id', $this->company->id)
+                ->update(['is_headquarters' => false]);
+        }
+
         $this->location = Location::query()->create([
             'company_id' => $this->company->id,
             'name' => $this->name,
@@ -101,6 +108,7 @@ class CreateLocation
             'phone' => $this->phone,
             'email' => $this->email,
             'timezone' => $this->timezone,
+            'is_headquarters' => $this->isHeadquarters,
         ]);
     }
 

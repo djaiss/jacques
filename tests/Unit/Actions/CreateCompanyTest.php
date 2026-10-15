@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Actions;
 
 use App\Actions\CreateCompany;
+use App\Enums\OnboardingStepEnum;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
@@ -153,6 +154,25 @@ class CreateCompanyTest extends TestCase
         )->execute();
 
         $this->assertTrue($company->refresh()->is_welcome_screen_pending);
+    }
+
+    #[Test]
+    public function it_starts_the_new_company_on_the_first_onboarding_step(): void
+    {
+        Queue::fake();
+
+        $company = new CreateCompany(
+            name: 'Dunder Mifflin',
+            firstName: 'Michael',
+            lastName: 'Scott',
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        $company->refresh();
+
+        $this->assertTrue($company->is_onboarding_pending);
+        $this->assertEquals(OnboardingStepEnum::Location, $company->onboarding_step);
     }
 
     #[Test]
