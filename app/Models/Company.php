@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $currency
  * @property string|null $billing_email
  * @property Carbon|null $trial_ends_at
+ * @property bool $is_welcome_screen_pending
  * @property array<string, mixed>|null $settings
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
@@ -47,6 +48,7 @@ class Company extends Model
         'currency',
         'billing_email',
         'trial_ends_at',
+        'is_welcome_screen_pending',
         'settings',
     ];
 
@@ -59,6 +61,7 @@ class Company extends Model
     {
         return [
             'trial_ends_at' => 'datetime',
+            'is_welcome_screen_pending' => 'boolean',
             'settings' => 'array',
         ];
     }

@@ -67,6 +67,7 @@ class CreateCompany
             'name' => $this->name,
             'slug' => $this->slug(),
             'trial_ends_at' => now()->addDays(30),
+            'is_welcome_screen_pending' => true,
         ]);
     }
 
