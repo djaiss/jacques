@@ -79,6 +79,37 @@ class CreateDefaultCatalogueTest extends TestCase
     }
 
     #[Test]
+    public function it_prices_every_service_with_the_same_amount_in_every_offered_currency(): void
+    {
+        $company = Company::factory()->create(['currencies' => ['CAD']]);
+
+        new CreateDefaultCatalogue(company: $company)->execute();
+
+        $haircut = Service::query()->where('company_id', $company->id)->where('name->en', "Women's Haircut")->firstOrFail();
+
+        $this->assertEquals(['CAD' => 6500, 'USD' => 6500, 'EUR' => 6500, 'GBP' => 6500, 'CHF' => 6500], $haircut->prices);
+        $this->assertEquals([], $haircut->missingCurrencies());
+    }
+
+    #[Test]
+    public function it_leaves_no_service_without_a_price_when_the_salon_switches_to_another_currency(): void
+    {
+        $company = Company::factory()->create(['currencies' => ['CAD']]);
+
+        new CreateDefaultCatalogue(company: $company)->execute();
+
+        $company->update(['currencies' => ['EUR', 'CHF']]);
+
+        $services = Service::query()->where('company_id', $company->id)->get();
+
+        foreach ($services as $service) {
+            $this->assertEquals([], $service->missingCurrencies());
+        }
+
+        $this->assertEquals(3500, $services->firstOrFail(fn (Service $service): bool => $service->name['en'] === "Men's Haircut")->prices['EUR']);
+    }
+
+    #[Test]
     public function it_splits_three_services_into_steps_with_processing_time(): void
     {
         $company = Company::factory()->create();
