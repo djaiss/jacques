@@ -15,19 +15,20 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 
 /**
- * Offer a service of the catalogue at a location, optionally at a price of its
- * own. Without one, the location follows the price of the service, including
- * when it changes later.
+ * Offer a service of the catalogue at a location, optionally at prices of its
+ * own in some currencies. In any other currency the location follows the price
+ * of the service, including when it changes later.
  */
 class CreateLocationService
 {
     private LocationService $locationService;
 
+    /** @param  array<string, int>  $prices */
     public function __construct(
         private readonly User $author,
         private readonly Location $location,
         private readonly Service $service,
-        private readonly ?int $price = null,
+        private readonly array $prices = [],
     ) {}
 
     public function execute(): LocationService
@@ -58,8 +59,14 @@ class CreateLocationService
             throw new InvalidArgumentException('A deactivated service cannot be offered at a location');
         }
 
-        if ($this->price !== null && $this->price < 0) {
-            throw new InvalidArgumentException('A price cannot be negative');
+        foreach ($this->prices as $currency => $amount) {
+            if (! in_array($currency, $this->location->company->currencies, true)) {
+                throw new InvalidArgumentException("{$currency} is not a currency of the company");
+            }
+
+            if ($amount < 0) {
+                throw new InvalidArgumentException('A price cannot be negative');
+            }
         }
 
         $offered = LocationService::query()
@@ -77,7 +84,7 @@ class CreateLocationService
         $this->locationService = LocationService::query()->create([
             'location_id' => $this->location->id,
             'service_id' => $this->service->id,
-            'price' => $this->price,
+            'prices' => $this->prices === [] ? null : $this->prices,
             'is_active' => true,
         ]);
     }

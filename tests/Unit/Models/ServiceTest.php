@@ -70,10 +70,10 @@ class ServiceTest extends TestCase
     {
         $location = Location::factory()->create();
         $service = Service::factory()->create(['company_id' => $location->company_id]);
-        $service->locations()->attach($location->id, ['price' => 4000]);
+        $service->locations()->attach($location->id, ['prices' => json_encode(['CAD' => 4000])]);
 
         $this->assertTrue($service->locations()->exists());
-        $this->assertEquals(4000, $service->locations->first()->pivot->price);
+        $this->assertEquals(['CAD' => 4000], json_decode($service->locations->first()->pivot->prices, true));
     }
 
     #[Test]
@@ -88,11 +88,11 @@ class ServiceTest extends TestCase
     }
 
     #[Test]
-    public function it_casts_the_price_and_the_active_flag(): void
+    public function it_casts_the_prices_and_the_active_flag(): void
     {
-        $service = Service::factory()->inactive()->create(['price' => 3500]);
+        $service = Service::factory()->inactive()->create(['prices' => ['CAD' => 3500, 'USD' => 2600]]);
 
-        $this->assertSame(3500, $service->refresh()->price);
+        $this->assertSame(['CAD' => 3500, 'USD' => 2600], $service->refresh()->prices);
         $this->assertFalse($service->is_active);
     }
 
@@ -107,6 +107,18 @@ class ServiceTest extends TestCase
 
         $this->assertEquals("Women's haircut", $haircut->localizedName('en'));
         $this->assertEquals('Coupe femme', $haircut->localizedName('de_DE'));
+    }
+
+    #[Test]
+    public function it_lists_the_currencies_it_has_no_price_in(): void
+    {
+        $company = Company::factory()->create(['currencies' => ['CAD', 'USD', 'EUR']]);
+        $haircut = Service::factory()->create([
+            'company_id' => $company->id,
+            'prices' => ['CAD' => 6500, 'GBP' => 3800],
+        ]);
+
+        $this->assertEquals(['USD', 'EUR'], $haircut->missingCurrencies());
     }
 
     #[Test]

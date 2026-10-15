@@ -67,7 +67,7 @@ class CreateDefaultCatalogue
                     'service_category_id' => $serviceCategory->id,
                     'name' => array_map(fn (array $catalogue): string => $catalogue[$categoryIndex]['services'][$serviceIndex]['name'], $catalogues),
                     'description' => null,
-                    'price' => $service['price'],
+                    'prices' => ['CAD' => $service['price']],
                     'is_active' => true,
                     'position' => $serviceIndex + 1,
                 ]);

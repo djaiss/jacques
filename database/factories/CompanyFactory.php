@@ -27,8 +27,8 @@ class CompanyFactory extends Factory
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 100000),
             'legal_name' => $name.' Inc.',
             'website_url' => fake()->url(),
-            'currency' => 'USD',
             'languages' => ['en'],
+            'currencies' => ['CAD'],
         ];
     }
 

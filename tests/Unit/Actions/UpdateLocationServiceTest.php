@@ -34,9 +34,10 @@ class UpdateLocationServiceTest extends TestCase
         $atStamford = LocationService::factory()->create(['location_id' => $stamford->id, 'service_id' => $atScranton->service_id]);
         $michael = $this->grant(User::factory()->create(['company_id' => $scranton->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateLocationService(author: $michael, locationService: $atScranton, price: 4000, isActive: false)->execute();
+        new UpdateLocationService(author: $michael, locationService: $atScranton, prices: ['CAD' => 4000], isActive: false)->execute();
 
-        $this->assertDatabaseHas('location_services', ['id' => $atScranton->id, 'price' => 4000, 'is_active' => false]);
+        $this->assertEquals(['CAD' => 4000], $atScranton->refresh()->prices);
+        $this->assertFalse($atScranton->is_active);
         $this->assertTrue($atStamford->refresh()->is_active);
 
         Queue::assertPushedOn(
@@ -52,13 +53,25 @@ class UpdateLocationServiceTest extends TestCase
     {
         Queue::fake();
 
-        $locationService = LocationService::factory()->create(['price' => 4000]);
+        $locationService = LocationService::factory()->create(['prices' => ['CAD' => 4000]]);
         $michael = $this->grant(User::factory()->create(['company_id' => $locationService->location->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateLocationService(author: $michael, locationService: $locationService, price: null)->execute();
+        new UpdateLocationService(author: $michael, locationService: $locationService, prices: [])->execute();
 
-        $this->assertNull($locationService->refresh()->price);
-        $this->assertEquals($locationService->service->price, $locationService->resolvedPrice());
+        $this->assertNull($locationService->refresh()->prices);
+        $this->assertEquals($locationService->service->prices['CAD'], $locationService->resolvedPrice('CAD'));
+    }
+
+    #[Test]
+    public function it_throws_when_a_price_is_in_a_currency_the_company_does_not_use(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('USD is not a currency of the company');
+
+        $locationService = LocationService::factory()->create();
+        $michael = $this->grant(User::factory()->create(['company_id' => $locationService->location->company_id]), PermissionEnum::ServiceManage);
+
+        new UpdateLocationService(author: $michael, locationService: $locationService, prices: ['USD' => 4000])->execute();
     }
 
     #[Test]
@@ -69,7 +82,7 @@ class UpdateLocationServiceTest extends TestCase
         $locationService = LocationService::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $locationService->location->company_id]), PermissionEnum::ServiceManage);
 
-        new UpdateLocationService(author: $michael, locationService: $locationService, price: -1)->execute();
+        new UpdateLocationService(author: $michael, locationService: $locationService, prices: ['CAD' => -1])->execute();
     }
 
     #[Test]
@@ -82,7 +95,7 @@ class UpdateLocationServiceTest extends TestCase
         $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $scranton->company_id]), Role::MANAGER);
         $dwight->locations()->attach($scranton->id);
 
-        new UpdateLocationService(author: $dwight, locationService: $atStamford, price: 4000)->execute();
+        new UpdateLocationService(author: $dwight, locationService: $atStamford, prices: ['CAD' => 4000])->execute();
     }
 
     #[Test]
@@ -92,6 +105,6 @@ class UpdateLocationServiceTest extends TestCase
 
         $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
 
-        new UpdateLocationService(author: $michael, locationService: LocationService::factory()->create(), price: 4000)->execute();
+        new UpdateLocationService(author: $michael, locationService: LocationService::factory()->create(), prices: ['CAD' => 4000])->execute();
     }
 }

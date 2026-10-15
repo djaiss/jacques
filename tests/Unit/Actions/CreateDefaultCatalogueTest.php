@@ -54,7 +54,7 @@ class CreateDefaultCatalogueTest extends TestCase
             ->select('services.*')
             ->with('steps')
             ->get()
-            ->map(fn (Service $service): array => [$service->name['en'], $service->price, $service->duration, $service->is_active])
+            ->map(fn (Service $service): array => [$service->name['en'], $service->prices['CAD'], $service->duration, $service->is_active])
             ->all();
 
         $this->assertEquals([
@@ -148,12 +148,12 @@ class CreateDefaultCatalogueTest extends TestCase
         new CreateDefaultCatalogue(company: $company)->execute();
 
         Service::query()->where('company_id', $company->id)->where('name->en', 'Balayage')->delete();
-        Service::query()->where('company_id', $company->id)->where('name->en', 'Blowout')->update(['price' => 5000]);
+        Service::query()->where('company_id', $company->id)->where('name->en', 'Blowout')->update(['prices' => json_encode(['CAD' => 5000])]);
 
         new CreateDefaultCatalogue(company: $company)->execute();
 
         $this->assertFalse(Service::query()->where('company_id', $company->id)->where('name->en', 'Balayage')->exists());
-        $this->assertEquals(5000, Service::query()->where('company_id', $company->id)->where('name->en', 'Blowout')->value('price'));
+        $this->assertEquals(['CAD' => 5000], Service::query()->where('company_id', $company->id)->where('name->en', 'Blowout')->first()->prices);
         $this->assertEquals(16, Service::query()->where('company_id', $company->id)->count());
     }
 
@@ -166,7 +166,7 @@ class CreateDefaultCatalogueTest extends TestCase
 
         new CreateDefaultCatalogue(company: $company)->execute();
 
-        $this->assertEquals(17, LocationService::query()->where('location_id', $scranton->id)->whereNull('price')->where('is_active', true)->count());
+        $this->assertEquals(17, LocationService::query()->where('location_id', $scranton->id)->whereNull('prices')->where('is_active', true)->count());
         $this->assertEquals(0, LocationService::query()->where('location_id', $stamford->id)->count());
     }
 

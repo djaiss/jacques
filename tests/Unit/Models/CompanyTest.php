@@ -104,6 +104,16 @@ class CompanyTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_its_currencies_in_the_order_they_were_chosen(): void
+    {
+        $company = Company::factory()->create([
+            'currencies' => ['USD', 'CAD'],
+        ]);
+
+        $this->assertEquals(['USD', 'CAD'], $company->refresh()->currencies);
+    }
+
+    #[Test]
     public function it_has_not_received_the_default_catalogue_by_default(): void
     {
         $company = Company::factory()->create();

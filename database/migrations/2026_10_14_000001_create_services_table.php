@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('service_category_id')->nullable()->comment('category the service is listed in, null when it has none');
             $table->json('name')->comment('name of the service in each salon language, keyed by language code');
             $table->json('description')->nullable()->comment('what the service consists of, in each salon language, keyed by language code');
-            $table->unsignedInteger('price')->comment('default price, in the smallest unit of the company currency');
+            $table->json('prices')->comment('price in each salon currency, in its smallest unit, keyed by currency code');
             $table->boolean('is_active')->default(true)->comment('whether the service is offered, so a service can be withdrawn without being deleted');
             $table->unsignedInteger('position')->comment('display order of the service in its category, starting at 1');
             $table->timestamps();

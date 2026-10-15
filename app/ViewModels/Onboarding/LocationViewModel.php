@@ -6,6 +6,7 @@ namespace App\ViewModels\Onboarding;
 
 use App\Enums\OnboardingStepEnum;
 use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\User;
 use Collator;
 use DateTimeZone;
@@ -24,7 +25,7 @@ class LocationViewModel extends StepViewModel
         return $this->user->company->onboarding_step->value > OnboardingStepEnum::Location->value;
     }
 
-    /** @return array{name: string, addressLine1: string, city: string, region: string, postalCode: string, country: string, phone: string, timezone: string, languages: list<string>} */
+    /** @return array{name: string, addressLine1: string, city: string, region: string, postalCode: string, country: string, phone: string, timezone: string, languages: list<string>, currencies: list<string>} */
     public function form(): array
     {
         $location = $this->firstLocation();
@@ -39,6 +40,7 @@ class LocationViewModel extends StepViewModel
             'phone' => (string) old('phone', $location->phone ?? ''),
             'timezone' => (string) old('timezone', $location->timezone ?? ''),
             'languages' => array_values((array) old('languages', $this->user->company->languages ?? ['en'])),
+            'currencies' => array_values((array) old('currencies', $this->user->company->currencies ?? ['CAD'])),
         ];
     }
 
@@ -152,6 +154,90 @@ class LocationViewModel extends StepViewModel
         }
 
         return $counters;
+    }
+
+    /** @return list<array{code: string, label: string}> */
+    public function currencies(): array
+    {
+        $labels = $this->currencyLabels();
+        $currencies = [];
+
+        foreach (config('jacques.currencies') as $code) {
+            $currencies[] = [
+                'code' => $code,
+                'label' => $labels[$code],
+            ];
+        }
+
+        return $currencies;
+    }
+
+    /** @return array<string, string> */
+    public function currenciesByCountry(): array
+    {
+        $currencies = [];
+
+        foreach (array_keys($this->countries()) as $code) {
+            $currencies[$code] = config("jacques.country_currencies.{$code}", 'CAD');
+        }
+
+        return $currencies;
+    }
+
+    /** @return list<array{code: string, label: string}> */
+    public function currenciesWithPrices(): array
+    {
+        $company = $this->user->company;
+        $prices = [];
+
+        $locationServices = LocationService::query()
+            ->whereHas('location', fn ($query) => $query->where('company_id', $company->id))
+            ->whereNotNull('prices')
+            ->get();
+
+        foreach ([...$company->services, ...$locationServices] as $item) {
+            foreach (array_keys($item->prices ?? []) as $currency) {
+                $prices[$currency] = true;
+            }
+        }
+
+        $labels = $this->currencyLabels();
+        $currencies = [];
+
+        foreach ($company->currencies as $code) {
+            if (isset($prices[$code])) {
+                $currencies[] = [
+                    'code' => $code,
+                    'label' => $labels[$code],
+                ];
+            }
+        }
+
+        return $currencies;
+    }
+
+    /** @return array<int, string> */
+    public function currencyCounters(): array
+    {
+        $counters = [];
+
+        foreach (range(1, count(config('jacques.currencies'))) as $count) {
+            $counters[$count] = trans_choice(':count currency|:count currencies', $count);
+        }
+
+        return $counters;
+    }
+
+    /** @return array<string, string> */
+    private function currencyLabels(): array
+    {
+        return [
+            'CAD' => __('Canadian dollar'),
+            'USD' => __('US dollar'),
+            'EUR' => __('Euro'),
+            'GBP' => __('Pound sterling'),
+            'CHF' => __('Swiss franc'),
+        ];
     }
 
     private function firstLocation(): ?Location

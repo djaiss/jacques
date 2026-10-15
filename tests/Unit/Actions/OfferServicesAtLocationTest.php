@@ -31,7 +31,7 @@ class OfferServicesAtLocationTest extends TestCase
         $this->assertDatabaseHas('location_services', [
             'location_id' => $scranton->id,
             'service_id' => $haircut->id,
-            'price' => null,
+            'prices' => null,
             'is_active' => true,
         ]);
         $this->assertDatabaseHas('location_services', [
@@ -61,13 +61,13 @@ class OfferServicesAtLocationTest extends TestCase
         LocationService::factory()->create([
             'location_id' => $scranton->id,
             'service_id' => $haircut->id,
-            'price' => 4000,
+            'prices' => ['CAD' => 4000],
         ]);
 
         new OfferServicesAtLocation(location: $scranton)->execute();
 
         $this->assertEquals(1, LocationService::query()->where('location_id', $scranton->id)->count());
-        $this->assertEquals(4000, LocationService::query()->where('location_id', $scranton->id)->value('price'));
+        $this->assertEquals(['CAD' => 4000], LocationService::query()->where('location_id', $scranton->id)->first()->prices);
     }
 
     #[Test]

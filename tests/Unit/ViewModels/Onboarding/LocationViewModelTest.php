@@ -7,6 +7,7 @@ namespace Tests\Unit\ViewModels\Onboarding;
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
@@ -148,6 +149,72 @@ class LocationViewModelTest extends TestCase
             ['code' => 'en', 'label' => 'English'],
             ['code' => 'es', 'label' => 'Español'],
         ], $viewModel->languagesWithTexts());
+    }
+
+    #[Test]
+    public function it_prefills_the_currencies_of_the_company(): void
+    {
+        $user = $this->user();
+        $user->company->update(['currencies' => ['USD', 'CAD']]);
+
+        $viewModel = new LocationViewModel(user: $user);
+
+        $this->assertEquals(['USD', 'CAD'], $viewModel->form()['currencies']);
+    }
+
+    #[Test]
+    public function it_offers_every_currency_by_its_name(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $currencies = collect($viewModel->currencies());
+
+        $this->assertEquals(['CAD', 'USD', 'EUR', 'GBP', 'CHF'], $currencies->pluck('code')->all());
+        $this->assertEquals('Canadian dollar', $currencies->firstWhere('code', 'CAD')['label']);
+    }
+
+    #[Test]
+    public function it_chooses_the_currency_of_each_country(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $currencies = $viewModel->currenciesByCountry();
+
+        $this->assertEquals('CAD', $currencies['CA']);
+        $this->assertEquals('USD', $currencies['US']);
+        $this->assertEquals('EUR', $currencies['FR']);
+        $this->assertEquals('CHF', $currencies['CH']);
+        $this->assertEquals('CAD', $currencies['JP']);
+    }
+
+    #[Test]
+    public function it_counts_the_currencies_chosen(): void
+    {
+        $viewModel = new LocationViewModel(user: $this->user());
+
+        $counters = $viewModel->currencyCounters();
+
+        $this->assertEquals('1 currency', $counters[1]);
+        $this->assertEquals('2 currencies', $counters[2]);
+        $this->assertCount(5, $counters);
+    }
+
+    #[Test]
+    public function it_lists_the_currencies_holding_prices_of_the_catalogue(): void
+    {
+        $user = $this->user();
+        $user->company->update(['currencies' => ['CAD', 'USD', 'EUR', 'CHF']]);
+        $scranton = Location::factory()->create(['company_id' => $user->company_id]);
+        $haircut = Service::factory()->create(['company_id' => $user->company_id, 'prices' => ['CAD' => 3500, 'GBP' => 2000]]);
+        LocationService::factory()->create(['location_id' => $scranton->id, 'service_id' => $haircut->id, 'prices' => ['EUR' => 2500]]);
+        LocationService::factory()->create(['prices' => ['CHF' => 3000]]);
+
+        $viewModel = new LocationViewModel(user: $user->refresh());
+
+        $this->assertEquals([
+            ['code' => 'CAD', 'label' => 'Canadian dollar'],
+            ['code' => 'EUR', 'label' => 'Euro'],
+        ], $viewModel->currenciesWithPrices());
     }
 
     private function user(OnboardingStepEnum $reached = OnboardingStepEnum::Location): User

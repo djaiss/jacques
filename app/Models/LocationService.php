@@ -18,15 +18,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * only once this row exists, and the location may stop offering it for a while
  * without losing the row.
  *
- * The price, when set, replaces the price of the service at this location.
- * When it is null the location follows the price of the service, including
- * when that price changes later. The duration cannot be changed here: it is
+ * The prices, keyed by currency code, replace the prices of the service at
+ * this location in the currencies they name. In any other currency the
+ * location follows the price of the service, including when that price
+ * changes later. The duration cannot be changed here: it is
  * the sum of the steps of the service, the same everywhere.
  *
  * @property int $id
  * @property int $location_id
  * @property int $service_id
- * @property int|null $price
+ * @property array<string, int>|null $prices
  * @property bool $is_active
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
@@ -46,7 +47,7 @@ class LocationService extends Model
     protected $fillable = [
         'location_id',
         'service_id',
-        'price',
+        'prices',
         'is_active',
     ];
 
@@ -58,7 +59,7 @@ class LocationService extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'integer',
+            'prices' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -94,11 +95,11 @@ class LocationService extends Model
     }
 
     /**
-     * Get the price at the location: its own when it has one, the price of the
-     * service otherwise.
+     * Get the price at the location in a currency: its own when it has one, the
+     * price of the service otherwise, and null when neither has one.
      */
-    public function resolvedPrice(): int
+    public function resolvedPrice(string $currency): ?int
     {
-        return $this->price ?? $this->service->price;
+        return $this->prices[$currency] ?? $this->service->prices[$currency] ?? null;
     }
 }

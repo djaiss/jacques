@@ -49,14 +49,17 @@ fermeture.
 Une personne est affectée à un ou plusieurs établissements. Un responsable
 n'agit que sur les établissements auxquels il est affecté (D4).
 
-### D2. Le salon déclare sa langue, son fuseau horaire et sa devise
+### D2. Le salon déclare sa langue, son fuseau horaire et ses devises
 
 Les trois sont posés à la création du salon et s'appliquent partout : le back
 office, la page publique de réservation et les messages envoyés.
 
 Le fuseau horaire est la valeur qui compte le plus. Toutes les heures sont
-stockées en temps universel et affichées dans le fuseau du salon. La devise ne
-sert qu'à afficher les prix du catalogue, puisque Jacques n'encaisse rien (D22).
+stockées en temps universel et affichées dans le fuseau du salon. Les devises ne
+servent qu'à afficher les prix du catalogue, puisque Jacques n'encaisse rien
+(D22). Un salon peut en déclarer plusieurs : chaque prestation porte alors un
+prix dans chacune, saisi par le salon. Jacques ne convertit jamais un montant
+d'une devise à une autre.
 
 ### D3. Un membre de l'équipe est un compte utilisateur
 
@@ -335,7 +338,7 @@ dessus en laissent 23.
 
 `Salon`, `User`, `ScheduleRule`, `ScheduleException`.
 
-Le salon porte sa langue, son fuseau horaire, sa devise et les deux réglages de
+Le salon porte sa langue, son fuseau horaire, ses devises et les deux réglages de
 réservation (D14, D20).
 
 `ScheduleRule` est une règle récurrente qui dit qu'un salon ou une personne est

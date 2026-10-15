@@ -12,20 +12,25 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Write what the first onboarding step asks: the name of the salon, which
- * renames the company, the languages it works in, and its first location,
- * created once, offering the catalogue, and updated on every later submission.
+ * renames the company, the languages and currencies it works in, and its first
+ * location, created once, offering the catalogue, and updated on every later
+ * submission.
  */
 class SetUpSalon
 {
     private Company $company;
 
-    /** @param  list<string>  $languages */
+    /**
+     * @param  list<string>  $languages
+     * @param  list<string>  $currencies
+     */
     public function __construct(
         private readonly User $author,
         private readonly string $name,
         private readonly string $country,
         private readonly string $timezone,
         private readonly array $languages,
+        private readonly array $currencies,
         private readonly ?string $region = null,
         private readonly ?string $city = null,
         private readonly ?string $postalCode = null,
@@ -42,6 +47,7 @@ class SetUpSalon
 
             $this->renameCompany();
             $this->updateLanguages();
+            $this->updateCurrencies();
             $this->saveFirstLocation();
             $this->completeStep();
         });
@@ -57,7 +63,6 @@ class SetUpSalon
             name: $this->name,
             legalName: $this->company->legal_name,
             websiteUrl: $this->company->website_url,
-            currency: $this->company->currency,
             billingEmail: $this->company->billing_email,
         )->execute();
     }
@@ -68,6 +73,15 @@ class SetUpSalon
             author: $this->author,
             company: $this->company,
             languages: $this->languages,
+        )->execute();
+    }
+
+    private function updateCurrencies(): void
+    {
+        $this->company = new UpdateCompanyCurrencies(
+            author: $this->author,
+            company: $this->company,
+            currencies: $this->currencies,
         )->execute();
     }
 

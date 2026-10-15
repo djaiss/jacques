@@ -33,19 +33,19 @@ class CreateLocationServiceTest extends TestCase
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
         $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
-        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'price' => 3500]);
+        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'prices' => ['CAD' => 3500]]);
 
-        $locationService = new CreateLocationService(author: $michael, location: $scranton, service: $haircut, price: 4000)->execute();
+        $locationService = new CreateLocationService(author: $michael, location: $scranton, service: $haircut, prices: ['CAD' => 4000])->execute();
 
         $this->assertInstanceOf(LocationService::class, $locationService);
         $this->assertDatabaseHas('location_services', [
             'id' => $locationService->id,
             'location_id' => $scranton->id,
             'service_id' => $haircut->id,
-            'price' => 4000,
             'is_active' => true,
         ]);
-        $this->assertEquals(4000, $locationService->resolvedPrice());
+        $this->assertEquals(['CAD' => 4000], $locationService->refresh()->prices);
+        $this->assertEquals(4000, $locationService->resolvedPrice('CAD'));
 
         Queue::assertPushedOn(
             queue: 'low',
@@ -63,14 +63,14 @@ class CreateLocationServiceTest extends TestCase
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
         $stamford = Location::factory()->create(['company_id' => $company->id]);
-        $haircut = Service::factory()->create(['company_id' => $company->id, 'price' => 3500]);
+        $haircut = Service::factory()->create(['company_id' => $company->id, 'prices' => ['CAD' => 3500]]);
 
         $locationService = new CreateLocationService(author: $michael, location: $stamford, service: $haircut)->execute();
 
-        $haircut->update(['price' => 3800]);
+        $haircut->update(['prices' => ['CAD' => 3800]]);
 
-        $this->assertNull($locationService->price);
-        $this->assertEquals(3800, $locationService->refresh()->resolvedPrice());
+        $this->assertNull($locationService->prices);
+        $this->assertEquals(3800, $locationService->refresh()->resolvedPrice('CAD'));
     }
 
     #[Test]
@@ -164,6 +164,20 @@ class CreateLocationServiceTest extends TestCase
         $scranton = Location::factory()->create(['company_id' => $company->id]);
         $haircut = Service::factory()->create(['company_id' => $company->id]);
 
-        new CreateLocationService(author: $michael, location: $scranton, service: $haircut, price: -100)->execute();
+        new CreateLocationService(author: $michael, location: $scranton, service: $haircut, prices: ['CAD' => -100])->execute();
+    }
+
+    #[Test]
+    public function it_throws_when_a_price_is_in_a_currency_the_company_does_not_use(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('CHF is not a currency of the company');
+
+        $company = Company::factory()->create();
+        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+        $scranton = Location::factory()->create(['company_id' => $company->id]);
+        $haircut = Service::factory()->create(['company_id' => $company->id]);
+
+        new CreateLocationService(author: $michael, location: $scranton, service: $haircut, prices: ['CHF' => 4000])->execute();
     }
 }

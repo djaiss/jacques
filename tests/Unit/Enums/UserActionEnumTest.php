@@ -22,6 +22,7 @@ class UserActionEnumTest extends TestCase
     public function it_describes_an_action_with_the_parameters_it_was_logged_with(): void
     {
         $this->assertEquals('Changed the languages of the salon to :languages', UserActionEnum::CompanyLanguagesUpdated->description());
+        $this->assertEquals('Changed the currencies of the salon to :currencies', UserActionEnum::CompanyCurrenciesUpdated->description());
         $this->assertEquals('Updated the profile of :name', UserActionEnum::EmployeeInformationUpdated->description());
         $this->assertEquals('Changed the avatar of :name', UserActionEnum::EmployeeAvatarUpdated->description());
         $this->assertEquals('Removed the avatar of :name', UserActionEnum::EmployeeAvatarDeleted->description());

@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id()->comment('primary key');
             $table->unsignedBigInteger('location_id')->comment('location that offers the service');
             $table->unsignedBigInteger('service_id')->comment('service the location offers');
-            $table->unsignedInteger('price')->nullable()->comment('price at this location, in the smallest unit of the company currency, null to use the price of the service');
+            $table->json('prices')->nullable()->comment('prices this location replaces, in the smallest unit of each currency, keyed by currency code, null when it follows the service');
             $table->boolean('is_active')->default(true)->comment('whether the location offers the service at the moment');
             $table->timestamps();
 

@@ -35,7 +35,7 @@ class OfferServicesAtLocation
             LocationService::query()->create([
                 'location_id' => $this->location->id,
                 'service_id' => $service->id,
-                'price' => null,
+                'prices' => null,
                 'is_active' => true,
             ]);
         }

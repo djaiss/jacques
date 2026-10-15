@@ -106,6 +106,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Currencies
+    |--------------------------------------------------------------------------
+    |
+    | The currencies a salon can price its catalogue in, by ISO 4217 code.
+    | Every one of them has two decimals, so every amount is stored in cents.
+    |
+    */
+
+    'currencies' => ['CAD', 'USD', 'EUR', 'GBP', 'CHF'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Currency of a country
+    |--------------------------------------------------------------------------
+    |
+    | The currency chosen for a salon as soon as its country is picked during
+    | the onboarding. The owner can change it right away. A country missing
+    | from this list starts with the Canadian dollar.
+    |
+    */
+
+    'country_currencies' => [
+        'BE' => 'EUR',
+        'CA' => 'CAD',
+        'CH' => 'CHF',
+        'FR' => 'EUR',
+        'US' => 'USD',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Remember me
     |--------------------------------------------------------------------------
     |

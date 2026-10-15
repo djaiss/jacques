@@ -28,12 +28,13 @@ class UpdateService
      * @param  array<string, string>  $name
      * @param  list<array{active_duration: int, processing_duration: int}>  $steps
      * @param  array<string, string|null>  $description
+     * @param  array<string, int>  $prices
      */
     public function __construct(
         private readonly User $author,
         private readonly Service $service,
         private array $name,
-        private readonly int $price,
+        private readonly array $prices,
         private readonly array $steps,
         private array $description = [],
         private readonly ?ServiceCategory $category = null,
@@ -97,8 +98,20 @@ class UpdateService
             }
         }
 
-        if ($this->price < 0) {
-            throw new InvalidArgumentException('A price cannot be negative');
+        foreach ($this->prices as $currency => $amount) {
+            if (! in_array($currency, $this->service->company->currencies, true)) {
+                throw new InvalidArgumentException("{$currency} is not a currency of the company");
+            }
+
+            if ($amount < 0) {
+                throw new InvalidArgumentException('A price cannot be negative');
+            }
+        }
+
+        foreach ($this->service->company->currencies as $currency) {
+            if (! array_key_exists($currency, $this->prices)) {
+                throw new InvalidArgumentException("A price is needed in {$currency}");
+            }
         }
 
         if ($this->steps === []) {
@@ -140,7 +153,8 @@ class UpdateService
         $removedDescriptions = array_diff_key($this->service->description ?? [], array_flip($this->service->company->languages));
         $description = [...$removedDescriptions, ...$this->description];
         $this->service->description = $description === [] ? null : $description;
-        $this->service->price = $this->price;
+        $removedCurrencies = array_diff_key($this->service->prices, array_flip($this->service->company->currencies));
+        $this->service->prices = [...$removedCurrencies, ...$this->prices];
         $this->service->save();
     }
 

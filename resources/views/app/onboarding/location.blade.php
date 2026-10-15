@@ -20,13 +20,20 @@
       languagesByCountry: @js($viewModel->languagesByCountry()),
       languageCounters: @js($viewModel->languageCounters()),
       languagesWithTexts: @js($viewModel->languagesWithTexts()),
+      currencies: @js($form['currencies']),
+      currenciesByCountry: @js($viewModel->currenciesByCountry()),
+      currencyCounters: @js($viewModel->currencyCounters()),
+      currenciesWithPrices: @js($viewModel->currenciesWithPrices()),
       confirmingRemoval: false,
       removalConfirmed: false,
       removedLanguages() {
         return this.languagesWithTexts.filter((language) => ! this.languages.includes(language.code))
       },
+      removedCurrencies() {
+        return this.currenciesWithPrices.filter((currency) => ! this.currencies.includes(currency.code))
+      },
       submitSalon(event) {
-        if (this.removalConfirmed || this.removedLanguages().length === 0) {
+        if (this.removalConfirmed || this.removedLanguages().length + this.removedCurrencies().length === 0) {
           return
         }
 
@@ -36,6 +43,7 @@
       chooseCountry() {
         this.timezone = this.timezones[this.country]?.[0]?.value ?? ''
         this.languages = [...(this.languagesByCountry[this.country] ?? ['en'])]
+        this.currencies = [this.currenciesByCountry[this.country] ?? 'CAD']
       },
       toggleLanguage(code) {
         if (! this.languages.includes(code)) {
@@ -46,6 +54,17 @@
 
         if (this.languages.length > 1) {
           this.languages = this.languages.filter((language) => language !== code)
+        }
+      },
+      toggleCurrency(code) {
+        if (! this.currencies.includes(code)) {
+          this.currencies.push(code)
+
+          return
+        }
+
+        if (this.currencies.length > 1) {
+          this.currencies = this.currencies.filter((currency) => currency !== code)
         }
       },
     }"
@@ -176,6 +195,41 @@
           <x-error id="languages-error" :messages="$errors->get('languages')" />
         </div>
 
+        <!-- currencies of the salon -->
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <span id="currencies-label" class="block text-sm leading-tight font-semibold text-ink">{{ __('Currencies accepted at the salon') }} <span class="text-error" aria-hidden="true">*</span></span>
+            <span class="text-xs text-muted" aria-live="polite">
+              <span x-text="currencyCounters[currencies.length]"></span><span x-show="currencies.length === 1">. {{ __('Keep at least one.') }}</span>
+            </span>
+          </div>
+
+          <div role="group" aria-labelledby="currencies-label" aria-describedby="currencies-help{{ $errors->has('currencies') ? ' currencies-error' : '' }}" class="flex flex-wrap gap-2">
+            @foreach ($viewModel->currencies() as $currency)
+              <button
+                type="button"
+                @click="toggleCurrency(@js($currency['code']))"
+                :aria-pressed="currencies.includes(@js($currency['code'])).toString()"
+                class="flex h-9.5 cursor-pointer items-center gap-2 rounded-[10px] border border-hairline-strong bg-input pr-3.5 pl-2.5 text-[15px] text-ink transition-colors duration-150 hover:border-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-canvas motion-reduce:transition-none"
+              >
+                <span class="flex size-4 items-center justify-center rounded-sm" :class="currencies.includes(@js($currency['code'])) ? 'bg-canvas' : 'ring-[1.5px] ring-hairline-strong ring-inset'" aria-hidden="true">
+                  <svg x-show="currencies.includes(@js($currency['code']))" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-ink">
+                    <path d="M3.5 8.5l3 3 6-7" />
+                  </svg>
+                </span>
+                <span>{{ $currency['label'] }} · {{ $currency['code'] }}</span>
+              </button>
+            @endforeach
+          </div>
+
+          <template x-for="code in currencies" :key="code">
+            <input type="hidden" name="currencies[]" :value="code" />
+          </template>
+
+          <p id="currencies-help" class="text-xs text-muted">{{ __('Every price in your catalogue is written in each of these currencies.') }}</p>
+          <x-error id="currencies-error" :messages="$errors->get('currencies')" />
+        </div>
+
         <x-button class="w-full">
           {{ __('Create my salon') }}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -189,13 +243,14 @@
       show="confirmingRemoval"
       close="confirmingRemoval = false"
       labelledby="remove-languages-title"
-      :title="__('Change the languages of the salon?')"
+      :title="__('Change the salon?')"
       :cancel="__('Keep them')"
     >
-      {{ __('Your catalogue has texts in:') }} <span class="font-semibold text-ink" x-text="removedLanguages().map((language) => language.label).join(', ')"></span>. {{ __('Their texts stay saved, and come back if you add the language again.') }}
+      <span x-show="removedLanguages().length > 0">{{ __('Your catalogue has texts in:') }} <span class="font-semibold text-ink" x-text="removedLanguages().map((language) => language.label).join(', ')"></span>. {{ __('Their texts stay saved, and come back if you add the language again.') }}</span>
+      <span x-show="removedCurrencies().length > 0">{{ __('Your catalogue has prices in:') }} <span class="font-semibold text-ink" x-text="removedCurrencies().map((currency) => currency.label).join(', ')"></span>. {{ __('Their prices stay saved, and come back if you add the currency again.') }}</span>
 
       <x-slot:actions>
-        <x-button.danger type="button" x-on:click="removalConfirmed = true; confirmingRemoval = false; $refs.salonForm.requestSubmit()">{{ __('Change the languages') }}</x-button.danger>
+        <x-button.danger type="button" x-on:click="removalConfirmed = true; confirmingRemoval = false; $refs.salonForm.requestSubmit()">{{ __('Change the salon') }}</x-button.danger>
       </x-slot:actions>
     </x-confirm-dialog>
   </div>
