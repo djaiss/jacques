@@ -20,11 +20,6 @@ class LocationViewModel extends StepViewModel
         parent::__construct(user: $user, step: OnboardingStepEnum::Location);
     }
 
-    public function isSetUp(): bool
-    {
-        return $this->user->company->onboarding_step->value > OnboardingStepEnum::Location->value;
-    }
-
     /** @return array{name: string, addressLine1: string, city: string, region: string, postalCode: string, country: string, phone: string, timezone: string, languages: list<string>, currencies: list<string>} */
     public function form(): array
     {

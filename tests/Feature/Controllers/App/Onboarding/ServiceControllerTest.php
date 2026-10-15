@@ -6,7 +6,10 @@ namespace Tests\Feature\Controllers\App\Onboarding;
 
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
+use App\Models\Location;
 use App\Models\Role;
+use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -26,8 +29,50 @@ class ServiceControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Onboarding · Step 2 of 4');
+        $response->assertSee('What services do you offer?');
         $response->assertSee('Finish later');
         $response->assertSee(route('onboarding.services.update'));
+    }
+
+    #[Test]
+    public function it_lists_the_categories_and_services_of_the_catalogue(): void
+    {
+        $user = $this->owner();
+        $category = ServiceCategory::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Cuts']]);
+        Service::factory()->create(['company_id' => $user->company_id, 'service_category_id' => $category->id, 'name' => ['en' => 'Dwight cut'], 'prices' => ['CAD' => 4250]]);
+
+        $response = $this->actingAs($user)->get(route('onboarding.services.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Cuts');
+        $response->assertSee('Dwight cut');
+        $response->assertSee('value="42.50"', false);
+        $response->assertSee('1 service in your catalog');
+    }
+
+    #[Test]
+    public function it_shows_the_empty_catalogue(): void
+    {
+        $user = $this->owner();
+
+        $response = $this->actingAs($user)->get(route('onboarding.services.index'));
+
+        $response->assertSee('Your catalog is empty');
+        $response->assertSee('Use the example catalog');
+    }
+
+    #[Test]
+    public function it_offers_every_service_at_the_headquarters_when_the_step_is_completed(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        $scranton = Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => true]);
+        $service = Service::factory()->create(['company_id' => $user->company_id]);
+
+        $this->actingAs($user)->put(route('onboarding.services.update'));
+
+        $this->assertDatabaseHas('location_services', ['location_id' => $scranton->id, 'service_id' => $service->id]);
     }
 
     #[Test]

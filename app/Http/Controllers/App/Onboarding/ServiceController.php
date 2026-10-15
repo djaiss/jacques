@@ -7,7 +7,7 @@ namespace App\Http\Controllers\App\Onboarding;
 use App\Actions\CompleteOnboardingStep;
 use App\Enums\OnboardingStepEnum;
 use App\Http\Controllers\Controller;
-use App\ViewModels\Onboarding\StepViewModel;
+use App\ViewModels\Onboarding\ServicesViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +17,7 @@ class ServiceController extends Controller
     public function index(Request $request): View
     {
         return view('app.onboarding.services', [
-            'viewModel' => new StepViewModel(
+            'viewModel' => new ServicesViewModel(
                 user: $request->user(),
                 step: OnboardingStepEnum::Services,
             ),

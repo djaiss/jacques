@@ -9,7 +9,10 @@ use App\Enums\OnboardingStepEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
+use App\Models\Location;
+use App\Models\LocationService;
 use App\Models\Role;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -115,6 +118,23 @@ class CompleteOnboardingStepTest extends TestCase
             author: $user,
             step: OnboardingStepEnum::Location,
         )->execute();
+    }
+
+    #[Test]
+    public function it_offers_every_service_at_the_headquarters_when_the_services_step_is_completed(): void
+    {
+        Queue::fake();
+
+        $user = $this->owner();
+        $scranton = Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => true]);
+        $stamford = Location::factory()->create(['company_id' => $user->company_id, 'is_headquarters' => false]);
+        $haircut = Service::factory()->create(['company_id' => $user->company_id]);
+
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+        new CompleteOnboardingStep(author: $user, step: OnboardingStepEnum::Services)->execute();
+
+        $this->assertEquals(1, LocationService::query()->where('location_id', $scranton->id)->where('service_id', $haircut->id)->count());
+        $this->assertDatabaseMissing('location_services', ['location_id' => $stamford->id]);
     }
 
     private function owner(): User

@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
 use App\Http\Controllers\App\Onboarding\AppointmentController as OnboardingAppointmentController;
+use App\Http\Controllers\App\Onboarding\Catalogue\CatalogueController as OnboardingCatalogueController;
+use App\Http\Controllers\App\Onboarding\Catalogue\CategoryController as OnboardingCategoryController;
+use App\Http\Controllers\App\Onboarding\Catalogue\CategoryPositionController as OnboardingCategoryPositionController;
+use App\Http\Controllers\App\Onboarding\Catalogue\RestorationController as OnboardingRestorationController;
+use App\Http\Controllers\App\Onboarding\Catalogue\ServiceController as OnboardingCatalogueServiceController;
+use App\Http\Controllers\App\Onboarding\Catalogue\ServiceDurationController as OnboardingServiceDurationController;
+use App\Http\Controllers\App\Onboarding\Catalogue\ServicePriceController as OnboardingServicePriceController;
 use App\Http\Controllers\App\Onboarding\LocationController as OnboardingLocationController;
 use App\Http\Controllers\App\Onboarding\OnboardingController;
 use App\Http\Controllers\App\Onboarding\ServiceController as OnboardingServiceController;
@@ -48,6 +55,25 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
     Route::get('onboarding/services', [OnboardingServiceController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Services->value)->name('onboarding.services.index');
     Route::put('onboarding/services', [OnboardingServiceController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Services->value)->name('onboarding.services.update');
+
+    // The catalogue as step 2 edits it, one small change at a time.
+    Route::middleware('onboarding.step:'.OnboardingStepEnum::Services->value)->group(function (): void {
+        Route::post('onboarding/services/categories', [OnboardingCategoryController::class, 'create'])->name('onboarding.services.categories.create');
+        Route::put('onboarding/services/categories/{category}', [OnboardingCategoryController::class, 'update'])->name('onboarding.services.categories.update');
+        Route::delete('onboarding/services/categories/{category}', [OnboardingCategoryController::class, 'destroy'])->name('onboarding.services.categories.destroy');
+        Route::put('onboarding/services/categories/{category}/position', [OnboardingCategoryPositionController::class, 'update'])->name('onboarding.services.categoryPositions.update');
+        Route::post('onboarding/services/categories/{category}/services', [OnboardingCatalogueServiceController::class, 'create'])->name('onboarding.services.services.create');
+
+        Route::get('onboarding/services/services/{service}/edit', [OnboardingCatalogueServiceController::class, 'edit'])->name('onboarding.services.services.edit');
+        Route::put('onboarding/services/services/{service}', [OnboardingCatalogueServiceController::class, 'update'])->name('onboarding.services.services.update');
+        Route::delete('onboarding/services/services/{service}', [OnboardingCatalogueServiceController::class, 'destroy'])->name('onboarding.services.services.destroy');
+        Route::put('onboarding/services/services/{service}/duration', [OnboardingServiceDurationController::class, 'update'])->name('onboarding.services.serviceDurations.update');
+        Route::put('onboarding/services/services/{service}/prices', [OnboardingServicePriceController::class, 'update'])->name('onboarding.services.servicePrices.update');
+
+        Route::post('onboarding/services/catalogue', [OnboardingCatalogueController::class, 'create'])->name('onboarding.services.catalogue.create');
+        Route::delete('onboarding/services/catalogue', [OnboardingCatalogueController::class, 'destroy'])->name('onboarding.services.catalogue.destroy');
+        Route::post('onboarding/services/restoration', [OnboardingRestorationController::class, 'create'])->name('onboarding.services.restoration.create');
+    });
 
     Route::get('onboarding/staff', [OnboardingStaffController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.index');
     Route::put('onboarding/staff', [OnboardingStaffController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Staff->value)->name('onboarding.staff.update');

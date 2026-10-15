@@ -13,15 +13,16 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Delete a service category. Its services stay in the catalogue: they join the
- * services without a category, after the ones already there, and the
- * categories after it move up one place.
+ * Delete a service category, and the categories after it move up one place.
+ * Its services either stay in the catalogue, joining the services without a
+ * category after the ones already there, or go with it when asked to.
  */
 class DestroyServiceCategory
 {
     public function __construct(
         private readonly User $author,
         private readonly ServiceCategory $category,
+        private readonly bool $withServices = false,
     ) {}
 
     public function execute(): void
@@ -29,7 +30,14 @@ class DestroyServiceCategory
         $this->authorize();
 
         DB::transaction(function (): void {
-            $this->releaseServices();
+            if ($this->withServices) {
+                $this->destroyServices();
+            }
+
+            if (! $this->withServices) {
+                $this->releaseServices();
+            }
+
             $this->destroy();
         });
 
@@ -42,6 +50,11 @@ class DestroyServiceCategory
             ->permission(PermissionEnum::ServiceManage)
             ->forCompany($this->category->company)
             ->authorize();
+    }
+
+    private function destroyServices(): void
+    {
+        $this->category->services()->delete();
     }
 
     private function releaseServices(): void

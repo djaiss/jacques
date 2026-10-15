@@ -77,14 +77,19 @@ class ServiceTest extends TestCase
     }
 
     #[Test]
-    public function it_lasts_the_active_and_processing_time_of_its_steps(): void
+    public function it_lasts_the_time_of_its_steps_split_into_busy_and_free_time(): void
     {
         $service = Service::factory()->create();
         $service->steps()->delete();
-        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 1, 'active_duration' => 20, 'processing_duration' => 30]);
-        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2, 'active_duration' => 15, 'processing_duration' => 0]);
+        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 1, 'duration' => 20, 'requires_staff' => true]);
+        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2, 'duration' => 30, 'requires_staff' => false]);
+        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 3, 'duration' => 15, 'requires_staff' => true]);
 
-        $this->assertEquals(65, $service->refresh()->duration);
+        $service->refresh();
+
+        $this->assertEquals(65, $service->duration);
+        $this->assertEquals(35, $service->busy_duration);
+        $this->assertEquals(30, $service->free_duration);
     }
 
     #[Test]
@@ -131,5 +136,48 @@ class ServiceTest extends TestCase
         ]);
 
         $this->assertEquals(['fr', 'de'], $haircut->missingLanguages());
+    }
+
+    #[Test]
+    public function it_lists_the_languages_missing_from_its_description_and_step_names(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+        $colour = Service::factory()->create([
+            'company_id' => $company->id,
+            'name' => ['en' => 'Full Color', 'fr' => 'Coloration'],
+            'description' => ['en' => 'Roots and lengths'],
+        ]);
+
+        $this->assertEquals(['fr'], $colour->missingLanguages());
+
+        $colour->update(['description' => null]);
+        $colour->steps()->delete();
+        ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 1, 'name' => ['en' => 'Application', 'fr' => 'Application']]);
+        ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 2, 'name' => ['en' => 'Processing'], 'requires_staff' => false]);
+
+        $this->assertEquals(['fr'], $colour->refresh()->missingLanguages());
+        $this->assertCount(3, $colour->translatableTexts());
+    }
+
+    #[Test]
+    public function it_ignores_the_name_of_a_single_step(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe'], 'description' => null]);
+
+        $this->assertEquals([], $haircut->missingLanguages());
+        $this->assertCount(1, $haircut->translatableTexts());
+    }
+
+    #[Test]
+    public function it_is_bookable_in_a_currency_only_with_a_price_in_it_and_a_name_in_the_first_language(): void
+    {
+        $company = Company::factory()->create(['languages' => ['en', 'fr'], 'currencies' => ['CAD', 'USD']]);
+        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'prices' => ['CAD' => 0]]);
+        $untitled = Service::factory()->create(['company_id' => $company->id, 'name' => ['fr' => 'Coupe'], 'prices' => ['CAD' => 3500]]);
+
+        $this->assertTrue($haircut->isBookableIn('CAD'));
+        $this->assertFalse($haircut->isBookableIn('USD'));
+        $this->assertFalse($untitled->isBookableIn('CAD'));
     }
 }

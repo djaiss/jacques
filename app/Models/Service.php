@@ -18,20 +18,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Class Service
  *
  * Something the salon sells, defined once for the whole company. A service is a
- * sequence of steps, each with an active part and a processing part during
- * which the team member is free for somebody else, and its duration is the sum
- * of them.
+ * sequence of steps, each one either keeping the team member busy or leaving
+ * them free for somebody else, and its duration is the sum of them. At least
+ * one step keeps the team member busy.
  *
  * A service is available at a location only once it has been added there,
  * through LocationService, which may also set another price for that location.
  * A deactivated service is offered nowhere, but its row stays.
  *
  * Its name and description are written once per language of the salon, keyed
- * by language code. Texts in a language the salon stopped using are kept.
+ * by language code. A language may still be missing, and texts in a language
+ * the salon stopped using are kept.
  *
  * Its price is written once per currency of the salon, in the smallest unit of
- * that currency, keyed by currency code. Nothing converts one into another,
- * and prices in a currency the salon stopped using are kept.
+ * that currency, keyed by currency code. A currency may still be missing.
+ * Nothing converts one into another, and prices in a currency the salon stopped
+ * using are kept. A service can be booked in a currency only once it has a
+ * price in it and a name in the first language of the salon.
  *
  * @property int $id
  * @property int $company_id
@@ -42,6 +45,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_active
  * @property int $position
  * @property-read int $duration
+ * @property-read int $busy_duration
+ * @property-read int $free_duration
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
  */
@@ -136,16 +141,33 @@ class Service extends Model
     }
 
     /**
-     * Get the duration of the service in minutes: the active and processing
-     * parts of every step, added together.
+     * Get the duration of the service in minutes: every step added together.
      *
      * @return Attribute<int, never>
      */
     protected function duration(): Attribute
     {
-        return Attribute::get(fn (): int => (int) $this->steps->sum(
-            fn (ServiceStep $step): int => $step->active_duration + $step->processing_duration,
-        ));
+        return Attribute::get(fn (): int => (int) $this->steps->sum('duration'));
+    }
+
+    /**
+     * Get the minutes during which the team member works on the client.
+     *
+     * @return Attribute<int, never>
+     */
+    protected function busyDuration(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) $this->steps->where('requires_staff', true)->sum('duration'));
+    }
+
+    /**
+     * Get the minutes during which the team member is free for somebody else.
+     *
+     * @return Attribute<int, never>
+     */
+    protected function freeDuration(): Attribute
+    {
+        return Attribute::get(fn (): int => $this->duration - $this->busy_duration);
     }
 
     /**
@@ -158,13 +180,44 @@ class Service extends Model
     }
 
     /**
-     * Get the languages of the salon the name is not written in yet.
+     * Get the texts a client may read, each keyed by language code: the name,
+     * the description once it is written in any language, and the step names
+     * once the service has more than one step.
+     *
+     * @return list<array<string, string|null>>
+     */
+    public function translatableTexts(): array
+    {
+        $texts = [$this->name];
+
+        if (array_filter($this->description ?? []) !== []) {
+            $texts[] = $this->description;
+        }
+
+        if ($this->steps->count() > 1) {
+            foreach ($this->steps as $step) {
+                $texts[] = $step->name ?? [];
+            }
+        }
+
+        return $texts;
+    }
+
+    /**
+     * Get the languages of the salon in which one of its texts is not written
+     * yet.
      *
      * @return list<string>
      */
     public function missingLanguages(): array
     {
-        return CatalogueText::missingLanguages($this->name, $this->company->languages);
+        $missing = [];
+
+        foreach ($this->translatableTexts() as $texts) {
+            $missing = [...$missing, ...CatalogueText::missingLanguages($texts, $this->company->languages)];
+        }
+
+        return array_values(array_intersect($this->company->languages, $missing));
     }
 
     /**
@@ -179,5 +232,18 @@ class Service extends Model
             $this->company->currencies,
             fn (string $currency): bool => ! array_key_exists($currency, $this->prices),
         ));
+    }
+
+    /**
+     * Whether a client can book the service in a currency: it needs a price in
+     * that currency and a name in the first language of the salon.
+     */
+    public function isBookableIn(string $currency): bool
+    {
+        if (! array_key_exists($currency, $this->prices)) {
+            return false;
+        }
+
+        return ($this->name[$this->company->languages[0]] ?? '') !== '';
     }
 }

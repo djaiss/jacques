@@ -40,8 +40,9 @@ class ServiceFactory extends Factory
             ServiceStep::query()->create([
                 'service_id' => $service->id,
                 'position' => 1,
-                'active_duration' => 30,
-                'processing_duration' => 0,
+                'name' => null,
+                'duration' => 30,
+                'requires_staff' => true,
             ]);
         });
     }

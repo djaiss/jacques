@@ -55,7 +55,7 @@ class LocationControllerTest extends TestCase
             'currencies' => ['CAD'],
         ]);
 
-        $response->assertRedirect(route('onboarding.location.index'));
+        $response->assertRedirect(route('onboarding.services.index'));
 
         $company = $user->company->refresh();
 
@@ -69,10 +69,6 @@ class LocationControllerTest extends TestCase
             'timezone' => 'America/New_York',
             'is_headquarters' => true,
         ]);
-
-        $this->actingAs($user)->get(route('onboarding.location.index'))
-            ->assertSee('Dunder Mifflin Scranton is ready')
-            ->assertSee(route('onboarding.services.index'));
     }
 
     #[Test]
@@ -137,7 +133,7 @@ class LocationControllerTest extends TestCase
             'timezone' => 'America/Toronto',
             'languages' => ['fr', 'en', 'es'],
             'currencies' => ['CAD'],
-        ])->assertRedirect(route('onboarding.location.index'));
+        ])->assertRedirect(route('onboarding.services.index'));
 
         $this->assertEquals(['fr', 'en', 'es'], $user->company->refresh()->languages);
     }
@@ -206,7 +202,7 @@ class LocationControllerTest extends TestCase
             'timezone' => 'America/New_York',
             'languages' => ['en'],
             'currencies' => ['USD', 'CAD'],
-        ])->assertRedirect(route('onboarding.location.index'));
+        ])->assertRedirect(route('onboarding.services.index'));
 
         $this->assertEquals(['USD', 'CAD'], $user->company->refresh()->currencies);
     }

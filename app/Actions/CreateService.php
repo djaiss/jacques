@@ -19,25 +19,25 @@ use InvalidArgumentException;
 
 /**
  * Add a service to the catalogue of a company, with its steps in the order they
- * are performed, after the services already in its category. The service is
- * offered nowhere until a location adds it.
+ * are performed, after the services already in its category. A text or a price
+ * may still be missing. The service is offered nowhere until a location adds it.
  */
 class CreateService
 {
     private Service $service;
 
     /**
-     * @param  array<string, string>  $name
-     * @param  list<array{active_duration: int, processing_duration: int}>  $steps
-     * @param  array<string, string|null>  $description
+     * @param  array<string, string|null>  $name
      * @param  array<string, int>  $prices
+     * @param  list<array{name?: array<string, string|null>, duration: int, requires_staff: bool}>  $steps
+     * @param  array<string, string|null>  $description
      */
     public function __construct(
         private readonly User $author,
         private readonly Company $company,
         private array $name,
         private readonly array $prices,
-        private readonly array $steps,
+        private array $steps,
         private array $description = [],
         private readonly ?ServiceCategory $category = null,
     ) {}
@@ -68,8 +68,12 @@ class CreateService
 
     private function sanitize(): void
     {
-        $this->name = array_map(TextSanitizer::plainText(...), $this->name);
-        $this->description = array_map(TextSanitizer::nullablePlainText(...), $this->description);
+        $this->name = array_filter(array_map(TextSanitizer::nullablePlainText(...), $this->name), fn (?string $text): bool => (string) $text !== '');
+        $this->description = array_filter(array_map(TextSanitizer::nullablePlainText(...), $this->description), fn (?string $text): bool => (string) $text !== '');
+
+        foreach ($this->steps as $index => $step) {
+            $this->steps[$index]['name'] = array_filter(array_map(TextSanitizer::nullablePlainText(...), $step['name'] ?? []), fn (?string $text): bool => (string) $text !== '');
+        }
     }
 
     private function validate(): void
@@ -78,24 +82,22 @@ class CreateService
             throw new ModelNotFoundException('Service category not found');
         }
 
-        foreach (array_keys($this->name + $this->description) as $language) {
+        $stepNames = array_merge([], ...array_map(fn (array $step): array => $step['name'], $this->steps));
+
+        foreach (array_keys($this->name + $this->description + $stepNames) as $language) {
             if (! in_array($language, $this->company->languages, true)) {
                 throw new InvalidArgumentException("{$language} is not a language of the company");
             }
         }
 
-        foreach ($this->company->languages as $language) {
-            if (($this->name[$language] ?? '') === '') {
-                throw new InvalidArgumentException("A name is needed in {$language}");
-            }
-
+        foreach ($this->name as $language => $name) {
             $taken = Service::query()
                 ->where('company_id', $this->company->id)
-                ->where("name->{$language}", $this->name[$language])
+                ->where("name->{$language}", $name)
                 ->exists();
 
             if ($taken) {
-                throw new InvalidArgumentException('The company already has a service called '.$this->name[$language]);
+                throw new InvalidArgumentException('The company already has a service called '.$name);
             }
         }
 
@@ -109,24 +111,18 @@ class CreateService
             }
         }
 
-        foreach ($this->company->currencies as $currency) {
-            if (! array_key_exists($currency, $this->prices)) {
-                throw new InvalidArgumentException("A price is needed in {$currency}");
-            }
-        }
-
         if ($this->steps === []) {
             throw new InvalidArgumentException('A service needs at least one step');
         }
 
         foreach ($this->steps as $step) {
-            if ($step['active_duration'] < 1) {
-                throw new InvalidArgumentException('The active part of a step lasts at least one minute');
+            if ($step['duration'] < 1) {
+                throw new InvalidArgumentException('A step lasts at least one minute');
             }
+        }
 
-            if ($step['processing_duration'] < 0) {
-                throw new InvalidArgumentException('The processing part of a step cannot be negative');
-            }
+        if (! in_array(true, array_column($this->steps, 'requires_staff'), true)) {
+            throw new InvalidArgumentException('A service needs at least one step that requires a team member');
         }
     }
 
@@ -154,8 +150,9 @@ class CreateService
             ServiceStep::query()->create([
                 'service_id' => $this->service->id,
                 'position' => $index + 1,
-                'active_duration' => $step['active_duration'],
-                'processing_duration' => $step['processing_duration'],
+                'name' => $step['name'] === [] ? null : $step['name'],
+                'duration' => $step['duration'],
+                'requires_staff' => $step['requires_staff'],
             ]);
         }
     }
@@ -166,7 +163,7 @@ class CreateService
             company: $this->company,
             user: $this->author,
             action: UserActionEnum::ServiceCreated,
-            parameters: ['name' => $this->name[$this->company->languages[0]]],
+            parameters: ['name' => $this->name[$this->company->languages[0]] ?? __('Untitled')],
         )->onQueue('low');
     }
 }

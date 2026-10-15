@@ -57,14 +57,23 @@ class CreateServiceCategoryTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_when_the_name_is_blank(): void
+    public function it_creates_an_unnamed_category(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        Queue::fake();
 
         $company = Company::factory()->create();
         $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        new CreateServiceCategory(author: $michael, company: $company, name: ['en' => '  '])->execute();
+        $category = new CreateServiceCategory(author: $michael, company: $company, name: ['en' => '  '])->execute();
+
+        $this->assertEquals([], $category->refresh()->name);
+        $this->assertEquals(['en'], $category->missingLanguages());
+
+        Queue::assertPushedOn(
+            queue: 'low',
+            job: LogUserAction::class,
+            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Untitled'],
+        );
     }
 
     #[Test]
@@ -111,25 +120,13 @@ class CreateServiceCategoryTest extends TestCase
         $result = new CreateServiceCategory(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
 
         $this->assertEquals(['fr' => 'Coupe', 'en' => 'Haircut'], $result->refresh()->name);
-        $this->assertEquals(['fr' => 'Courte ou longue', 'en' => null], $result->description);
+        $this->assertEquals(['fr' => 'Courte ou longue'], $result->description);
 
         Queue::assertPushedOn(
             queue: 'low',
             job: LogUserAction::class,
             callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
         );
-    }
-
-    #[Test]
-    public function it_throws_when_the_name_is_missing_in_a_language_of_the_salon(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('A name is needed in en');
-
-        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-
-        new CreateServiceCategory(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => ''])->execute();
     }
 
     #[Test]

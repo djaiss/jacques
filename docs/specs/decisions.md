@@ -87,8 +87,10 @@ salon garde toujours au moins un propriétaire actif.
 
 ### D5. Une prestation est une suite d'étapes, avec temps de pose
 
-Une étape porte une durée active, une durée de pose pendant laquelle la personne
-redevient disponible, et son rang dans la prestation.
+Une étape porte un nom dans chaque langue du salon, une durée, le fait qu'elle
+occupe ou non la personne, et son rang dans la prestation. Une étape qui
+n'occupe personne est un temps de pose : la personne redevient disponible pendant
+sa durée. Une prestation garde au moins une étape qui occupe la personne.
 
 C'est l'idée principale du produit. Tout le reste peut sauter avant elle.
 

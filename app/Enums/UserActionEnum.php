@@ -58,6 +58,11 @@ enum UserActionEnum: string implements Translatable
     case ServiceDeactivated = 'service_deactivated';
     case ServiceActivated = 'service_activated';
     case ServiceDeleted = 'service_deleted';
+    case ServiceDurationUpdated = 'service_duration_updated';
+    case ServicePricesUpdated = 'service_prices_updated';
+    case CatalogueDestroyed = 'catalogue_destroyed';
+    case CatalogueRestored = 'catalogue_restored';
+    case CatalogueRemovalRestored = 'catalogue_removal_restored';
     case LocationServiceCreated = 'location_service_created';
     case LocationServiceUpdated = 'location_service_updated';
     case LocationServiceDeleted = 'location_service_deleted';
@@ -123,6 +128,11 @@ enum UserActionEnum: string implements Translatable
             self::ServiceDeactivated => 'Deactivated the service called :name',
             self::ServiceActivated => 'Activated the service called :name',
             self::ServiceDeleted => 'Deleted the service called :name',
+            self::ServiceDurationUpdated => 'Changed the duration of the service called :name',
+            self::ServicePricesUpdated => 'Changed the prices of the service called :name',
+            self::CatalogueDestroyed => 'Emptied the catalogue',
+            self::CatalogueRestored => 'Brought back the example catalogue',
+            self::CatalogueRemovalRestored => 'Put back what was just removed from the catalogue',
             self::LocationServiceCreated => 'Offered the service called :name at the location called :location',
             self::LocationServiceUpdated => 'Updated the service called :name at the location called :location',
             self::LocationServiceDeleted => 'Stopped offering the service called :name at the location called :location',
