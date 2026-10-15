@@ -10,6 +10,7 @@ use App\Models\Location;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -100,5 +101,23 @@ class CompanyTest extends TestCase
         ]);
 
         $this->assertEquals(['fr', 'en'], $company->refresh()->languages);
+    }
+
+    #[Test]
+    public function it_has_not_received_the_default_catalogue_by_default(): void
+    {
+        $company = Company::factory()->create();
+
+        $this->assertNull($company->refresh()->default_catalogue_created_at);
+    }
+
+    #[Test]
+    public function it_knows_when_it_received_the_default_catalogue(): void
+    {
+        $company = Company::factory()->create([
+            'default_catalogue_created_at' => '2026-10-14 09:00:00',
+        ]);
+
+        $this->assertInstanceOf(Carbon::class, $company->refresh()->default_catalogue_created_at);
     }
 }
