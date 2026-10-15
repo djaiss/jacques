@@ -22,9 +22,11 @@
       @keydown.g.window="if (! /input|textarea/i.test($event.target.tagName)) { $event.preventDefault(); menuOpen = ! menuOpen }"
       class="min-h-screen pb-22.5"
     >
-      <div class="mx-auto max-w-265 px-4 sm:px-8">
+      <div class="px-4 sm:px-8">
         <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" />
+      </div>
 
+      <div class="mx-auto max-w-265 px-4 sm:px-8">
         <main id="main" tabindex="-1" class="focus:outline-none">
           {{ $slot }}
         </main>
