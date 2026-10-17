@@ -11,8 +11,6 @@ on:
   # request is still tested.
   push:
     branches: [main]
-  release:
-    types: [created]
   workflow_dispatch:
 
 concurrency:
@@ -42,25 +40,18 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup PHP ${{ matrix.php-version }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php-version }}
           # gd is what the image manipulation runs on, so the photo tests need
           # it. The runner image does not guarantee it, so it is asked for here.
           extensions: mbstring, dom, fileinfo, gd, ${{ matrix.connection }}
           coverage: none
-
-      - name: Check PHP Version
-        run: php -v
-
-      - name: Check Composer Version
-        run: composer -V
-
-      - name: Check PHP Extensions
-        run: php -m
 
       # Composer
       - name: Validate composer.json and composer.lock
@@ -71,7 +62,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache composer files
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
