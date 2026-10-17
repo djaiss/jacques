@@ -11,8 +11,6 @@ on:
   # request is still tested.
   push:
     branches: [main]
-  release:
-    types: [created]
   workflow_dispatch:
 
 concurrency:
@@ -42,45 +40,20 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup PHP ${{ matrix.php-version }}
-        uses: shivammathur/setup-php@v2
+        uses: ./.github/actions/setup-php
         with:
           php-version: ${{ matrix.php-version }}
           # gd is what the image manipulation runs on, so the photo tests need
           # it. The runner image does not guarantee it, so it is asked for here.
           extensions: mbstring, dom, fileinfo, gd, ${{ matrix.connection }}
-          coverage: none
 
-      - name: Check PHP Version
-        run: php -v
-
-      - name: Check Composer Version
-        run: composer -V
-
-      - name: Check PHP Extensions
-        run: php -m
-
-      # Composer
       - name: Validate composer.json and composer.lock
         run: composer validate
-
-      - name: Get Composer Cache Directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache composer files
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-${{ matrix.php-version }}
-            ${{ runner.os }}-composer-
-
-      - name: Install composer dependencies
-        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
 
       # The tests render Blade views, so @vite needs a manifest. Building the
       # real assets is the job of the Static analysis workflow, so a stub is

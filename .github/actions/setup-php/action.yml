@@ -1,0 +1,38 @@
+name: Setup PHP
+description: Installs PHP with its extensions, restores the Composer cache and installs the dependencies.
+
+inputs:
+  php-version:
+    description: The PHP version to install.
+    default: '8.4'
+  extensions:
+    description: The PHP extensions to install, comma separated.
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP ${{ inputs.php-version }}
+      uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: ${{ inputs.extensions }}
+        coverage: none
+
+    - name: Get Composer Cache Directory
+      id: composer-cache
+      shell: bash
+      run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache composer files
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ inputs.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-${{ inputs.php-version }}
+          ${{ runner.os }}-composer-
+
+    - name: Install composer dependencies
+      shell: bash
+      run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
