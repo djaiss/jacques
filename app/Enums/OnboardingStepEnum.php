@@ -11,7 +11,7 @@ enum OnboardingStepEnum: int implements Translatable
     case Location = 1;
     case Services = 2;
     case Staff = 3;
-    case Appointments = 4;
+    case Availability = 4;
 
     public function label(): string
     {
@@ -19,7 +19,7 @@ enum OnboardingStepEnum: int implements Translatable
             self::Location => 'Location',
             self::Services => 'Services',
             self::Staff => 'Staff',
-            self::Appointments => 'Appointments',
+            self::Availability => 'Availability',
         };
     }
 
@@ -29,7 +29,7 @@ enum OnboardingStepEnum: int implements Translatable
             self::Location => 'onboarding.location.index',
             self::Services => 'onboarding.services.index',
             self::Staff => 'onboarding.staff.index',
-            self::Appointments => 'onboarding.appointments.index',
+            self::Availability => 'onboarding.availability.index',
         };
     }
 

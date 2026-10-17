@@ -16,7 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * One staff member assigned to one location, and the day they were assigned.
  *
  * A permission granted at location scope reaches the locations where the
- * assignment of a person is active, and nothing else. A paused assignment
+ * assignment of a person is active, and nothing else. An assignment also
+ * says whether the person works the opening hours of the location or hours
+ * of their own, since working hours are kept per location. A paused assignment
  * keeps its row, so resuming it gives back what was set up there. People are
  * assigned and removed through the relation on the two models it joins, which
  * is what AssignLocation and RemoveLocation use. This is here for what the
@@ -26,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $location_id
  * @property int $staff_id
  * @property bool $is_active
+ * @property bool $follows_opening_hours
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
  */
@@ -45,6 +48,7 @@ class LocationStaff extends Model
         'location_id',
         'staff_id',
         'is_active',
+        'follows_opening_hours',
     ];
 
     /**
@@ -56,6 +60,7 @@ class LocationStaff extends Model
     {
         return [
             'is_active' => 'boolean',
+            'follows_opening_hours' => 'boolean',
         ];
     }
 

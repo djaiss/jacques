@@ -37,7 +37,7 @@ class OnboardingControllerTest extends TestCase
     {
         $user = $this->owner(OnboardingStepEnum::Services);
 
-        $this->actingAs($user)->get(route('onboarding.appointments.index'))->assertRedirect(route('onboarding.services.index'));
+        $this->actingAs($user)->get(route('onboarding.availability.index'))->assertRedirect(route('onboarding.services.index'));
         $this->actingAs($user)->put(route('onboarding.staff.update'))->assertRedirect(route('onboarding.services.index'));
     }
 

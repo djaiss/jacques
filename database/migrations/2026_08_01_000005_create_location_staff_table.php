@@ -15,6 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('location_id')->comment('location the staff member is assigned to');
             $table->unsignedBigInteger('staff_id')->comment('staff member assigned to the location');
             $table->boolean('is_active')->default(true)->comment('whether the assignment is in effect, so it can be paused without being removed');
+            $table->boolean('follows_opening_hours')->default(true)->comment('whether the staff member works the opening hours of the location rather than hours of their own');
             $table->timestamps();
 
             $table->foreign('location_id')->references('id')->on('locations')->cascadeOnDelete();

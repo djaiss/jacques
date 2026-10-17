@@ -5,6 +5,7 @@ import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 import morph from '@alpinejs/morph';
 import ajax from '@imacrayon/alpine-ajax';
+import { openingHoursEditor, workingHoursPanel } from './weekly-hours';
 
 window.Turbo = Turbo;
 
@@ -27,6 +28,9 @@ Alpine.plugin(ajax);
  * stays connected once that region has been updated.
  */
 ajax.configure({ mergeStrategy: 'morph' });
+
+Alpine.data('openingHoursEditor', openingHoursEditor);
+Alpine.data('workingHoursPanel', workingHoursPanel);
 
 /*
  * The files in `fileList` bigger than maxKilobytes. An upload form uses it to

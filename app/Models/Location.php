@@ -97,7 +97,7 @@ class Location extends Model
     public function staff(): BelongsToMany
     {
         return $this->belongsToMany(Staff::class, 'location_staff')
-            ->withPivot('is_active')
+            ->withPivot(['is_active', 'follows_opening_hours'])
             ->withTimestamps();
     }
 
@@ -121,6 +121,17 @@ class Location extends Model
         return $this->belongsToMany(Service::class, 'location_services')
             ->withPivot(['prices', 'is_active'])
             ->withTimestamps();
+    }
+
+    /**
+     * Get the weekly ranges during which the location is open. A day with no
+     * range is a day the location is closed.
+     *
+     * @return HasMany<LocationOpeningHour, $this>
+     */
+    public function openingHours(): HasMany
+    {
+        return $this->hasMany(LocationOpeningHour::class);
     }
 
     /**

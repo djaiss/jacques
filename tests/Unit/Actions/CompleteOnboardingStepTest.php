@@ -52,14 +52,14 @@ class CompleteOnboardingStepTest extends TestCase
         Queue::fake();
 
         $user = $this->owner();
-        $user->company->update(['onboarding_step' => OnboardingStepEnum::Appointments]);
+        $user->company->update(['onboarding_step' => OnboardingStepEnum::Availability]);
 
         new CompleteOnboardingStep(
             author: $user,
             step: OnboardingStepEnum::Location,
         )->execute();
 
-        $this->assertEquals(OnboardingStepEnum::Appointments, $user->company->refresh()->onboarding_step);
+        $this->assertEquals(OnboardingStepEnum::Availability, $user->company->refresh()->onboarding_step);
     }
 
     #[Test]
@@ -68,11 +68,11 @@ class CompleteOnboardingStepTest extends TestCase
         Queue::fake();
 
         $user = $this->owner();
-        $user->company->update(['onboarding_step' => OnboardingStepEnum::Appointments]);
+        $user->company->update(['onboarding_step' => OnboardingStepEnum::Availability]);
 
         new CompleteOnboardingStep(
             author: $user,
-            step: OnboardingStepEnum::Appointments,
+            step: OnboardingStepEnum::Availability,
         )->execute();
 
         $this->assertFalse($user->company->refresh()->is_onboarding_pending);
@@ -97,7 +97,7 @@ class CompleteOnboardingStepTest extends TestCase
 
         new CompleteOnboardingStep(
             author: $user,
-            step: OnboardingStepEnum::Appointments,
+            step: OnboardingStepEnum::Availability,
         )->execute();
 
         $company->refresh();
