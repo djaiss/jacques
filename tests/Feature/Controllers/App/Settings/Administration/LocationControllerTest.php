@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Administration;
+namespace Tests\Feature\Controllers\App\Settings\Administration\LocationControllerTest;
 
 use App\Enums\PermissionEnum;
 use App\Models\Company;
@@ -10,343 +10,293 @@ use App\Models\Location;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('shows the locations of the company', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_shows_the_locations_of_the_company(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index'));
+    $response->assertOk();
+    $response->assertSee('Locations');
+    $response->assertSee('Add a location');
+    $response->assertSee('open locations');
+    $response->assertSee('Sorted by location');
+    $response->assertSee('Scranton branch');
+});
 
-        $response->assertOk();
-        $response->assertSee('Locations');
-        $response->assertSee('Add a location');
-        $response->assertSee('open locations');
-        $response->assertSee('Sorted by location');
-        $response->assertSee('Scranton branch');
-    }
+it('orders the locations by city when the path asks for it', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_orders_the_locations_by_city_when_the_path_asks_for_it(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch', 'city' => 'Akron']);
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch', 'city' => 'Utica']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch', 'city' => 'Akron']);
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch', 'city' => 'Utica']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index', ['sort' => 'place']));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index', ['sort' => 'place']));
+    $response->assertOk();
+    $response->assertSee('Sorted by city');
+    $response->assertSeeInOrder(['Scranton branch', 'Nashua branch']);
+});
 
-        $response->assertOk();
-        $response->assertSee('Sorted by city');
-        $response->assertSeeInOrder(['Scranton branch', 'Nashua branch']);
-    }
+it('keeps the archived locations off the first list', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_keeps_the_archived_locations_off_the_first_list(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
-        Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index'));
+    $response->assertOk();
+    $response->assertSee('Scranton branch');
+    $response->assertDontSee('Nashua branch');
+});
 
-        $response->assertOk();
-        $response->assertSee('Scranton branch');
-        $response->assertDontSee('Nashua branch');
-    }
+it('shows the archived locations on a path of their own', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_shows_the_archived_locations_on_a_path_of_their_own(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
-        Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index', 'archived'));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index', 'archived'));
+    $response->assertOk();
+    $response->assertSee('Nashua branch');
+    $response->assertDontSee('Scranton branch');
+});
 
-        $response->assertOk();
-        $response->assertSee('Nashua branch');
-        $response->assertDontSee('Scranton branch');
-    }
+it('shows every location on the third path', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_shows_every_location_on_the_third_path(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
-        Location::factory()->archived()->create(['company_id' => $user->company_id, 'name' => 'Nashua branch']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index', 'all'));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index', 'all'));
+    $response->assertOk();
+    $response->assertSee('Scranton branch');
+    $response->assertSee('Nashua branch');
+});
 
-        $response->assertOk();
-        $response->assertSee('Scranton branch');
-        $response->assertSee('Nashua branch');
-    }
+it('narrows the list down to what was searched for', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_narrows_the_list_down_to_what_was_searched_for(): void
-    {
-        $user = $this->administrator();
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Utica branch']);
 
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
-        Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Utica branch']);
+    $response = $this->actingAs($user)->get(route('settings.locations.index', ['q' => 'utica']));
 
-        $response = $this->actingAs($user)->get(route('settings.locations.index', ['q' => 'utica']));
+    $response->assertOk();
+    $response->assertSee('Utica branch');
+    $response->assertDontSee('Scranton branch');
+});
 
-        $response->assertOk();
-        $response->assertSee('Utica branch');
-        $response->assertDontSee('Scranton branch');
-    }
+it('turns away a scope it does not know', function () {
+    $user = administrator();
 
-    #[Test]
-    public function it_turns_away_a_scope_it_does_not_know(): void
-    {
-        $user = $this->administrator();
+    $this->actingAs($user)->get('settings/administration/locations/somewhere')->assertNotFound();
+});
 
-        $this->actingAs($user)->get('settings/administration/locations/somewhere')->assertNotFound();
-    }
+it('hides the screen from somebody who may not administer the company', function () {
+    $user = member();
 
-    #[Test]
-    public function it_hides_the_screen_from_somebody_who_may_not_administer_the_company(): void
-    {
-        $user = $this->member();
+    $this->actingAs($user)->get(route('settings.locations.index'))->assertNotFound();
+});
 
-        $this->actingAs($user)->get(route('settings.locations.index'))->assertNotFound();
-    }
+it('creates an location', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_an_location(): void
-    {
-        Queue::fake();
+    $user = administrator();
 
-        $user = $this->administrator();
+    $response = $this->actingAs($user)->post(route('settings.locations.create'), [
+        'name' => 'Scranton branch',
+        'city' => 'Scranton',
+        'country' => 'us',
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.locations.create'), [
-            'name' => 'Scranton branch',
-            'city' => 'Scranton',
-            'country' => 'us',
-        ]);
+    $response->assertRedirect(route('settings.locations.index'));
+    $response->assertSessionHas('status', 'The location is added.');
 
-        $response->assertRedirect(route('settings.locations.index'));
-        $response->assertSessionHas('status', 'The location is added.');
+    $this->assertDatabaseHas('locations', [
+        'company_id' => $user->company_id,
+        'name' => 'Scranton branch',
+        'city' => 'Scranton',
+        'country' => 'US',
+    ]);
+});
 
-        $this->assertDatabaseHas('locations', [
-            'company_id' => $user->company_id,
-            'name' => 'Scranton branch',
+it('sends the new location messages to a bag of their own', function () {
+    $user = administrator();
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.locations.index'))
+        ->post(route('settings.locations.create'), ['name' => '']);
+
+    $response->assertRedirect(route('settings.locations.index'));
+    $response->assertSessionHasErrorsIn('createLocation', ['name']);
+});
+
+it('turns away a country that is not two letters', function () {
+    $user = administrator();
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.locations.index'))
+        ->post(route('settings.locations.create'), ['name' => 'Scranton branch', 'country' => 'USA']);
+
+    $response->assertSessionHasErrorsIn('createLocation', ['country']);
+});
+
+it('saves an location', function () {
+    Queue::fake();
+
+    $user = administrator();
+    $location = Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.locations.index'))
+        ->put(route('settings.locations.update', $location->id), [
+            'name' => 'Scranton business park',
             'city' => 'Scranton',
             'country' => 'US',
+            'region' => 'Pennsylvania',
+            'postal_code' => '18505',
+            'address_line_1' => '1725 Slough Avenue',
+            'address_line_2' => 'Suite 200',
+            'phone' => '570-555-0100',
+            'email' => 'scranton@dundermifflin.com',
+            'timezone' => 'America/New_York',
+            'is_headquarters' => '1',
         ]);
-    }
 
-    #[Test]
-    public function it_sends_the_new_location_messages_to_a_bag_of_their_own(): void
-    {
-        $user = $this->administrator();
+    $response->assertRedirect(route('settings.locations.index'));
+    $response->assertSessionHas('status', 'The location is saved.');
 
-        $response = $this->actingAs($user)
-            ->from(route('settings.locations.index'))
-            ->post(route('settings.locations.create'), ['name' => '']);
+    $location->refresh();
 
-        $response->assertRedirect(route('settings.locations.index'));
-        $response->assertSessionHasErrorsIn('createLocation', ['name']);
-    }
+    expect($location->name)->toEqual('Scranton business park');
+    expect($location->address_line_1)->toEqual('1725 Slough Avenue');
+    expect($location->address_line_2)->toEqual('Suite 200');
+    expect($location->email)->toEqual('scranton@dundermifflin.com');
+    expect($location->timezone)->toEqual('America/New_York');
+    expect($location->is_headquarters)->toBeTrue();
+});
 
-    #[Test]
-    public function it_turns_away_a_country_that_is_not_two_letters(): void
-    {
-        $user = $this->administrator();
+it('goes back to the list the save was made from', function () {
+    Queue::fake();
 
-        $response = $this->actingAs($user)
-            ->from(route('settings.locations.index'))
-            ->post(route('settings.locations.create'), ['name' => 'Scranton branch', 'country' => 'USA']);
+    $user = administrator();
+    $location = Location::factory()->archived()->create(['company_id' => $user->company_id]);
 
-        $response->assertSessionHasErrorsIn('createLocation', ['country']);
-    }
+    $this->actingAs($user)
+        ->from(route('settings.locations.index', 'archived'))
+        ->put(route('settings.locations.update', $location->id), ['name' => 'Nashua branch'])
+        ->assertRedirect(route('settings.locations.index', 'archived'));
+});
 
-    #[Test]
-    public function it_saves_an_location(): void
-    {
-        Queue::fake();
+it('turns away a time zone that does not exist', function () {
+    $user = administrator();
+    $location = Location::factory()->create(['company_id' => $user->company_id]);
 
-        $user = $this->administrator();
-        $location = Location::factory()->create(['company_id' => $user->company_id, 'name' => 'Scranton branch']);
+    $response = $this->actingAs($user)
+        ->from(route('settings.locations.index'))
+        ->put(route('settings.locations.update', $location->id), [
+            'name' => 'Scranton branch',
+            'timezone' => 'Middle/Earth',
+        ]);
 
-        $response = $this->actingAs($user)
-            ->from(route('settings.locations.index'))
-            ->put(route('settings.locations.update', $location->id), [
-                'name' => 'Scranton business park',
-                'city' => 'Scranton',
-                'country' => 'US',
-                'region' => 'Pennsylvania',
-                'postal_code' => '18505',
-                'address_line_1' => '1725 Slough Avenue',
-                'address_line_2' => 'Suite 200',
-                'phone' => '570-555-0100',
-                'email' => 'scranton@dundermifflin.com',
-                'timezone' => 'America/New_York',
-                'is_headquarters' => '1',
-            ]);
+    $response->assertSessionHasErrors(['timezone']);
+});
 
-        $response->assertRedirect(route('settings.locations.index'));
-        $response->assertSessionHas('status', 'The location is saved.');
+it('turns away an email that is not an address', function () {
+    $user = administrator();
+    $location = Location::factory()->create(['company_id' => $user->company_id]);
 
-        $location->refresh();
+    $response = $this->actingAs($user)
+        ->from(route('settings.locations.index'))
+        ->put(route('settings.locations.update', $location->id), [
+            'name' => 'Scranton branch',
+            'email' => 'dwight at schrute farms',
+        ]);
 
-        $this->assertEquals('Scranton business park', $location->name);
-        $this->assertEquals('1725 Slough Avenue', $location->address_line_1);
-        $this->assertEquals('Suite 200', $location->address_line_2);
-        $this->assertEquals('scranton@dundermifflin.com', $location->email);
-        $this->assertEquals('America/New_York', $location->timezone);
-        $this->assertTrue($location->is_headquarters);
-    }
+    $response->assertSessionHasErrors(['email']);
+});
 
-    #[Test]
-    public function it_goes_back_to_the_list_the_save_was_made_from(): void
-    {
-        Queue::fake();
+it('cannot save an location of another company', function () {
+    $user = administrator();
+    $location = Location::factory()->create();
 
-        $user = $this->administrator();
-        $location = Location::factory()->archived()->create(['company_id' => $user->company_id]);
+    $this->actingAs($user)
+        ->put(route('settings.locations.update', $location->id), ['name' => 'Stamford branch'])
+        ->assertNotFound();
+});
 
-        $this->actingAs($user)
-            ->from(route('settings.locations.index', 'archived'))
-            ->put(route('settings.locations.update', $location->id), ['name' => 'Nashua branch'])
-            ->assertRedirect(route('settings.locations.index', 'archived'));
-    }
+it('stops somebody who may not administer the company from adding an location', function () {
+    $user = member();
 
-    #[Test]
-    public function it_turns_away_a_time_zone_that_does_not_exist(): void
-    {
-        $user = $this->administrator();
-        $location = Location::factory()->create(['company_id' => $user->company_id]);
+    $this->actingAs($user)
+        ->post(route('settings.locations.create'), ['name' => 'Scranton branch'])
+        ->assertNotFound();
+});
 
-        $response = $this->actingAs($user)
-            ->from(route('settings.locations.index'))
-            ->put(route('settings.locations.update', $location->id), [
-                'name' => 'Scranton branch',
-                'timezone' => 'Middle/Earth',
-            ]);
+it('shows a manager only their locations and no way to add one', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
-        $response->assertSessionHasErrors(['timezone']);
-    }
+    $response = $this->actingAs($michael)->get(route('settings.locations.index'));
 
-    #[Test]
-    public function it_turns_away_an_email_that_is_not_an_address(): void
-    {
-        $user = $this->administrator();
-        $location = Location::factory()->create(['company_id' => $user->company_id]);
+    $response->assertOk();
+    $response->assertSee('Scranton branch');
+    $response->assertDontSee('Stamford branch');
+    $response->assertDontSee('Add a location');
+    $response->assertDontSee('People who work here');
+});
 
-        $response = $this->actingAs($user)
-            ->from(route('settings.locations.index'))
-            ->put(route('settings.locations.update', $location->id), [
-                'name' => 'Scranton branch',
-                'email' => 'dwight at schrute farms',
-            ]);
+it('does not find a location a manager is not assigned to', function () {
+    $company = Company::factory()->create();
+    $stamford = Location::factory()->create(['company_id' => $company->id]);
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
 
-        $response->assertSessionHasErrors(['email']);
-    }
+    $this->actingAs($michael)
+        ->put(route('settings.locations.update', $stamford->id), ['name' => 'Stamford branch'])
+        ->assertNotFound();
+});
 
-    #[Test]
-    public function it_cannot_save_an_location_of_another_company(): void
-    {
-        $user = $this->administrator();
-        $location = Location::factory()->create();
+it('offers the owner a way to assign people to a location', function () {
+    $company = Company::factory()->create();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
-        $this->actingAs($user)
-            ->put(route('settings.locations.update', $location->id), ['name' => 'Stamford branch'])
-            ->assertNotFound();
-    }
+    $response = $this->actingAs($michael)->get(route('settings.locations.index'));
 
-    #[Test]
-    public function it_stops_somebody_who_may_not_administer_the_company_from_adding_an_location(): void
-    {
-        $user = $this->member();
+    $response->assertSee('People who work here');
+    $response->assertSee('Take this person off the location?');
+});
 
-        $this->actingAs($user)
-            ->post(route('settings.locations.create'), ['name' => 'Scranton branch'])
-            ->assertNotFound();
-    }
+function administrator(): User
+{
+    $company = Company::factory()->create();
 
-    #[Test]
-    public function it_shows_a_manager_only_their_locations_and_no_way_to_add_one(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
-        Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford branch']);
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
-
-        $response = $this->actingAs($michael)->get(route('settings.locations.index'));
-
-        $response->assertOk();
-        $response->assertSee('Scranton branch');
-        $response->assertDontSee('Stamford branch');
-        $response->assertDontSee('Add a location');
-        $response->assertDontSee('People who work here');
-    }
-
-    #[Test]
-    public function it_does_not_find_a_location_a_manager_is_not_assigned_to(): void
-    {
-        $company = Company::factory()->create();
-        $stamford = Location::factory()->create(['company_id' => $company->id]);
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-
-        $this->actingAs($michael)
-            ->put(route('settings.locations.update', $stamford->id), ['name' => 'Stamford branch'])
-            ->assertNotFound();
-    }
-
-    #[Test]
-    public function it_offers_the_owner_a_way_to_assign_people_to_a_location(): void
-    {
-        $company = Company::factory()->create();
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
-
-        $response = $this->actingAs($michael)->get(route('settings.locations.index'));
-
-        $response->assertSee('People who work here');
-        $response->assertSee('Take this person off the location?');
-    }
-
-    private function administrator(): User
-    {
-        $company = Company::factory()->create();
-
-        return $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-    }
-
-    private function member(): User
-    {
-        $company = Company::factory()->create();
-
-        return $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::STAFF);
-    }
-
-    #[Test]
-    public function it_gives_the_fields_of_the_panel_and_of_the_dialog_different_ids(): void
-    {
-        $user = $this->administrator();
-
-        Location::factory()->create(['company_id' => $user->company_id]);
-
-        $response = $this->actingAs($user)->get(route('settings.locations.index'));
-
-        $this->assertSame(1, substr_count($response->getContent(), 'id="name"'));
-        $this->assertSame(1, substr_count($response->getContent(), 'id="location_name"'));
-        $response->assertSee('name="name"', escape: false);
-    }
+    return test()->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
 }
+
+function member(): User
+{
+    $company = Company::factory()->create();
+
+    return test()->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::STAFF);
+}
+
+it('gives the fields of the panel and of the dialog different ids', function () {
+    $user = administrator();
+
+    Location::factory()->create(['company_id' => $user->company_id]);
+
+    $response = $this->actingAs($user)->get(route('settings.locations.index'));
+
+    expect(substr_count($response->getContent(), 'id="name"'))->toBe(1);
+    expect(substr_count($response->getContent(), 'id="location_name"'))->toBe(1);
+    $response->assertSee('name="name"', escape: false);
+});

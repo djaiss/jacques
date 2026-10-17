@@ -2,92 +2,74 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings\Account\Profile;
-
 use App\Models\Company;
 use App\Models\Staff;
 use App\Models\User;
 use App\ViewModels\Settings\Account\Profile\ProfileViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ProfileViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('gives the details of the staff member', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Stanley',
+        'last_name' => 'Hudson',
+        'display_name' => null,
+        'email' => 'stanley.hudson@dundermifflin.com',
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_gives_the_details_of_the_staff_member(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Stanley',
-            'last_name' => 'Hudson',
-            'display_name' => null,
-            'email' => 'stanley.hudson@dundermifflin.com',
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new ProfileViewModel(user: $user, staff: $staff);
 
-        $viewModel = new ProfileViewModel(user: $user, staff: $staff);
+    expect($viewModel->details())->toEqual([
+        'first_name' => 'Stanley',
+        'last_name' => 'Hudson',
+        'display_name' => null,
+        'work_email' => 'stanley.hudson@dundermifflin.com',
+    ]);
+});
 
-        $this->assertEquals([
-            'first_name' => 'Stanley',
-            'last_name' => 'Hudson',
-            'display_name' => null,
-            'work_email' => 'stanley.hudson@dundermifflin.com',
-        ], $viewModel->details());
-    }
+it('gives the name the staff member goes by', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Jim',
+        'last_name' => 'Halpert',
+        'display_name' => 'Big Tuna',
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_gives_the_name_the_staff_member_goes_by(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Jim',
-            'last_name' => 'Halpert',
-            'display_name' => 'Big Tuna',
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new ProfileViewModel(user: $user, staff: $staff);
 
-        $viewModel = new ProfileViewModel(user: $user, staff: $staff);
+    expect($viewModel->name())->toEqual('Big Tuna');
+});
 
-        $this->assertEquals('Big Tuna', $viewModel->name());
-    }
+it('falls back to the email when there is no staff record', function () {
+    $user = User::factory()->create([
+        'email' => 'accountant@vancerefrigeration.com',
+    ]);
 
-    #[Test]
-    public function it_falls_back_to_the_email_when_there_is_no_staff_record(): void
-    {
-        $user = User::factory()->create([
-            'email' => 'accountant@vancerefrigeration.com',
-        ]);
+    $viewModel = new ProfileViewModel(user: $user, staff: null);
 
-        $viewModel = new ProfileViewModel(user: $user, staff: null);
+    expect($viewModel->name())->toEqual('accountant@vancerefrigeration.com');
+    expect($viewModel->details())->toEqual([
+        'first_name' => null,
+        'last_name' => null,
+        'display_name' => null,
+        'work_email' => null,
+    ]);
+});
 
-        $this->assertEquals('accountant@vancerefrigeration.com', $viewModel->name());
-        $this->assertEquals([
-            'first_name' => null,
-            'last_name' => null,
-            'display_name' => null,
-            'work_email' => null,
-        ], $viewModel->details());
-    }
+it('gives the company name and the email', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'dwight.schrute@dundermifflin.com',
+    ]);
 
-    #[Test]
-    public function it_gives_the_company_name_and_the_email(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'dwight.schrute@dundermifflin.com',
-        ]);
+    $viewModel = new ProfileViewModel(user: $user, staff: null);
 
-        $viewModel = new ProfileViewModel(user: $user, staff: null);
-
-        $this->assertEquals('Dunder Mifflin', $viewModel->companyName());
-        $this->assertEquals('dwight.schrute@dundermifflin.com', $viewModel->email());
-    }
-}
+    expect($viewModel->companyName())->toEqual('Dunder Mifflin');
+    expect($viewModel->email())->toEqual('dwight.schrute@dundermifflin.com');
+});

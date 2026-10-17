@@ -21,8 +21,8 @@ the skills: [actions](../skills/actions/SKILL.md),
 ## General PHP
 
 - You MUST declare one class, interface, trait or enum per file. This has no
-  exception, and applies to tests exactly as it applies to the rest of the
-  application.
+  exception, and applies to `tests/Fixtures` exactly as it applies to the rest
+  of the application. Test files declare none.
 - Follow PSR-1, PSR-2, and PSR-12 standards.
 - Use camelCase for non-public-facing string-like elements.
 - Avoid using the `final` keyword; assume users write tests for overridden
@@ -141,15 +141,16 @@ short HTML comment naming it. That is a separate rule, and it lives in the
 - Use the `#[Fillable]` attribute to define mass-assignable fields.
 - Use the `#[RouteKey]` attribute to define the route key for the model.
 
-## Test Classes
+## Test Files
 
-- A test file MUST contain the test class and nothing else.
+- A test file holds Pest tests, its helper functions and its constants, and no
+  class. CI fails on a class in `tests/Unit` or `tests/Feature`.
 - Every class a test needs (a stub, a fake, a notification standing in for a
   real one) MUST live in its own file under `tests/Fixtures`, in a namespace
   that mirrors the application (e.g.
   `Tests\Fixtures\Notifications\SomethingHappened`), whether or not it is used
-  by a single test. The folder is empty today.
-- Use descriptive test method names and follow the arrange, act, assert pattern.
+  by a single test. The one class per file rule applies there in full.
+- Use descriptive test descriptions and follow the arrange, act, assert pattern.
 
 ## Whitespace
 

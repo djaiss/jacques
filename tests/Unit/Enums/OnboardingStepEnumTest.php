@@ -2,44 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Enums;
-
 use App\Enums\OnboardingStepEnum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class OnboardingStepEnumTest extends TestCase
-{
-    #[Test]
-    public function it_names_every_step(): void
-    {
-        foreach (OnboardingStepEnum::cases() as $step) {
-            $this->assertNotEmpty($step->label());
-        }
+it('names every step', function () {
+    foreach (OnboardingStepEnum::cases() as $step) {
+        expect($step->label())->not->toBeEmpty();
     }
+});
 
-    #[Test]
-    public function it_orders_the_four_steps(): void
-    {
-        $this->assertEquals(
-            ['Location', 'Services', 'Staff', 'Availability'],
-            array_map(fn (OnboardingStepEnum $step): string => $step->label(), OnboardingStepEnum::cases()),
-        );
-    }
+it('orders the four steps', function () {
+    expect(array_map(fn (OnboardingStepEnum $step): string => $step->label(), OnboardingStepEnum::cases()))->toEqual(['Location', 'Services', 'Staff', 'Availability']);
+});
 
-    #[Test]
-    public function it_gives_every_step_a_route_that_exists(): void
-    {
-        foreach (OnboardingStepEnum::cases() as $step) {
-            $this->assertTrue(app('router')->has($step->routeName()));
-        }
+it('gives every step a route that exists', function () {
+    foreach (OnboardingStepEnum::cases() as $step) {
+        expect(app('router')->has($step->routeName()))->toBeTrue();
     }
+});
 
-    #[Test]
-    public function it_gives_the_step_that_follows(): void
-    {
-        $this->assertEquals(OnboardingStepEnum::Services, OnboardingStepEnum::Location->next());
-        $this->assertEquals(OnboardingStepEnum::Availability, OnboardingStepEnum::Staff->next());
-        $this->assertNull(OnboardingStepEnum::Availability->next());
-    }
-}
+it('gives the step that follows', function () {
+    expect(OnboardingStepEnum::Location->next())->toEqual(OnboardingStepEnum::Services);
+    expect(OnboardingStepEnum::Staff->next())->toEqual(OnboardingStepEnum::Availability);
+    expect(OnboardingStepEnum::Availability->next())->toBeNull();
+});

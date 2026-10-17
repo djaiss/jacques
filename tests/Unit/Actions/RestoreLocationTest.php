@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\RestoreLocation;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -12,78 +10,58 @@ use App\Models\Company;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class RestoreLocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('reopens an location', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_reopens_an_location(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->archived()->create(['company_id' => $company->id, 'name' => 'Nashua branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->archived()->create(['company_id' => $company->id, 'name' => 'Nashua branch']);
+    $restored = new RestoreLocation(author: $author, location: $location)->execute();
 
-        $restored = new RestoreLocation(author: $author, location: $location)->execute();
+    expect($restored)->toBeInstanceOf(Location::class);
 
-        $this->assertInstanceOf(Location::class, $restored);
+    $location->refresh();
 
-        $location->refresh();
+    expect($location->isArchived())->toBeFalse();
 
-        $this->assertFalse($location->isArchived());
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationRestored
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === ['name' => 'Nashua branch'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationRestored
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === ['name' => 'Nashua branch'],
-        );
-    }
+it('does not give the headquarters badge back', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_does_not_give_the_headquarters_badge_back(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->archived()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->archived()->create(['company_id' => $company->id]);
+    new RestoreLocation(author: $author, location: $location)->execute();
 
-        new RestoreLocation(author: $author, location: $location)->execute();
+    $location->refresh();
 
-        $location->refresh();
+    expect($location->is_headquarters)->toBeFalse();
+});
 
-        $this->assertFalse($location->is_headquarters);
-    }
+it('throws when the author may not change the company', function () {
+    $company = Company::factory()->create();
+    $author = User::factory()->create(['company_id' => $company->id]);
+    $location = Location::factory()->archived()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_change_the_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new RestoreLocation(author: $author, location: $location)->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $author = User::factory()->create(['company_id' => $company->id]);
-        $location = Location::factory()->archived()->create(['company_id' => $company->id]);
+it('throws when the location belongs to another company', function () {
+    $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
+    $location = Location::factory()->archived()->create();
 
-        new RestoreLocation(author: $author, location: $location)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_location_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
-        $location = Location::factory()->archived()->create();
-
-        new RestoreLocation(author: $author, location: $location)->execute();
-    }
-}
+    new RestoreLocation(author: $author, location: $location)->execute();
+})->throws(ModelNotFoundException::class);

@@ -2,61 +2,44 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Onboarding;
+namespace Tests\Unit\ViewModels\Onboarding\StepViewModelTest;
 
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\User;
 use App\ViewModels\Onboarding\StepViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class StepViewModelTest extends TestCase
+it('names the salon and the step', function () {
+    $viewModel = new StepViewModel(user: user(OnboardingStepEnum::Staff), step: OnboardingStepEnum::Services);
+
+    expect($viewModel->salonName())->toEqual('Dunder Mifflin');
+    expect($viewModel->stepLabel())->toEqual('Services');
+    expect($viewModel->stepCounter())->toEqual('Step 2 of 4');
+});
+
+it('marks the steps done current and upcoming', function () {
+    $viewModel = new StepViewModel(user: user(OnboardingStepEnum::Staff), step: OnboardingStepEnum::Services);
+
+    $steps = $viewModel->steps();
+
+    expect($steps)->toHaveCount(4);
+    expect(array_column($steps, 'isDone'))->toEqual([true, true, false, false]);
+    expect(array_column($steps, 'isCurrent'))->toEqual([false, true, false, false]);
+    expect(array_column($steps, 'label'))->toEqual(['Location', 'Services', 'Staff', 'Availability']);
+});
+
+it('links only the steps already reached', function () {
+    $viewModel = new StepViewModel(user: user(OnboardingStepEnum::Services), step: OnboardingStepEnum::Location);
+
+    expect(array_column($viewModel->steps(), 'url'))->toEqual([route('onboarding.location.index'), route('onboarding.services.index'), null, null]);
+});
+
+function user(OnboardingStepEnum $reached): User
 {
-    use RefreshDatabase;
+    $company = Company::factory()->onboardingPending()->create([
+        'name' => 'Dunder Mifflin',
+        'onboarding_step' => $reached,
+    ]);
 
-    #[Test]
-    public function it_names_the_salon_and_the_step(): void
-    {
-        $viewModel = new StepViewModel(user: $this->user(OnboardingStepEnum::Staff), step: OnboardingStepEnum::Services);
-
-        $this->assertEquals('Dunder Mifflin', $viewModel->salonName());
-        $this->assertEquals('Services', $viewModel->stepLabel());
-        $this->assertEquals('Step 2 of 4', $viewModel->stepCounter());
-    }
-
-    #[Test]
-    public function it_marks_the_steps_done_current_and_upcoming(): void
-    {
-        $viewModel = new StepViewModel(user: $this->user(OnboardingStepEnum::Staff), step: OnboardingStepEnum::Services);
-
-        $steps = $viewModel->steps();
-
-        $this->assertCount(4, $steps);
-        $this->assertEquals([true, true, false, false], array_column($steps, 'isDone'));
-        $this->assertEquals([false, true, false, false], array_column($steps, 'isCurrent'));
-        $this->assertEquals(['Location', 'Services', 'Staff', 'Availability'], array_column($steps, 'label'));
-    }
-
-    #[Test]
-    public function it_links_only_the_steps_already_reached(): void
-    {
-        $viewModel = new StepViewModel(user: $this->user(OnboardingStepEnum::Services), step: OnboardingStepEnum::Location);
-
-        $this->assertEquals(
-            [route('onboarding.location.index'), route('onboarding.services.index'), null, null],
-            array_column($viewModel->steps(), 'url'),
-        );
-    }
-
-    private function user(OnboardingStepEnum $reached): User
-    {
-        $company = Company::factory()->onboardingPending()->create([
-            'name' => 'Dunder Mifflin',
-            'onboarding_step' => $reached,
-        ]);
-
-        return User::factory()->create(['company_id' => $company->id]);
-    }
+    return User::factory()->create(['company_id' => $company->id]);
 }

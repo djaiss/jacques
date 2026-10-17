@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Permissions;
+namespace Tests\Unit\Permissions\StaffScopeTest;
 
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
@@ -14,186 +14,151 @@ use App\Models\RolePermission;
 use App\Models\Staff;
 use App\Models\User;
 use App\Permissions\StaffScope;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class StaffScopeTest extends TestCase
-{
-    use RefreshDatabase;
+it('returns everybody in the company at company scope', function () {
+    $company = Company::factory()->create();
+    Staff::factory()->count(3)->create(['company_id' => $company->id]);
+    $user = userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
 
-    #[Test]
-    public function it_returns_everybody_in_the_company_at_company_scope(): void
-    {
-        $company = Company::factory()->create();
-        Staff::factory()->count(3)->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
+    expect(StaffScope::for($user, PermissionEnum::StaffView)->count())->toEqual(3);
+});
 
-        $this->assertEquals(3, StaffScope::for($user, PermissionEnum::StaffView)->count());
-    }
+it('returns only their own record at self scope', function () {
+    $company = Company::factory()->create();
+    $jim = Staff::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->count(3)->create(['company_id' => $company->id]);
+    $user = userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self, $jim);
 
-    #[Test]
-    public function it_returns_only_their_own_record_at_self_scope(): void
-    {
-        $company = Company::factory()->create();
-        $jim = Staff::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->count(3)->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self, $jim);
+    $staffMembers = StaffScope::for($user, PermissionEnum::StaffUpdate)->get();
 
-        $staffMembers = StaffScope::for($user, PermissionEnum::StaffUpdate)->get();
+    expect($staffMembers)->toHaveCount(1);
+    expect($staffMembers->first()->id)->toEqual($jim->id);
+});
 
-        $this->assertCount(1, $staffMembers);
-        $this->assertEquals($jim->id, $staffMembers->first()->id);
-    }
+it('returns nobody when the user has no staff record at self scope', function () {
+    $company = Company::factory()->create();
+    Staff::factory()->count(3)->create(['company_id' => $company->id]);
+    $user = userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self);
 
-    #[Test]
-    public function it_returns_nobody_when_the_user_has_no_staff_record_at_self_scope(): void
-    {
-        $company = Company::factory()->create();
-        Staff::factory()->count(3)->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self);
+    expect(StaffScope::for($user, PermissionEnum::StaffUpdate)->count())->toEqual(0);
+});
 
-        $this->assertEquals(0, StaffScope::for($user, PermissionEnum::StaffUpdate)->count());
-    }
+it('returns nobody when no role grants the permission', function () {
+    $company = Company::factory()->create();
+    Staff::factory()->count(3)->create(['company_id' => $company->id]);
+    $user = userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
 
-    #[Test]
-    public function it_returns_nobody_when_no_role_grants_the_permission(): void
-    {
-        $company = Company::factory()->create();
-        Staff::factory()->count(3)->create(['company_id' => $company->id]);
-        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Company);
+    expect(StaffScope::for($user, PermissionEnum::StaffUpdate)->count())->toEqual(0);
+});
 
-        $this->assertEquals(0, StaffScope::for($user, PermissionEnum::StaffUpdate)->count());
-    }
+it('never reaches into another company', function () {
+    $dunderMifflin = Company::factory()->create();
+    Staff::factory()->count(2)->create(['company_id' => $dunderMifflin->id]);
 
-    #[Test]
-    public function it_never_reaches_into_another_company(): void
-    {
-        $dunderMifflin = Company::factory()->create();
-        Staff::factory()->count(2)->create(['company_id' => $dunderMifflin->id]);
+    $michaelScottPaperCompany = Company::factory()->create();
+    Staff::factory()->count(4)->create(['company_id' => $michaelScottPaperCompany->id]);
 
-        $michaelScottPaperCompany = Company::factory()->create();
-        Staff::factory()->count(4)->create(['company_id' => $michaelScottPaperCompany->id]);
+    $user = userWith($dunderMifflin, PermissionEnum::StaffView, ScopeEnum::Company);
 
-        $user = $this->userWith($dunderMifflin, PermissionEnum::StaffView, ScopeEnum::Company);
+    $staffMembers = StaffScope::for($user, PermissionEnum::StaffView)->get();
 
-        $staffMembers = StaffScope::for($user, PermissionEnum::StaffView)->get();
+    expect($staffMembers)->toHaveCount(2);
+    expect($staffMembers->pluck('company_id')->unique()->all())->toEqual([$dunderMifflin->id]);
+});
 
-        $this->assertCount(2, $staffMembers);
-        $this->assertEquals([$dunderMifflin->id], $staffMembers->pluck('company_id')->unique()->all());
-    }
+it('returns everybody in the company for the owner role', function () {
+    $company = Company::factory()->create();
+    Staff::factory()->count(3)->create(['company_id' => $company->id]);
+    $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
-    #[Test]
-    public function it_returns_everybody_in_the_company_for_the_owner_role(): void
-    {
-        $company = Company::factory()->create();
-        Staff::factory()->count(3)->create(['company_id' => $company->id]);
-        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    expect(StaffScope::for($owner, PermissionEnum::StaffView)->count())->toEqual(3);
+});
 
-        $this->assertEquals(3, StaffScope::for($owner, PermissionEnum::StaffView)->count());
-    }
+it('returns the colleagues of their locations at location scope', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $dwight = Staff::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id]);
+    $dwight->locations()->attach($scranton);
+    $michael = userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
-    #[Test]
-    public function it_returns_the_colleagues_of_their_locations_at_location_scope(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = Staff::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id]);
-        $dwight->locations()->attach($scranton);
-        $michael = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $michael->id])->locations()->attach($scranton);
+    expect(StaffScope::for($michael, PermissionEnum::StaffView)->pluck('id')->all())->toEqualCanonicalizing([$dwight->id, $michael->staff->id]);
+});
 
-        $this->assertEqualsCanonicalizing([$dwight->id, $michael->staff->id], StaffScope::for($michael, PermissionEnum::StaffView)->pluck('id')->all());
-    }
+it('returns nobody through a paused assignment at location scope', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id])->locations()->attach($scranton);
+    $user = userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
+    $michael = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    LocationStaff::factory()->paused()->create(['location_id' => $scranton->id, 'staff_id' => $michael->id]);
 
-    #[Test]
-    public function it_returns_nobody_through_a_paused_assignment_at_location_scope(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id])->locations()->attach($scranton);
-        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
-        $michael = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        LocationStaff::factory()->paused()->create(['location_id' => $scranton->id, 'staff_id' => $michael->id]);
+    expect(StaffScope::for($user, PermissionEnum::StaffView)->count())->toEqual(0);
+});
 
-        $this->assertEquals(0, StaffScope::for($user, PermissionEnum::StaffView)->count());
-    }
+it('returns nobody when the user has no staff record at location scope', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->count(2)->create(['company_id' => $company->id])
+        ->each(fn (Staff $staff) => $staff->locations()->attach($scranton));
+    $user = userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
 
-    #[Test]
-    public function it_returns_nobody_when_the_user_has_no_staff_record_at_location_scope(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->count(2)->create(['company_id' => $company->id])
-            ->each(fn (Staff $staff) => $staff->locations()->attach($scranton));
-        $user = $this->userWith($company, PermissionEnum::StaffView, ScopeEnum::Location);
+    expect(StaffScope::for($user, PermissionEnum::StaffView)->count())->toEqual(0);
+});
 
-        $this->assertEquals(0, StaffScope::for($user, PermissionEnum::StaffView)->count());
-    }
+it('refuses a permission that covers the whole company', function () {
 
-    #[Test]
-    public function it_refuses_a_permission_that_covers_the_whole_company(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    $company = Company::factory()->create();
+    $user = userWith($company, PermissionEnum::RoleManage, ScopeEnum::Company);
 
-        $company = Company::factory()->create();
-        $user = $this->userWith($company, PermissionEnum::RoleManage, ScopeEnum::Company);
+    StaffScope::for($user, PermissionEnum::RoleManage);
+})->throws(InvalidArgumentException::class);
 
-        StaffScope::for($user, PermissionEnum::RoleManage);
-    }
+it('agrees with the check made one staff member at a time', function () {
+    $dunderMifflin = Company::factory()->create();
+    $michaelScottPaperCompany = Company::factory()->create();
 
-    #[Test]
-    public function it_agrees_with_the_check_made_one_staff_member_at_a_time(): void
-    {
-        $dunderMifflin = Company::factory()->create();
-        $michaelScottPaperCompany = Company::factory()->create();
+    $pam = Staff::factory()->create(['company_id' => $dunderMifflin->id]);
+    $scranton = Location::factory()->create(['company_id' => $dunderMifflin->id]);
+    Staff::factory()->count(3)->create(['company_id' => $dunderMifflin->id])
+        ->take(2)
+        ->each(fn (Staff $staff) => $staff->locations()->attach($scranton));
+    LocationStaff::factory()->paused()->create([
+        'location_id' => $scranton->id,
+        'staff_id' => Staff::factory()->create(['company_id' => $dunderMifflin->id])->id,
+    ]);
+    Staff::factory()->count(3)->create(['company_id' => $michaelScottPaperCompany->id]);
 
-        $pam = Staff::factory()->create(['company_id' => $dunderMifflin->id]);
-        $scranton = Location::factory()->create(['company_id' => $dunderMifflin->id]);
-        Staff::factory()->count(3)->create(['company_id' => $dunderMifflin->id])
-            ->take(2)
-            ->each(fn (Staff $staff) => $staff->locations()->attach($scranton));
-        LocationStaff::factory()->paused()->create([
-            'location_id' => $scranton->id,
-            'staff_id' => Staff::factory()->create(['company_id' => $dunderMifflin->id])->id,
-        ]);
-        Staff::factory()->count(3)->create(['company_id' => $michaelScottPaperCompany->id]);
+    $everybody = Staff::query()->get();
 
-        $everybody = Staff::query()->get();
+    foreach (ScopeEnum::cases() as $scope) {
+        $user = userWith($dunderMifflin, PermissionEnum::StaffUpdate, $scope, $pam);
+        $pam->locations()->syncWithoutDetaching([$scranton->id]);
+        $allowed = StaffScope::for($user, PermissionEnum::StaffUpdate)->pluck('id')->all();
 
-        foreach (ScopeEnum::cases() as $scope) {
-            $user = $this->userWith($dunderMifflin, PermissionEnum::StaffUpdate, $scope, $pam);
-            $pam->locations()->syncWithoutDetaching([$scranton->id]);
-            $allowed = StaffScope::for($user, PermissionEnum::StaffUpdate)->pluck('id')->all();
-
-            foreach ($everybody as $staff) {
-                $this->assertEquals(
-                    $user->permission(PermissionEnum::StaffUpdate)->forStaff($staff)->allowed(),
-                    in_array($staff->id, $allowed, true),
-                    "The list and the check disagree about staff member {$staff->id} at {$scope->value} scope",
-                );
-            }
+        foreach ($everybody as $staff) {
+            expect(in_array($staff->id, $allowed, true))->toEqual($user->permission(PermissionEnum::StaffUpdate)->forStaff($staff)->allowed(), "The list and the check disagree about staff member {$staff->id} at {$scope->value} scope");
         }
     }
+});
 
-    private function userWith(Company $company, PermissionEnum $permission, ScopeEnum $scope, ?Staff $staff = null): User
-    {
-        $role = Role::factory()->create(['company_id' => $company->id]);
+function userWith(Company $company, PermissionEnum $permission, ScopeEnum $scope, ?Staff $staff = null): User
+{
+    $role = Role::factory()->create(['company_id' => $company->id]);
 
-        RolePermission::factory()->create([
-            'role_id' => $role->id,
-            'permission' => $permission,
-            'scope' => $scope,
-        ]);
+    RolePermission::factory()->create([
+        'role_id' => $role->id,
+        'permission' => $permission,
+        'scope' => $scope,
+    ]);
 
-        $user = User::factory()->create(['company_id' => $company->id]);
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $staff?->update(['user_id' => $user->id]);
+    $staff?->update(['user_id' => $user->id]);
 
-        $user->roles()->attach($role->id);
+    $user->roles()->attach($role->id);
 
-        return $user;
-    }
+    return $user;
 }

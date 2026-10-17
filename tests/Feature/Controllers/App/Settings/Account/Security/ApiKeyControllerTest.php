@@ -2,128 +2,104 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Security;
-
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ApiKeyControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates an api key', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_an_api_key(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create();
 
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
+        'name' => 'Dundie awards bot',
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
-            'name' => 'Dundie awards bot',
-        ]);
+    $response->assertRedirect(route('settings.security.index'));
+    $response->assertSessionHas('status', 'Your API key is ready.');
 
-        $response->assertRedirect(route('settings.security.index'));
-        $response->assertSessionHas('status', 'Your API key is ready.');
+    $this->assertDatabaseHas('personal_access_tokens', [
+        'tokenable_id' => $user->id,
+        'name' => 'Dundie awards bot',
+    ]);
+});
 
-        $this->assertDatabaseHas('personal_access_tokens', [
-            'tokenable_id' => $user->id,
-            'name' => 'Dundie awards bot',
-        ]);
-    }
+it('hands the key over once', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_hands_the_key_over_once(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create();
 
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
+        'name' => 'Dundie awards bot',
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
-            'name' => 'Dundie awards bot',
-        ]);
+    $response->assertSessionHas('apiKey');
 
-        $response->assertSessionHas('apiKey');
+    $this->actingAs($user)->get(route('settings.security.index'))
+        ->assertStatus(200)
+        ->assertSee('Your new API key', escape: false);
 
-        $this->actingAs($user)->get(route('settings.security.index'))
-            ->assertStatus(200)
-            ->assertSee('Your new API key', escape: false);
+    $this->actingAs($user)->get(route('settings.security.index'))
+        ->assertDontSee('Your new API key', escape: false);
+});
 
-        $this->actingAs($user)->get(route('settings.security.index'))
-            ->assertDontSee('Your new API key', escape: false);
-    }
+it('refuses a name that is too short', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_refuses_a_name_that_is_too_short(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create();
 
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
+        'name' => 'ab',
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), [
-            'name' => 'ab',
-        ]);
+    $response->assertSessionHasErrors('name');
 
-        $response->assertSessionHasErrors('name');
+    expect($user->tokens()->count())->toBe(0);
+});
 
-        $this->assertSame(0, $user->tokens()->count());
-    }
+it('refuses a missing name', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_refuses_a_missing_name(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create();
 
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), []);
 
-        $response = $this->actingAs($user)->post(route('settings.apiKeys.create'), []);
+    $response->assertSessionHasErrors('name');
+});
 
-        $response->assertSessionHasErrors('name');
-    }
+it('revokes an api key', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_revokes_an_api_key(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create();
+    $apiKey = $user->createToken('Dundie awards bot')->accessToken;
 
-        $user = User::factory()->create();
-        $apiKey = $user->createToken('Dundie awards bot')->accessToken;
+    $response = $this->actingAs($user)->delete(route('settings.apiKeys.destroy', $apiKey->id));
 
-        $response = $this->actingAs($user)->delete(route('settings.apiKeys.destroy', $apiKey->id));
+    $response->assertRedirect(route('settings.security.index'));
+    $response->assertSessionHas('status', 'The API key is revoked.');
 
-        $response->assertRedirect(route('settings.security.index'));
-        $response->assertSessionHas('status', 'The API key is revoked.');
+    $this->assertModelMissing($apiKey);
+});
 
-        $this->assertModelMissing($apiKey);
-    }
+it('refuses to revoke a key that belongs to somebody else', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_refuses_to_revoke_a_key_that_belongs_to_somebody_else(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = User::factory()->create(['company_id' => $company->id]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
+    $apiKey = $dwight->createToken('Beet farm sync')->accessToken;
 
-        $company = Company::factory()->create();
-        $michael = User::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
-        $apiKey = $dwight->createToken('Beet farm sync')->accessToken;
+    $response = $this->actingAs($michael)->delete(route('settings.apiKeys.destroy', $apiKey->id));
 
-        $response = $this->actingAs($michael)->delete(route('settings.apiKeys.destroy', $apiKey->id));
+    $response->assertNotFound();
 
-        $response->assertNotFound();
+    $this->assertModelExists($apiKey);
+});
 
-        $this->assertModelExists($apiKey);
-    }
+it('refuses a visitor who is not signed in', function () {
+    $this->post(route('settings.apiKeys.create'), ['name' => 'Dundie awards bot'])
+        ->assertRedirect(route('auth.signIn.new'));
 
-    #[Test]
-    public function it_refuses_a_visitor_who_is_not_signed_in(): void
-    {
-        $this->post(route('settings.apiKeys.create'), ['name' => 'Dundie awards bot'])
-            ->assertRedirect(route('auth.signIn.new'));
-
-        $this->delete(route('settings.apiKeys.destroy', 1))
-            ->assertRedirect(route('auth.signIn.new'));
-    }
-}
+    $this->delete(route('settings.apiKeys.destroy', 1))
+        ->assertRedirect(route('auth.signIn.new'));
+});

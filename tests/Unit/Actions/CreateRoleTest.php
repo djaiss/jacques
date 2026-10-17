@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateRole;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
@@ -13,175 +11,144 @@ use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateRoleTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates a role and what it may do', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_role_and_what_it_may_do(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = new CreateRole(
+        author: $author,
+        company: $company,
+        name: 'Regional manager',
+        grants: [
+            ['permission' => PermissionEnum::StaffView, 'scope' => ScopeEnum::Company],
+            ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
+            ['permission' => PermissionEnum::ReportView, 'scope' => ScopeEnum::Location],
+        ],
+        description: 'Runs the Scranton branch.',
+    )->execute();
 
-        $role = new CreateRole(
-            author: $author,
-            company: $company,
-            name: 'Regional manager',
-            grants: [
-                ['permission' => PermissionEnum::StaffView, 'scope' => ScopeEnum::Company],
-                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
-                ['permission' => PermissionEnum::ReportView, 'scope' => ScopeEnum::Location],
+    expect($role)->toBeInstanceOf(Role::class);
+    $this->assertDatabaseHas('roles', [
+        'id' => $role->id,
+        'company_id' => $company->id,
+        'name' => 'Regional manager',
+        'description' => 'Runs the Scranton branch.',
+        'slug' => 'regional-manager',
+        'is_default' => false,
+        'is_editable' => true,
+    ]);
+    $this->assertDatabaseHas('role_permissions', [
+        'role_id' => $role->id,
+        'permission' => PermissionEnum::StaffView->value,
+        'scope' => ScopeEnum::Company->value,
+    ]);
+    $this->assertDatabaseHas('role_permissions', [
+        'role_id' => $role->id,
+        'permission' => PermissionEnum::StaffUpdate->value,
+        'scope' => ScopeEnum::Self->value,
+    ]);
+    $this->assertDatabaseHas('role_permissions', [
+        'role_id' => $role->id,
+        'permission' => PermissionEnum::ReportView->value,
+        'scope' => ScopeEnum::Location->value,
+    ]);
+
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::RoleCreated
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === [
+                'name' => 'Regional manager',
+                'permissions' => 'staff.view:company, staff.update:self, report.view:location',
             ],
-            description: 'Runs the Scranton branch.',
-        )->execute();
+    );
+});
 
-        $this->assertInstanceOf(Role::class, $role);
-        $this->assertDatabaseHas('roles', [
-            'id' => $role->id,
-            'company_id' => $company->id,
-            'name' => 'Regional manager',
-            'description' => 'Runs the Scranton branch.',
-            'slug' => 'regional-manager',
-            'is_default' => false,
-            'is_editable' => true,
-        ]);
-        $this->assertDatabaseHas('role_permissions', [
-            'role_id' => $role->id,
-            'permission' => PermissionEnum::StaffView->value,
-            'scope' => ScopeEnum::Company->value,
-        ]);
-        $this->assertDatabaseHas('role_permissions', [
-            'role_id' => $role->id,
-            'permission' => PermissionEnum::StaffUpdate->value,
-            'scope' => ScopeEnum::Self->value,
-        ]);
-        $this->assertDatabaseHas('role_permissions', [
-            'role_id' => $role->id,
-            'permission' => PermissionEnum::ReportView->value,
-            'scope' => ScopeEnum::Location->value,
-        ]);
+it('makes the slug unique within the company', function () {
+    Queue::fake();
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::RoleCreated
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === [
-                    'name' => 'Regional manager',
-                    'permissions' => 'staff.view:company, staff.update:self, report.view:location',
-                ],
-        );
-    }
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
 
-    #[Test]
-    public function it_makes_the_slug_unique_within_the_company(): void
-    {
-        Queue::fake();
+    $first = new CreateRole(author: $author, company: $company, name: 'Regional manager')->execute();
+    $second = new CreateRole(author: $author, company: $company, name: 'Regional manager')->execute();
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    expect($first->slug)->toEqual('regional-manager');
+    expect($second->slug)->toEqual('regional-manager-2');
+});
 
-        $first = new CreateRole(author: $author, company: $company, name: 'Regional manager')->execute();
-        $second = new CreateRole(author: $author, company: $company, name: 'Regional manager')->execute();
+it('lets two companies use the same slug', function () {
+    Queue::fake();
 
-        $this->assertEquals('regional-manager', $first->slug);
-        $this->assertEquals('regional-manager-2', $second->slug);
-    }
+    $dunderMifflin = Company::factory()->create();
+    $michaelScottPaperCompany = Company::factory()->create();
 
-    #[Test]
-    public function it_lets_two_companies_use_the_same_slug(): void
-    {
-        Queue::fake();
+    $first = new CreateRole(
+        author: $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage),
+        company: $dunderMifflin,
+        name: 'Regional manager',
+    )->execute();
 
-        $dunderMifflin = Company::factory()->create();
-        $michaelScottPaperCompany = Company::factory()->create();
+    $second = new CreateRole(
+        author: $this->grant(User::factory()->create(['company_id' => $michaelScottPaperCompany->id]), PermissionEnum::RoleManage),
+        company: $michaelScottPaperCompany,
+        name: 'Regional manager',
+    )->execute();
 
-        $first = new CreateRole(
-            author: $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage),
-            company: $dunderMifflin,
-            name: 'Regional manager',
-        )->execute();
+    expect($first->slug)->toEqual('regional-manager');
+    expect($second->slug)->toEqual('regional-manager');
+});
 
-        $second = new CreateRole(
-            author: $this->grant(User::factory()->create(['company_id' => $michaelScottPaperCompany->id]), PermissionEnum::RoleManage),
-            company: $michaelScottPaperCompany,
-            name: 'Regional manager',
-        )->execute();
+it('throws when the author may not administer the company', function () {
+    $company = Company::factory()->create();
+    $member = User::factory()->create(['company_id' => $company->id]);
 
-        $this->assertEquals('regional-manager', $first->slug);
-        $this->assertEquals('regional-manager', $second->slug);
-    }
+    new CreateRole(author: $member, company: $company, name: 'Regional manager')->execute();
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_administer_the_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+it('throws when the company belongs to somebody else', function () {
+    $dunderMifflin = Company::factory()->create();
+    $michaelScottPaperCompany = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage);
 
-        $company = Company::factory()->create();
-        $member = User::factory()->create(['company_id' => $company->id]);
+    new CreateRole(
+        author: $author,
+        company: $michaelScottPaperCompany,
+        name: 'Regional manager',
+    )->execute();
+})->throws(ModelNotFoundException::class);
 
-        new CreateRole(author: $member, company: $company, name: 'Regional manager')->execute();
-    }
+it('throws when a company wide permission is granted at self scope', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
 
-    #[Test]
-    public function it_throws_when_the_company_belongs_to_somebody_else(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new CreateRole(
+        author: $author,
+        company: $company,
+        name: 'Regional manager',
+        grants: [
+            ['permission' => PermissionEnum::CompanyManage, 'scope' => ScopeEnum::Self],
+        ],
+    )->execute();
+})->throws(InvalidArgumentException::class);
 
-        $dunderMifflin = Company::factory()->create();
-        $michaelScottPaperCompany = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage);
+it('throws when the same permission is granted twice', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
 
-        new CreateRole(
-            author: $author,
-            company: $michaelScottPaperCompany,
-            name: 'Regional manager',
-        )->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_a_company_wide_permission_is_granted_at_self_scope(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-
-        new CreateRole(
-            author: $author,
-            company: $company,
-            name: 'Regional manager',
-            grants: [
-                ['permission' => PermissionEnum::CompanyManage, 'scope' => ScopeEnum::Self],
-            ],
-        )->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_same_permission_is_granted_twice(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-
-        new CreateRole(
-            author: $author,
-            company: $company,
-            name: 'Regional manager',
-            grants: [
-                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
-                ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Company],
-            ],
-        )->execute();
-    }
-}
+    new CreateRole(
+        author: $author,
+        company: $company,
+        name: 'Regional manager',
+        grants: [
+            ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Self],
+            ['permission' => PermissionEnum::StaffUpdate, 'scope' => ScopeEnum::Company],
+        ],
+    )->execute();
+})->throws(InvalidArgumentException::class);

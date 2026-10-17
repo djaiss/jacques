@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\UpdateLocation;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -14,215 +12,174 @@ use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class UpdateLocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('updates an location', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_updates_an_location(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    new UpdateLocation(
+        author: $author,
+        location: $location,
+        name: 'Scranton business park',
+        country: 'us',
+        region: 'Pennsylvania',
+        city: 'Scranton',
+        postalCode: '18505',
+        addressLine1: '1725 Slough Avenue',
+        addressLine2: 'Suite 200',
+        phone: '570-555-0100',
+        email: 'scranton@dundermifflin.com',
+        timezone: 'America/New_York',
+    )->execute();
 
-        new UpdateLocation(
-            author: $author,
-            location: $location,
-            name: 'Scranton business park',
-            country: 'us',
-            region: 'Pennsylvania',
-            city: 'Scranton',
-            postalCode: '18505',
-            addressLine1: '1725 Slough Avenue',
-            addressLine2: 'Suite 200',
-            phone: '570-555-0100',
-            email: 'scranton@dundermifflin.com',
-            timezone: 'America/New_York',
-        )->execute();
+    $location->refresh();
 
-        $location->refresh();
+    expect($location->name)->toEqual('Scranton business park');
+    expect($location->country)->toEqual('US');
+    expect($location->city)->toEqual('Scranton');
+    expect($location->region)->toEqual('Pennsylvania');
+    expect($location->postal_code)->toEqual('18505');
+    expect($location->address_line_1)->toEqual('1725 Slough Avenue');
+    expect($location->address_line_2)->toEqual('Suite 200');
+    expect($location->phone)->toEqual('570-555-0100');
+    expect($location->email)->toEqual('scranton@dundermifflin.com');
+    expect($location->timezone)->toEqual('America/New_York');
 
-        $this->assertEquals('Scranton business park', $location->name);
-        $this->assertEquals('US', $location->country);
-        $this->assertEquals('Scranton', $location->city);
-        $this->assertEquals('Pennsylvania', $location->region);
-        $this->assertEquals('18505', $location->postal_code);
-        $this->assertEquals('1725 Slough Avenue', $location->address_line_1);
-        $this->assertEquals('Suite 200', $location->address_line_2);
-        $this->assertEquals('570-555-0100', $location->phone);
-        $this->assertEquals('scranton@dundermifflin.com', $location->email);
-        $this->assertEquals('America/New_York', $location->timezone);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationUpdated
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === ['name' => 'Scranton business park'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationUpdated
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === ['name' => 'Scranton business park'],
-        );
-    }
+it('empties what is left out', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_empties_what_is_left_out(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id]);
+    new UpdateLocation(author: $author, location: $location, name: 'Utica branch')->execute();
 
-        new UpdateLocation(author: $author, location: $location, name: 'Utica branch')->execute();
+    $location->refresh();
 
-        $location->refresh();
+    expect($location->country)->toBeNull();
+    expect($location->city)->toBeNull();
+    expect($location->region)->toBeNull();
+    expect($location->postal_code)->toBeNull();
+    expect($location->address_line_1)->toBeNull();
+    expect($location->address_line_2)->toBeNull();
+    expect($location->phone)->toBeNull();
+    expect($location->email)->toBeNull();
+    expect($location->timezone)->toBeNull();
+});
 
-        $this->assertNull($location->country);
-        $this->assertNull($location->city);
-        $this->assertNull($location->region);
-        $this->assertNull($location->postal_code);
-        $this->assertNull($location->address_line_1);
-        $this->assertNull($location->address_line_2);
-        $this->assertNull($location->phone);
-        $this->assertNull($location->email);
-        $this->assertNull($location->timezone);
-    }
+it('lets an location keep its own name', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_lets_an_location_keep_its_own_name(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    new UpdateLocation(author: $author, location: $location, name: 'Scranton branch', city: 'Scranton')->execute();
 
-        new UpdateLocation(author: $author, location: $location, name: 'Scranton branch', city: 'Scranton')->execute();
+    $location->refresh();
 
-        $location->refresh();
+    expect($location->name)->toEqual('Scranton branch');
+    expect($location->city)->toEqual('Scranton');
+});
 
-        $this->assertEquals('Scranton branch', $location->name);
-        $this->assertEquals('Scranton', $location->city);
-    }
+it('promotes an location to headquarters and demotes the one that held it', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_promotes_an_location_to_headquarters_and_demotes_the_one_that_held_it(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $scranton = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    $utica = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $scranton = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
-        $utica = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
+    new UpdateLocation(author: $author, location: $utica, name: 'Utica branch', isHeadquarters: true)->execute();
 
-        new UpdateLocation(author: $author, location: $utica, name: 'Utica branch', isHeadquarters: true)->execute();
+    expect($utica->refresh()->is_headquarters)->toBeTrue();
+    expect($scranton->refresh()->is_headquarters)->toBeFalse();
+});
 
-        $this->assertTrue($utica->refresh()->is_headquarters);
-        $this->assertFalse($scranton->refresh()->is_headquarters);
-    }
+it('leaves the headquarters of another company alone', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_leaves_the_headquarters_of_another_company_alone(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
+    $elsewhere = Location::factory()->primary()->create();
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
-        $elsewhere = Location::factory()->primary()->create();
+    new UpdateLocation(author: $author, location: $location, name: 'Utica branch', isHeadquarters: true)->execute();
 
-        new UpdateLocation(author: $author, location: $location, name: 'Utica branch', isHeadquarters: true)->execute();
+    expect($elsewhere->refresh()->is_headquarters)->toBeTrue();
+});
 
-        $this->assertTrue($elsewhere->refresh()->is_headquarters);
-    }
+it('leaves the headquarters alone when the box is not ticked', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_leaves_the_headquarters_alone_when_the_box_is_not_ticked(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->primary()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    new UpdateLocation(author: $author, location: $location, name: 'Scranton business park')->execute();
 
-        new UpdateLocation(author: $author, location: $location, name: 'Scranton business park')->execute();
+    expect($location->refresh()->is_headquarters)->toBeTrue();
+});
 
-        $this->assertTrue($location->refresh()->is_headquarters);
-    }
+it('throws when an archived location is made the headquarters', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->archived()->create(['company_id' => $company->id, 'name' => 'Nashua branch']);
 
-    #[Test]
-    public function it_throws_when_an_archived_location_is_made_the_headquarters(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    new UpdateLocation(author: $author, location: $location, name: 'Nashua branch', isHeadquarters: true)->execute();
+})->throws(InvalidArgumentException::class);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->archived()->create(['company_id' => $company->id, 'name' => 'Nashua branch']);
+it('throws when another location of the company already has that name', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
+    $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
-        new UpdateLocation(author: $author, location: $location, name: 'Nashua branch', isHeadquarters: true)->execute();
-    }
+    new UpdateLocation(author: $author, location: $location, name: 'Utica branch')->execute();
+})->throws(InvalidArgumentException::class);
 
-    #[Test]
-    public function it_throws_when_another_location_of_the_company_already_has_that_name(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+it('throws when the name is blank', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        Location::factory()->create(['company_id' => $company->id, 'name' => 'Utica branch']);
-        $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    new UpdateLocation(author: $author, location: $location, name: '  ')->execute();
+})->throws(InvalidArgumentException::class);
 
-        new UpdateLocation(author: $author, location: $location, name: 'Utica branch')->execute();
-    }
+it('throws when the author may not change the company', function () {
+    $company = Company::factory()->create();
+    $author = User::factory()->create(['company_id' => $company->id]);
+    $location = Location::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_name_is_blank(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    new UpdateLocation(author: $author, location: $location, name: 'Scranton branch')->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id]);
+it('lets a manager update only the locations they are assigned to', function () {
+    Queue::fake();
 
-        new UpdateLocation(author: $author, location: $location, name: '  ')->execute();
-    }
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
+    $stamford = Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford']);
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+    Staff::factory()->create(['company_id' => $michael->company_id, 'user_id' => $michael->id])->locations()->attach($scranton);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_change_the_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new UpdateLocation(author: $michael, location: $scranton, name: 'Scranton branch')->execute();
 
-        $company = Company::factory()->create();
-        $author = User::factory()->create(['company_id' => $company->id]);
-        $location = Location::factory()->create(['company_id' => $company->id]);
+    expect($scranton->refresh()->name)->toEqual('Scranton branch');
 
-        new UpdateLocation(author: $author, location: $location, name: 'Scranton branch')->execute();
-    }
-
-    #[Test]
-    public function it_lets_a_manager_update_only_the_locations_they_are_assigned_to(): void
-    {
-        Queue::fake();
-
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
-        $stamford = Location::factory()->create(['company_id' => $company->id, 'name' => 'Stamford']);
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        Staff::factory()->create(['company_id' => $michael->company_id, 'user_id' => $michael->id])->locations()->attach($scranton);
-
-        new UpdateLocation(author: $michael, location: $scranton, name: 'Scranton branch')->execute();
-
-        $this->assertEquals('Scranton branch', $scranton->refresh()->name);
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new UpdateLocation(author: $michael, location: $stamford, name: 'Stamford branch')->execute();
-    }
-}
+    new UpdateLocation(author: $michael, location: $stamford, name: 'Stamford branch')->execute();
+})->throws(ModelNotFoundException::class);

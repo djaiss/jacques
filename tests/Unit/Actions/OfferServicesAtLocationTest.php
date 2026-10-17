@@ -2,86 +2,68 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\OfferServicesAtLocation;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Service;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class OfferServicesAtLocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('offers every active service at the price of the service', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $haircut = Service::factory()->create(['company_id' => $company->id]);
+    $beardTrim = Service::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_offers_every_active_service_at_the_price_of_the_service(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $haircut = Service::factory()->create(['company_id' => $company->id]);
-        $beardTrim = Service::factory()->create(['company_id' => $company->id]);
+    $offered = new OfferServicesAtLocation(location: $scranton)->execute();
 
-        $offered = new OfferServicesAtLocation(location: $scranton)->execute();
+    expect($offered->pluck('service_id')->all())->toEqualCanonicalizing([$haircut->id, $beardTrim->id]);
+    expect(LocationService::query()->where('location_id', $scranton->id)->count())->toEqual(2);
+    $this->assertDatabaseHas('location_services', [
+        'location_id' => $scranton->id,
+        'service_id' => $haircut->id,
+        'prices' => null,
+        'is_active' => true,
+    ]);
+    $this->assertDatabaseHas('location_services', [
+        'location_id' => $scranton->id,
+        'service_id' => $beardTrim->id,
+    ]);
+});
 
-        $this->assertEqualsCanonicalizing([$haircut->id, $beardTrim->id], $offered->pluck('service_id')->all());
-        $this->assertEquals(2, LocationService::query()->where('location_id', $scranton->id)->count());
-        $this->assertDatabaseHas('location_services', [
-            'location_id' => $scranton->id,
-            'service_id' => $haircut->id,
-            'prices' => null,
-            'is_active' => true,
-        ]);
-        $this->assertDatabaseHas('location_services', [
-            'location_id' => $scranton->id,
-            'service_id' => $beardTrim->id,
-        ]);
-    }
+it('skips a deactivated service', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $balayage = Service::factory()->create(['company_id' => $company->id, 'is_active' => false]);
 
-    #[Test]
-    public function it_skips_a_deactivated_service(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $balayage = Service::factory()->create(['company_id' => $company->id, 'is_active' => false]);
+    new OfferServicesAtLocation(location: $scranton)->execute();
 
-        new OfferServicesAtLocation(location: $scranton)->execute();
+    $this->assertDatabaseMissing('location_services', ['service_id' => $balayage->id]);
+});
 
-        $this->assertDatabaseMissing('location_services', ['service_id' => $balayage->id]);
-    }
+it('does not offer a service twice', function () {
+    $company = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $haircut = Service::factory()->create(['company_id' => $company->id]);
+    LocationService::factory()->create([
+        'location_id' => $scranton->id,
+        'service_id' => $haircut->id,
+        'prices' => ['CAD' => 4000],
+    ]);
 
-    #[Test]
-    public function it_does_not_offer_a_service_twice(): void
-    {
-        $company = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $haircut = Service::factory()->create(['company_id' => $company->id]);
-        LocationService::factory()->create([
-            'location_id' => $scranton->id,
-            'service_id' => $haircut->id,
-            'prices' => ['CAD' => 4000],
-        ]);
+    $offered = new OfferServicesAtLocation(location: $scranton)->execute();
 
-        $offered = new OfferServicesAtLocation(location: $scranton)->execute();
+    expect($offered->isEmpty())->toBeTrue();
+    expect(LocationService::query()->where('location_id', $scranton->id)->count())->toEqual(1);
+    expect(LocationService::query()->where('location_id', $scranton->id)->first()->prices)->toEqual(['CAD' => 4000]);
+});
 
-        $this->assertTrue($offered->isEmpty());
-        $this->assertEquals(1, LocationService::query()->where('location_id', $scranton->id)->count());
-        $this->assertEquals(['CAD' => 4000], LocationService::query()->where('location_id', $scranton->id)->first()->prices);
-    }
+it('never offers a service of another company', function () {
+    $dunderMifflin = Company::factory()->create();
+    $scranton = Location::factory()->create(['company_id' => $dunderMifflin->id]);
+    $vance = Company::factory()->create();
+    Service::factory()->create(['company_id' => $vance->id]);
 
-    #[Test]
-    public function it_never_offers_a_service_of_another_company(): void
-    {
-        $dunderMifflin = Company::factory()->create();
-        $scranton = Location::factory()->create(['company_id' => $dunderMifflin->id]);
-        $vance = Company::factory()->create();
-        Service::factory()->create(['company_id' => $vance->id]);
+    new OfferServicesAtLocation(location: $scranton)->execute();
 
-        new OfferServicesAtLocation(location: $scranton)->execute();
-
-        $this->assertEquals(0, LocationService::query()->count());
-    }
-}
+    expect(LocationService::query()->count())->toEqual(0);
+});

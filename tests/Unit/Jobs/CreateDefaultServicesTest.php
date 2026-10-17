@@ -2,38 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Jobs;
-
 use App\Jobs\CreateDefaultServices;
 use App\Models\Company;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateDefaultServicesTest extends TestCase
-{
-    use RefreshDatabase;
+it('copies the default catalogue into the company', function () {
+    $company = Company::factory()->create();
 
-    #[Test]
-    public function it_copies_the_default_catalogue_into_the_company(): void
-    {
-        $company = Company::factory()->create();
+    new CreateDefaultServices(companyId: $company->id)->handle();
 
-        new CreateDefaultServices(companyId: $company->id)->handle();
+    expect(ServiceCategory::query()->where('company_id', $company->id)->count())->toEqual(6);
+    expect(Service::query()->where('company_id', $company->id)->count())->toEqual(17);
+    expect($company->refresh()->default_catalogue_created_at)->not->toBeNull();
+});
 
-        $this->assertEquals(6, ServiceCategory::query()->where('company_id', $company->id)->count());
-        $this->assertEquals(17, Service::query()->where('company_id', $company->id)->count());
-        $this->assertNotNull($company->refresh()->default_catalogue_created_at);
-    }
+it('fails for a company that does not exist', function () {
 
-    #[Test]
-    public function it_fails_for_a_company_that_does_not_exist(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        new CreateDefaultServices(companyId: 404)->handle();
-    }
-}
+    new CreateDefaultServices(companyId: 404)->handle();
+})->throws(ModelNotFoundException::class);

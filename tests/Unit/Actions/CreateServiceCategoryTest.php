@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateServiceCategory;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -13,158 +11,119 @@ use App\Models\Role;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateServiceCategoryTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates a service category after the existing ones', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_service_category_after_the_existing_ones(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
+    $category = new CreateServiceCategory(
+        author: $michael,
+        company: $company,
+        name: ['en' => '<b>Colours</b>'],
+        description: ['en' => 'Everything that changes the colour'],
+    )->execute();
 
-        $category = new CreateServiceCategory(
-            author: $michael,
-            company: $company,
-            name: ['en' => '<b>Colours</b>'],
-            description: ['en' => 'Everything that changes the colour'],
-        )->execute();
+    expect($category)->toBeInstanceOf(ServiceCategory::class);
+    $category->refresh();
 
-        $this->assertInstanceOf(ServiceCategory::class, $category);
-        $category->refresh();
+    expect($category->company_id)->toEqual($company->id);
+    expect($category->name)->toEqual(['en' => 'Colours']);
+    expect($category->description)->toEqual(['en' => 'Everything that changes the colour']);
+    expect($category->position)->toEqual(2);
 
-        $this->assertEquals($company->id, $category->company_id);
-        $this->assertEquals(['en' => 'Colours'], $category->name);
-        $this->assertEquals(['en' => 'Everything that changes the colour'], $category->description);
-        $this->assertEquals(2, $category->position);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceCategoryCreated
+            && $job->user->id === $michael->id
+            && $job->parameters === ['name' => 'Colours'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceCategoryCreated
-                && $job->user->id === $michael->id
-                && $job->parameters === ['name' => 'Colours'],
-        );
-    }
+it('creates an unnamed category', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_an_unnamed_category(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $category = new CreateServiceCategory(author: $michael, company: $company, name: ['en' => '  '])->execute();
 
-        $category = new CreateServiceCategory(author: $michael, company: $company, name: ['en' => '  '])->execute();
+    expect($category->refresh()->name)->toEqual([]);
+    expect($category->missingLanguages())->toEqual(['en']);
 
-        $this->assertEquals([], $category->refresh()->name);
-        $this->assertEquals(['en'], $category->missingLanguages());
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Untitled'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Untitled'],
-        );
-    }
+it('throws when the company already has a category of that name', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Cuts']]);
 
-    #[Test]
-    public function it_throws_when_the_company_already_has_a_category_of_that_name(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Cuts'])->execute();
+})->throws(InvalidArgumentException::class);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Cuts']]);
+it('throws when a manager changes the catalogue', function () {
+    $company = Company::factory()->create();
+    $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
 
-        new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Cuts'])->execute();
-    }
+    new CreateServiceCategory(author: $dwight, company: $company, name: ['en' => 'Cuts'])->execute();
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_throws_when_a_manager_changes_the_catalogue(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+it('throws when the author belongs to another company', function () {
+    $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+    new CreateServiceCategory(author: $michael, company: Company::factory()->create(), name: ['en' => 'Cuts'])->execute();
+})->throws(ModelNotFoundException::class);
 
-        new CreateServiceCategory(author: $dwight, company: $company, name: ['en' => 'Cuts'])->execute();
-    }
+it('writes the name in every language of the salon', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_throws_when_the_author_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
+    $result = new CreateServiceCategory(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
 
-        new CreateServiceCategory(author: $michael, company: Company::factory()->create(), name: ['en' => 'Cuts'])->execute();
-    }
+    expect($result->refresh()->name)->toEqual(['fr' => 'Coupe', 'en' => 'Haircut']);
+    expect($result->description)->toEqual(['fr' => 'Courte ou longue']);
 
-    #[Test]
-    public function it_writes_the_name_in_every_language_of_the_salon(): void
-    {
-        Queue::fake();
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
+    );
+});
 
-        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+it('throws when a text is written in a language the salon does not use', function () {
+    $company = Company::factory()->create(['languages' => ['en']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $result = new CreateServiceCategory(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
+    new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Haircut', 'es' => 'Corte'])->execute();
+})->throws(InvalidArgumentException::class, 'es is not a language of the company');
 
-        $this->assertEquals(['fr' => 'Coupe', 'en' => 'Haircut'], $result->refresh()->name);
-        $this->assertEquals(['fr' => 'Courte ou longue'], $result->description);
+it('allows the same name in two different languages', function () {
+    Queue::fake();
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
-        );
-    }
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage', 'fr' => 'Mèches']]);
 
-    #[Test]
-    public function it_throws_when_a_text_is_written_in_a_language_the_salon_does_not_use(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('es is not a language of the company');
+    $result = new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Highlights', 'fr' => 'Balayage'])->execute();
 
-        $company = Company::factory()->create(['languages' => ['en']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    expect($result->name)->toEqual(['en' => 'Highlights', 'fr' => 'Balayage']);
+});
 
-        new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Haircut', 'es' => 'Corte'])->execute();
-    }
+it('throws when the name is taken in the same language', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe']]);
 
-    #[Test]
-    public function it_allows_the_same_name_in_two_different_languages(): void
-    {
-        Queue::fake();
-
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage', 'fr' => 'Mèches']]);
-
-        $result = new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Highlights', 'fr' => 'Balayage'])->execute();
-
-        $this->assertEquals(['en' => 'Highlights', 'fr' => 'Balayage'], $result->name);
-    }
-
-    #[Test]
-    public function it_throws_when_the_name_is_taken_in_the_same_language(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('The company already has a service category called Coupe');
-
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        ServiceCategory::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe']]);
-
-        new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Trim', 'fr' => 'Coupe'])->execute();
-    }
-}
+    new CreateServiceCategory(author: $michael, company: $company, name: ['en' => 'Trim', 'fr' => 'Coupe'])->execute();
+})->throws(InvalidArgumentException::class, 'The company already has a service category called Coupe');

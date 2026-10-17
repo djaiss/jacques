@@ -2,75 +2,57 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings\Account\Preferences;
-
 use App\Enums\TimeFormatEnum;
 use App\Models\User;
 use App\ViewModels\Settings\Account\Preferences\PreferencesViewModel;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class PreferencesViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('lists every language and ticks the one in use', function () {
+    app()->setLocale('fr_FR');
 
-    #[Test]
-    public function it_lists_every_language_and_ticks_the_one_in_use(): void
-    {
-        app()->setLocale('fr_FR');
+    $user = User::factory()->create(['locale' => 'fr_FR']);
 
-        $user = User::factory()->create(['locale' => 'fr_FR']);
+    $viewModel = new PreferencesViewModel(user: $user);
 
-        $viewModel = new PreferencesViewModel(user: $user);
+    $locales = $viewModel->locales();
 
-        $locales = $viewModel->locales();
+    expect($locales)->toHaveCount(count(config('jacques.locales')));
+    expect($viewModel->locale())->toEqual('fr_FR');
+    expect($viewModel->localeLabel())->toEqual('Français');
+    expect(collect($locales)->firstWhere('value', 'fr_FR')['selected'])->toBeTrue();
+    expect(collect($locales)->firstWhere('value', 'en')['selected'])->toBeFalse();
+});
 
-        $this->assertCount(count(config('jacques.locales')), $locales);
-        $this->assertEquals('fr_FR', $viewModel->locale());
-        $this->assertEquals('Français', $viewModel->localeLabel());
-        $this->assertTrue(collect($locales)->firstWhere('value', 'fr_FR')['selected']);
-        $this->assertFalse(collect($locales)->firstWhere('value', 'en')['selected']);
-    }
+it('falls back to the language of the application when the one in use is unknown', function () {
+    app()->setLocale('kl_GL');
 
-    #[Test]
-    public function it_falls_back_to_the_language_of_the_application_when_the_one_in_use_is_unknown(): void
-    {
-        app()->setLocale('kl_GL');
+    $user = User::factory()->create(['locale' => null]);
 
-        $user = User::factory()->create(['locale' => null]);
+    $viewModel = new PreferencesViewModel(user: $user);
 
-        $viewModel = new PreferencesViewModel(user: $user);
+    expect($viewModel->locale())->toEqual(config('app.locale'));
+});
 
-        $this->assertEquals(config('app.locale'), $viewModel->locale());
-    }
+it('lists both time formats and ticks the one in use', function () {
+    $user = User::factory()->create(['time_format' => TimeFormatEnum::TwelveHour]);
 
-    #[Test]
-    public function it_lists_both_time_formats_and_ticks_the_one_in_use(): void
-    {
-        $user = User::factory()->create(['time_format' => TimeFormatEnum::TwelveHour]);
+    $viewModel = new PreferencesViewModel(user: $user);
 
-        $viewModel = new PreferencesViewModel(user: $user);
+    $formats = $viewModel->timeFormats();
 
-        $formats = $viewModel->timeFormats();
+    expect($formats)->toHaveCount(2);
+    expect($viewModel->timeFormat())->toEqual(TimeFormatEnum::TwelveHour);
+    expect($viewModel->timeFormatLabel())->toEqual('12-hour');
+    expect(collect($formats)->firstWhere('value', '12')['selected'])->toBeTrue();
+    expect(collect($formats)->firstWhere('value', '24')['selected'])->toBeFalse();
+});
 
-        $this->assertCount(2, $formats);
-        $this->assertEquals(TimeFormatEnum::TwelveHour, $viewModel->timeFormat());
-        $this->assertEquals('12-hour', $viewModel->timeFormatLabel());
-        $this->assertTrue(collect($formats)->firstWhere('value', '12')['selected']);
-        $this->assertFalse(collect($formats)->firstWhere('value', '24')['selected']);
-    }
+it('writes the time the way the account asked for', function () {
+    Carbon::setTestNow(Carbon::create(2026, 7, 31, 17, 45));
 
-    #[Test]
-    public function it_writes_the_time_the_way_the_account_asked_for(): void
-    {
-        Carbon::setTestNow(Carbon::create(2026, 7, 31, 17, 45));
+    $user = User::factory()->create(['time_format' => TimeFormatEnum::TwelveHour]);
 
-        $user = User::factory()->create(['time_format' => TimeFormatEnum::TwelveHour]);
+    $viewModel = new PreferencesViewModel(user: $user);
 
-        $viewModel = new PreferencesViewModel(user: $user);
-
-        $this->assertEquals('5:45 PM', $viewModel->timePreview());
-    }
-}
+    expect($viewModel->timePreview())->toEqual('5:45 PM');
+});

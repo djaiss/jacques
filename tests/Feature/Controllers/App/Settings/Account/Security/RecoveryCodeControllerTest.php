@@ -2,40 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Security;
-
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class RecoveryCodeControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('hands out a new set of recovery codes', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_hands_out_a_new_set_of_recovery_codes(): void
-    {
-        Queue::fake();
+    $user = User::factory()->twoFactor()->create();
 
-        $user = User::factory()->twoFactor()->create();
+    $response = $this->actingAs($user)->post(route('settings.recoveryCodes.create'));
 
-        $response = $this->actingAs($user)->post(route('settings.recoveryCodes.create'));
+    $response->assertRedirect(route('settings.security.index'));
+    $response->assertSessionHas('status', 'Your recovery codes are new.');
 
-        $response->assertRedirect(route('settings.security.index'));
-        $response->assertSessionHas('status', 'Your recovery codes are new.');
+    expect($user->refresh()->two_factor_recovery_codes)->toHaveCount(8);
+});
 
-        $this->assertCount(8, $user->refresh()->two_factor_recovery_codes);
-    }
+it('is not found when two factor authentication is not in use', function () {
+    $user = User::factory()->create(['two_factor_confirmed_at' => null]);
 
-    #[Test]
-    public function it_is_not_found_when_two_factor_authentication_is_not_in_use(): void
-    {
-        $user = User::factory()->create(['two_factor_confirmed_at' => null]);
+    $response = $this->actingAs($user)->post(route('settings.recoveryCodes.create'));
 
-        $response = $this->actingAs($user)->post(route('settings.recoveryCodes.create'));
-
-        $response->assertNotFound();
-    }
-}
+    $response->assertNotFound();
+});

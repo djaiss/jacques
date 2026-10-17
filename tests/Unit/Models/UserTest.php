@@ -2,158 +2,122 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Company;
 use App\Models\EmailSent;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class UserTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a company', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_belongs_to_a_company(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create(['company_id' => $company->id]);
+    expect($user->company()->exists())->toBeTrue();
+    expect($user->company->name)->toEqual('Dunder Mifflin');
+});
 
-        $this->assertTrue($user->company()->exists());
-        $this->assertEquals('Dunder Mifflin', $user->company->name);
-    }
+it('has one staff record', function () {
+    $user = User::factory()->create();
+    Staff::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'first_name' => 'Michael',
+        'last_name' => 'Scott',
+        'display_name' => null,
+    ]);
 
-    #[Test]
-    public function it_has_one_staff_record(): void
-    {
-        $user = User::factory()->create();
-        Staff::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'first_name' => 'Michael',
-            'last_name' => 'Scott',
-            'display_name' => null,
-        ]);
+    expect($user->staff()->exists())->toBeTrue();
+    expect($user->staff->name)->toEqual('Michael Scott');
+});
 
-        $this->assertTrue($user->staff()->exists());
-        $this->assertEquals('Michael Scott', $user->staff->name);
-    }
+it('has no staff record by default', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_has_no_staff_record_by_default(): void
-    {
-        $user = User::factory()->create();
+    expect($user->staff()->exists())->toBeFalse();
+    expect($user->staff)->toBeNull();
+});
 
-        $this->assertFalse($user->staff()->exists());
-        $this->assertNull($user->staff);
-    }
+it('knows whether it holds the owner role', function () {
+    $michael = User::factory()->create();
+    $dwight = User::factory()->create(['company_id' => $michael->company_id]);
+    $owner = Role::factory()->create(['company_id' => $michael->company_id, 'slug' => Role::OWNER]);
+    $michael->roles()->attach($owner);
 
-    #[Test]
-    public function it_knows_whether_it_holds_the_owner_role(): void
-    {
-        $michael = User::factory()->create();
-        $dwight = User::factory()->create(['company_id' => $michael->company_id]);
-        $owner = Role::factory()->create(['company_id' => $michael->company_id, 'slug' => Role::OWNER]);
-        $michael->roles()->attach($owner);
+    expect($michael->isOwner())->toBeTrue();
+    expect($dwight->isOwner())->toBeFalse();
+});
 
-        $this->assertTrue($michael->isOwner());
-        $this->assertFalse($dwight->isOwner());
-    }
+it('has many emails sent', function () {
+    $user = User::factory()->create();
+    EmailSent::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'subject' => 'Somebody signed in from a new place',
+    ]);
 
-    #[Test]
-    public function it_has_many_emails_sent(): void
-    {
-        $user = User::factory()->create();
-        EmailSent::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'subject' => 'Somebody signed in from a new place',
-        ]);
+    expect($user->emailsSent()->exists())->toBeTrue();
+    expect($user->emailsSent->first()->subject)->toEqual('Somebody signed in from a new place');
+});
 
-        $this->assertTrue($user->emailsSent()->exists());
-        $this->assertEquals('Somebody signed in from a new place', $user->emailsSent->first()->subject);
-    }
+it('returns the password hash as the authentication password', function () {
+    $user = User::factory()->create(['password_hash' => Hash::make('dwightschrute')]);
 
-    #[Test]
-    public function it_returns_the_password_hash_as_the_authentication_password(): void
-    {
-        $user = User::factory()->create(['password_hash' => Hash::make('dwightschrute')]);
+    expect($user->getAuthPassword())->toEqual($user->password_hash);
+    expect(Hash::check('dwightschrute', $user->getAuthPassword()))->toBeTrue();
+});
 
-        $this->assertEquals($user->password_hash, $user->getAuthPassword());
-        $this->assertTrue(Hash::check('dwightschrute', $user->getAuthPassword()));
-    }
+it('returns an empty authentication password when the user signs in through sso', function () {
+    $user = User::factory()->singleSignOn()->create();
 
-    #[Test]
-    public function it_returns_an_empty_authentication_password_when_the_user_signs_in_through_sso(): void
-    {
-        $user = User::factory()->singleSignOn()->create();
+    expect($user->getAuthPassword())->toEqual('');
+});
 
-        $this->assertEquals('', $user->getAuthPassword());
-    }
+it('knows whether it uses single sign on', function () {
+    $withSso = User::factory()->singleSignOn()->create();
+    $withPassword = User::factory()->create();
 
-    #[Test]
-    public function it_knows_whether_it_uses_single_sign_on(): void
-    {
-        $withSso = User::factory()->singleSignOn()->create();
-        $withPassword = User::factory()->create();
+    expect($withSso->usesSingleSignOn())->toBeTrue();
+    expect($withPassword->usesSingleSignOn())->toBeFalse();
+});
 
-        $this->assertTrue($withSso->usesSingleSignOn());
-        $this->assertFalse($withPassword->usesSingleSignOn());
-    }
+it('hides the password hash when serialized', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_hides_the_password_hash_when_serialized(): void
-    {
-        $user = User::factory()->create();
+    expect($user->toArray())->not->toHaveKey('password_hash');
+    expect($user->toArray())->not->toHaveKey('remember_token');
+});
 
-        $this->assertArrayNotHasKey('password_hash', $user->toArray());
-        $this->assertArrayNotHasKey('remember_token', $user->toArray());
-    }
+it('casts the dates and the active flag', function () {
+    $user = User::factory()->inactive()->create([
+        'last_signed_in_at' => now(),
+        'password_changed_at' => '2026-07-31 09:30:00',
+    ]);
 
-    #[Test]
-    public function it_casts_the_dates_and_the_active_flag(): void
-    {
-        $user = User::factory()->inactive()->create([
-            'last_signed_in_at' => now(),
-            'password_changed_at' => '2026-07-31 09:30:00',
-        ]);
+    $user->refresh();
 
-        $user->refresh();
+    expect($user->is_active)->toBeFalse();
+    expect($user->last_signed_in_at)->not->toBeNull();
+    expect($user->email_verified_at)->not->toBeNull();
+    expect($user->password_changed_at)->toBeInstanceOf(Carbon::class);
+});
 
-        $this->assertFalse($user->is_active);
-        $this->assertNotNull($user->last_signed_in_at);
-        $this->assertNotNull($user->email_verified_at);
-        $this->assertInstanceOf(Carbon::class, $user->password_changed_at);
-    }
+it('has no password change date when the password was never set', function () {
+    $user = User::factory()->singleSignOn()->create();
 
-    #[Test]
-    public function it_has_no_password_change_date_when_the_password_was_never_set(): void
-    {
-        $user = User::factory()->singleSignOn()->create();
+    expect($user->password_changed_at)->toBeNull();
+});
 
-        $this->assertNull($user->password_changed_at);
-    }
+it('soft deletes', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_soft_deletes(): void
-    {
-        $user = User::factory()->create();
+    $user->delete();
 
-        $user->delete();
+    $this->assertSoftDeleted($user);
+});
 
-        $this->assertSoftDeleted($user);
-    }
-
-    #[Test]
-    public function it_knows_whether_the_email_address_was_confirmed(): void
-    {
-        $this->assertFalse(User::factory()->unverified()->create()->hasConfirmedEmail());
-        $this->assertTrue(User::factory()->create()->hasConfirmedEmail());
-    }
-}
+it('knows whether the email address was confirmed', function () {
+    expect(User::factory()->unverified()->create()->hasConfirmedEmail())->toBeFalse();
+    expect(User::factory()->create()->hasConfirmedEmail())->toBeTrue();
+});

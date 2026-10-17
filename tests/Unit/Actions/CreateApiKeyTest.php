@@ -2,91 +2,73 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateApiKey;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateApiKeyTest extends TestCase
-{
-    use RefreshDatabase;
+it('mints a key for the user', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_mints_a_key_for_the_user(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
+    $key = new CreateApiKey(user: $user, name: 'Dundie awards bot')->execute();
 
-        $key = new CreateApiKey(user: $user, name: 'Dundie awards bot')->execute();
+    expect($key)->toBeString();
+    expect($user->tokens()->count())->toBe(1);
+    expect($user->tokens()->first()->name)->toBe('Dundie awards bot');
 
-        $this->assertIsString($key);
-        $this->assertSame(1, $user->tokens()->count());
-        $this->assertSame('Dundie awards bot', $user->tokens()->first()->name);
+    $this->assertDatabaseHas('personal_access_tokens', [
+        'tokenable_id' => $user->id,
+        'tokenable_type' => User::class,
+        'name' => 'Dundie awards bot',
+    ]);
+});
 
-        $this->assertDatabaseHas('personal_access_tokens', [
-            'tokenable_id' => $user->id,
-            'tokenable_type' => User::class,
-            'name' => 'Dundie awards bot',
-        ]);
-    }
+it('returns the key in plain text and stores only its hash', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_returns_the_key_in_plain_text_and_stores_only_its_hash(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
+    $key = new CreateApiKey(user: $user, name: 'Deployment script')->execute();
 
-        $key = new CreateApiKey(user: $user, name: 'Deployment script')->execute();
+    expect($key)->toContain('|');
 
-        $this->assertStringContainsString('|', $key);
+    $stored = $user->tokens()->first()->token;
 
-        $stored = $user->tokens()->first()->token;
+    expect($stored)->not->toBe($key);
+    expect($stored)->toBe(hash('sha256', explode('|', $key)[1]));
+});
 
-        $this->assertNotSame($key, $stored);
-        $this->assertSame(hash('sha256', explode('|', $key)[1]), $stored);
-    }
+it('leaves a key unused until something uses it', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_leaves_a_key_unused_until_something_uses_it(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
+    new CreateApiKey(user: $user, name: 'Deployment script')->execute();
 
-        new CreateApiKey(user: $user, name: 'Deployment script')->execute();
+    expect($user->tokens()->first()->last_used_at)->toBeNull();
+});
 
-        $this->assertNull($user->tokens()->first()->last_used_at);
-    }
+it('logs the creation', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_logs_the_creation(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
+    new CreateApiKey(user: $user, name: 'Dundie awards bot')->execute();
 
-        new CreateApiKey(user: $user, name: 'Dundie awards bot')->execute();
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ApiKeyCreated
-                && $job->company->id === $company->id
-                && $job->user->id === $user->id
-                && $job->parameters === ['name' => 'Dundie awards bot'],
-        );
-    }
-}
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ApiKeyCreated
+            && $job->company->id === $company->id
+            && $job->user->id === $user->id
+            && $job->parameters === ['name' => 'Dundie awards bot'],
+    );
+});

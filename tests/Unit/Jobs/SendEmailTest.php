@@ -2,179 +2,156 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Jobs;
-
 use App\Enums\EmailTypeEnum;
 use App\Jobs\SendEmail;
 use App\Models\Company;
 use App\Models\EmailSent;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
-use InvalidArgumentException;
-use Mockery;
-use PHPUnit\Framework\Attributes\Test;
 use Resend\Email;
 use Resend\Service\Email as EmailService;
 use Tests\Fixtures\Mail\MagicLinkSignInMail;
-use Tests\TestCase;
 
-class SendEmailTest extends TestCase
-{
-    use RefreshDatabase;
+it('sends the email the traditional way', function () {
+    Config::set('app.use_resend', false);
+    Config::set('mail.from.address', 'noreply@jacques.test');
+    Mail::fake();
 
-    #[Test]
-    public function it_sends_the_email_the_traditional_way(): void
-    {
-        Config::set('app.use_resend', false);
-        Config::set('mail.from.address', 'noreply@jacques.test');
-        Mail::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    new SendEmail(
+        mailable: new MagicLinkSignInMail,
+        company: $company,
+        emailType: EmailTypeEnum::MagicLinkSignIn,
+        user: $user,
+    )->handle();
 
-        new SendEmail(
-            mailable: new MagicLinkSignInMail,
-            company: $company,
-            emailType: EmailTypeEnum::MagicLinkSignIn,
-            user: $user,
-        )->handle();
+    Mail::assertSent(
+        MagicLinkSignInMail::class,
+        fn (MagicLinkSignInMail $mail): bool => $mail->hasTo('michael.scott@dundermifflin.com'),
+    );
 
-        Mail::assertSent(
-            MagicLinkSignInMail::class,
-            fn (MagicLinkSignInMail $mail): bool => $mail->hasTo('michael.scott@dundermifflin.com'),
-        );
+    $emailSent = EmailSent::query()->latest()->first();
 
-        $emailSent = EmailSent::query()->latest()->first();
+    expect($emailSent->company_id)->toEqual($company->id);
+    expect($emailSent->user_id)->toEqual($user->id);
+    expect($emailSent->email_type)->toEqual(EmailTypeEnum::MagicLinkSignIn->value);
+    expect($emailSent->email_address)->toEqual('michael.scott@dundermifflin.com');
+    expect($emailSent->subject)->toEqual('A sign-in without a password on your Jacques account');
+    expect($emailSent->uuid)->toBeNull();
+    expect($emailSent->sent_at)->not->toBeNull();
+});
 
-        $this->assertEquals($company->id, $emailSent->company_id);
-        $this->assertEquals($user->id, $emailSent->user_id);
-        $this->assertEquals(EmailTypeEnum::MagicLinkSignIn->value, $emailSent->email_type);
-        $this->assertEquals('michael.scott@dundermifflin.com', $emailSent->email_address);
-        $this->assertEquals('A sign-in without a password on your Jacques account', $emailSent->subject);
-        $this->assertNull($emailSent->uuid);
-        $this->assertNotNull($emailSent->sent_at);
-    }
+it('sends the email with resend', function () {
+    Config::set('app.use_resend', true);
+    Config::set('mail.from.address', 'noreply@jacques.test');
 
-    #[Test]
-    public function it_sends_the_email_with_resend(): void
-    {
-        Config::set('app.use_resend', true);
-        Config::set('mail.from.address', 'noreply@jacques.test');
+    $emailsMock = Mockery::mock(EmailService::class);
+    $emailsMock
+        ->shouldReceive('send')
+        ->once()
+        ->with(Mockery::on(
+            fn ($arguments): bool => (
+                $arguments['from'] === 'noreply@jacques.test'
+                && $arguments['to'] === ['michael.scott@dundermifflin.com']
+                && $arguments['subject'] === 'A sign-in without a password on your Jacques account'
+                && is_string($arguments['html'])
+                && mb_strlen($arguments['html']) > 0
+            ),
+        ))
+        ->andReturn(Email::from(['id' => 'resend-uuid-12345']));
 
-        $emailsMock = Mockery::mock(EmailService::class);
-        $emailsMock
-            ->shouldReceive('send')
-            ->once()
-            ->with(Mockery::on(
-                fn ($arguments): bool => (
-                    $arguments['from'] === 'noreply@jacques.test'
-                    && $arguments['to'] === ['michael.scott@dundermifflin.com']
-                    && $arguments['subject'] === 'A sign-in without a password on your Jacques account'
-                    && is_string($arguments['html'])
-                    && mb_strlen($arguments['html']) > 0
-                ),
-            ))
-            ->andReturn(Email::from(['id' => 'resend-uuid-12345']));
+    $resendMock = Mockery::mock();
+    $resendMock
+        ->shouldReceive('emails')
+        ->once()
+        ->andReturn($emailsMock);
 
-        $resendMock = Mockery::mock();
-        $resendMock
-            ->shouldReceive('emails')
-            ->once()
-            ->andReturn($emailsMock);
+    app()->instance('resend', $resendMock);
 
-        app()->instance('resend', $resendMock);
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    new SendEmail(
+        mailable: new MagicLinkSignInMail,
+        company: $company,
+        emailType: EmailTypeEnum::MagicLinkSignIn,
+        user: $user,
+    )->handle();
 
-        new SendEmail(
-            mailable: new MagicLinkSignInMail,
-            company: $company,
-            emailType: EmailTypeEnum::MagicLinkSignIn,
-            user: $user,
-        )->handle();
+    $emailSent = EmailSent::query()->latest()->first();
 
-        $emailSent = EmailSent::query()->latest()->first();
+    expect($emailSent->uuid)->toEqual('resend-uuid-12345');
+    expect($emailSent->email_address)->toEqual('michael.scott@dundermifflin.com');
+});
 
-        $this->assertEquals('resend-uuid-12345', $emailSent->uuid);
-        $this->assertEquals('michael.scott@dundermifflin.com', $emailSent->email_address);
-    }
+it('sends the email to an address that has no user', function () {
+    Config::set('app.use_resend', false);
+    Mail::fake();
 
-    #[Test]
-    public function it_sends_the_email_to_an_address_that_has_no_user(): void
-    {
-        Config::set('app.use_resend', false);
-        Mail::fake();
+    $company = Company::factory()->create();
 
-        $company = Company::factory()->create();
+    new SendEmail(
+        mailable: new MagicLinkSignInMail,
+        company: $company,
+        emailType: EmailTypeEnum::MagicLinkCreated,
+        emailAddress: 'jan.levinson@dundermifflin.com',
+    )->handle();
 
-        new SendEmail(
-            mailable: new MagicLinkSignInMail,
-            company: $company,
-            emailType: EmailTypeEnum::MagicLinkCreated,
-            emailAddress: 'jan.levinson@dundermifflin.com',
-        )->handle();
+    Mail::assertSent(
+        MagicLinkSignInMail::class,
+        fn (MagicLinkSignInMail $mail): bool => $mail->hasTo('jan.levinson@dundermifflin.com'),
+    );
 
-        Mail::assertSent(
-            MagicLinkSignInMail::class,
-            fn (MagicLinkSignInMail $mail): bool => $mail->hasTo('jan.levinson@dundermifflin.com'),
-        );
+    $emailSent = EmailSent::query()->latest()->first();
 
-        $emailSent = EmailSent::query()->latest()->first();
+    expect($emailSent->company_id)->toEqual($company->id);
+    expect($emailSent->user_id)->toBeNull();
+    expect($emailSent->email_address)->toEqual('jan.levinson@dundermifflin.com');
+});
 
-        $this->assertEquals($company->id, $emailSent->company_id);
-        $this->assertNull($emailSent->user_id);
-        $this->assertEquals('jan.levinson@dundermifflin.com', $emailSent->email_address);
-    }
+it('prefers the given address over the email of the user', function () {
+    Config::set('app.use_resend', false);
+    Mail::fake();
 
-    #[Test]
-    public function it_prefers_the_given_address_over_the_email_of_the_user(): void
-    {
-        Config::set('app.use_resend', false);
-        Mail::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    new SendEmail(
+        mailable: new MagicLinkSignInMail,
+        company: $company,
+        emailType: EmailTypeEnum::MagicLinkSignIn,
+        user: $user,
+        emailAddress: 'michael.scarn@dundermifflin.com',
+    )->handle();
 
-        new SendEmail(
-            mailable: new MagicLinkSignInMail,
-            company: $company,
-            emailType: EmailTypeEnum::MagicLinkSignIn,
-            user: $user,
-            emailAddress: 'michael.scarn@dundermifflin.com',
-        )->handle();
+    $emailSent = EmailSent::query()->latest()->first();
 
-        $emailSent = EmailSent::query()->latest()->first();
+    expect($emailSent->user_id)->toEqual($user->id);
+    expect($emailSent->email_address)->toEqual('michael.scarn@dundermifflin.com');
+});
 
-        $this->assertEquals($user->id, $emailSent->user_id);
-        $this->assertEquals('michael.scarn@dundermifflin.com', $emailSent->email_address);
-    }
+it('throws when there is neither a user nor an address', function () {
 
-    #[Test]
-    public function it_throws_when_there_is_neither_a_user_nor_an_address(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    Config::set('app.use_resend', false);
+    Mail::fake();
 
-        Config::set('app.use_resend', false);
-        Mail::fake();
+    $company = Company::factory()->create();
 
-        $company = Company::factory()->create();
-
-        new SendEmail(
-            mailable: new MagicLinkSignInMail,
-            company: $company,
-            emailType: EmailTypeEnum::MagicLinkSignIn,
-        )->handle();
-    }
-}
+    new SendEmail(
+        mailable: new MagicLinkSignInMail,
+        company: $company,
+        emailType: EmailTypeEnum::MagicLinkSignIn,
+    )->handle();
+})->throws(InvalidArgumentException::class);

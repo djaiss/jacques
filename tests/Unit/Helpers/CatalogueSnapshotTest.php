@@ -2,46 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Helpers;
-
 use App\Helpers\CatalogueSnapshot;
 use App\Models\Company;
 use App\Models\Service;
 use App\Models\ServiceCategory;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CatalogueSnapshotTest extends TestCase
-{
-    use RefreshDatabase;
+it('keeps a service with its place prices and steps', function () {
+    $service = Service::factory()->create(['name' => ['en' => 'Beard trim'], 'prices' => ['CAD' => 2000], 'position' => 3]);
 
-    #[Test]
-    public function it_keeps_a_service_with_its_place_prices_and_steps(): void
-    {
-        $service = Service::factory()->create(['name' => ['en' => 'Beard trim'], 'prices' => ['CAD' => 2000], 'position' => 3]);
+    $snapshot = CatalogueSnapshot::ofService($service);
 
-        $snapshot = CatalogueSnapshot::ofService($service);
+    expect($snapshot['categories'])->toEqual([]);
+    expect($snapshot['services'][0]['name'])->toEqual(['en' => 'Beard trim']);
+    expect($snapshot['services'][0]['position'])->toEqual(3);
+    expect($snapshot['services'][0]['steps'])->toEqual([['name' => null, 'duration' => 30, 'requires_staff' => true]]);
+});
 
-        $this->assertEquals([], $snapshot['categories']);
-        $this->assertEquals(['en' => 'Beard trim'], $snapshot['services'][0]['name']);
-        $this->assertEquals(3, $snapshot['services'][0]['position']);
-        $this->assertEquals([['name' => null, 'duration' => 30, 'requires_staff' => true]], $snapshot['services'][0]['steps']);
-    }
+it('keeps the whole catalogue of a company', function () {
+    $company = Company::factory()->create();
+    $cuts = ServiceCategory::factory()->create(['company_id' => $company->id]);
+    Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $cuts->id]);
+    Service::factory()->create(['company_id' => $company->id]);
+    Service::factory()->create();
 
-    #[Test]
-    public function it_keeps_the_whole_catalogue_of_a_company(): void
-    {
-        $company = Company::factory()->create();
-        $cuts = ServiceCategory::factory()->create(['company_id' => $company->id]);
-        Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $cuts->id]);
-        Service::factory()->create(['company_id' => $company->id]);
-        Service::factory()->create();
+    $snapshot = CatalogueSnapshot::ofCompany($company);
 
-        $snapshot = CatalogueSnapshot::ofCompany($company);
-
-        $this->assertCount(1, $snapshot['categories']);
-        $this->assertCount(1, $snapshot['categories'][0]['services']);
-        $this->assertCount(1, $snapshot['services']);
-    }
-}
+    expect($snapshot['categories'])->toHaveCount(1);
+    expect($snapshot['categories'][0]['services'])->toHaveCount(1);
+    expect($snapshot['services'])->toHaveCount(1);
+});

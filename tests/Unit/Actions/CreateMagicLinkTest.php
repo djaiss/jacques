@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateMagicLink;
 use App\Enums\EmailTypeEnum;
 use App\Enums\UserActionEnum;
@@ -12,99 +10,73 @@ use App\Jobs\SendEmail;
 use App\Models\MagicLink;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateMagicLinkTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates a link and emails it', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_link_and_emails_it(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    $result = new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
 
-        $result = new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
+    expect($result)->toBeInstanceOf(User::class);
+    expect(MagicLink::query()->where('user_id', $user->id)->count())->toEqual(1);
 
-        $this->assertInstanceOf(User::class, $result);
-        $this->assertEquals(1, MagicLink::query()->where('user_id', $user->id)->count());
+    Queue::assertPushedOn(
+        queue: 'high',
+        job: SendEmail::class,
+        callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::MagicLinkCreated
+            && $job->user->id === $user->id,
+    );
 
-        Queue::assertPushedOn(
-            queue: 'high',
-            job: SendEmail::class,
-            callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::MagicLinkCreated
-                && $job->user->id === $user->id,
-        );
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::MagicLinkCreated,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::MagicLinkCreated,
-        );
-    }
+it('never stores the token it puts in the email', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_never_stores_the_token_it_puts_in_the_email(): void
-    {
-        Queue::fake();
+    User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-        User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
 
-        new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
+    $stored = MagicLink::query()->firstOrFail();
 
-        $stored = MagicLink::query()->firstOrFail();
+    Queue::assertPushed(SendEmail::class, function (SendEmail $job) use ($stored): bool {
+        preg_match('#/magic-link/([A-Za-z0-9]{64})#', $job->mailable->url, $matches);
 
-        Queue::assertPushed(SendEmail::class, function (SendEmail $job) use ($stored): bool {
-            preg_match('#/magic-link/([A-Za-z0-9]{64})#', $job->mailable->url, $matches);
+        expect($matches)->not->toBeEmpty('The email should carry a 64 character token.');
+        expect($stored->token)->not->toEqual($matches[1]);
+        expect($stored->token)->toEqual(hash('sha256', $matches[1]));
 
-            $this->assertNotEmpty($matches, 'The email should carry a 64 character token.');
-            $this->assertNotEquals($matches[1], $stored->token);
-            $this->assertEquals(hash('sha256', $matches[1]), $stored->token);
+        return true;
+    });
+});
 
-            return true;
-        });
-    }
+it('gives the link a short life', function () {
+    Queue::fake();
+    config(['jacques.magic_link_duration_minutes' => 5]);
 
-    #[Test]
-    public function it_gives_the_link_a_short_life(): void
-    {
-        Queue::fake();
-        config(['jacques.magic_link_duration_minutes' => 5]);
+    User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-        User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
 
-        new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
+    expect(MagicLink::query()->firstOrFail()->expires_at->timestamp)->toEqualWithDelta(now()->addMinutes(5)->timestamp, 2);
+});
 
-        $this->assertEqualsWithDelta(
-            now()->addMinutes(5)->timestamp,
-            MagicLink::query()->firstOrFail()->expires_at->timestamp,
-            2,
-        );
-    }
+it('refuses an address that has no account', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_refuses_an_address_that_has_no_account(): void
-    {
-        Queue::fake();
+    new CreateMagicLink(email: 'nobody@dundermifflin.com')->execute();
+})->throws(ModelNotFoundException::class);
 
-        $this->expectException(ModelNotFoundException::class);
+it('refuses a suspended user', function () {
+    Queue::fake();
 
-        new CreateMagicLink(email: 'nobody@dundermifflin.com')->execute();
-    }
+    User::factory()->inactive()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-    #[Test]
-    public function it_refuses_a_suspended_user(): void
-    {
-        Queue::fake();
-
-        User::factory()->inactive()->create(['email' => 'michael.scott@dundermifflin.com']);
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
-    }
-}
+    new CreateMagicLink(email: 'michael.scott@dundermifflin.com')->execute();
+})->throws(ModelNotFoundException::class);

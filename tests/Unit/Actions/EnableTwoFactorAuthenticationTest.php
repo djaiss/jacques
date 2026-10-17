@@ -2,56 +2,40 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\EnableTwoFactorAuthentication;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class EnableTwoFactorAuthenticationTest extends TestCase
-{
-    use RefreshDatabase;
+it('writes down a secret and draws the square for it', function () {
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-    #[Test]
-    public function it_writes_down_a_secret_and_draws_the_square_for_it(): void
-    {
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    $enrolment = new EnableTwoFactorAuthentication(user: $user)->execute();
 
-        $enrolment = new EnableTwoFactorAuthentication(user: $user)->execute();
+    expect($enrolment['secret'])->not->toBeEmpty();
+    expect($user->refresh()->two_factor_secret)->toEqual($enrolment['secret']);
 
-        $this->assertNotEmpty($enrolment['secret']);
-        $this->assertEquals($enrolment['secret'], $user->refresh()->two_factor_secret);
+    expect($enrolment['qrCode'])->toStartWith('<svg');
+    expect($enrolment['qrCode'])->not->toContain('<?xml');
+});
 
-        $this->assertStringStartsWith('<svg', $enrolment['qrCode']);
-        $this->assertStringNotContainsString('<?xml', $enrolment['qrCode']);
-    }
+it('leaves the account unprotected until the code is confirmed', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_leaves_the_account_unprotected_until_the_code_is_confirmed(): void
-    {
-        $user = User::factory()->create();
+    new EnableTwoFactorAuthentication(user: $user)->execute();
 
-        new EnableTwoFactorAuthentication(user: $user)->execute();
+    $user->refresh();
 
-        $user->refresh();
+    expect($user->two_factor_confirmed_at)->toBeNull();
+    expect($user->two_factor_recovery_codes)->toBeNull();
+    expect($user->usesTwoFactorAuthentication())->toBeFalse();
+});
 
-        $this->assertNull($user->two_factor_confirmed_at);
-        $this->assertNull($user->two_factor_recovery_codes);
-        $this->assertFalse($user->usesTwoFactorAuthentication());
-    }
+it('mints a new secret every time and forgets what came before', function () {
+    $user = User::factory()->twoFactor()->create();
 
-    #[Test]
-    public function it_mints_a_new_secret_every_time_and_forgets_what_came_before(): void
-    {
-        $user = User::factory()->twoFactor()->create();
+    $first = new EnableTwoFactorAuthentication(user: $user)->execute();
+    $second = new EnableTwoFactorAuthentication(user: $user)->execute();
 
-        $first = new EnableTwoFactorAuthentication(user: $user)->execute();
-        $second = new EnableTwoFactorAuthentication(user: $user)->execute();
-
-        $this->assertNotEquals($first['secret'], $second['secret']);
-        $this->assertEquals($second['secret'], $user->refresh()->two_factor_secret);
-        $this->assertNull($user->two_factor_recovery_codes);
-    }
-}
+    expect($second['secret'])->not->toEqual($first['secret']);
+    expect($user->refresh()->two_factor_secret)->toEqual($second['secret']);
+    expect($user->two_factor_recovery_codes)->toBeNull();
+});

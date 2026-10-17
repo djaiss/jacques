@@ -2,72 +2,56 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\DismissWelcomeScreen;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class DismissWelcomeScreenTest extends TestCase
-{
-    use RefreshDatabase;
+it('dismisses the welcome screen of the company', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_dismisses_the_welcome_screen_of_the_company(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->welcomeScreenPending()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->welcomeScreenPending()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create(['company_id' => $company->id]);
+    $result = new DismissWelcomeScreen(user: $user)->execute();
 
-        $result = new DismissWelcomeScreen(user: $user)->execute();
+    expect($result)->toBeInstanceOf(Company::class);
+    $this->assertDatabaseHas('companies', [
+        'id' => $company->id,
+        'is_welcome_screen_pending' => false,
+    ]);
 
-        $this->assertInstanceOf(Company::class, $result);
-        $this->assertDatabaseHas('companies', [
-            'id' => $company->id,
-            'is_welcome_screen_pending' => false,
-        ]);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::WelcomeScreenDismissed
+            && $job->company->id === $company->id
+            && $job->user->id === $user->id,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::WelcomeScreenDismissed
-                && $job->company->id === $company->id
-                && $job->user->id === $user->id,
-        );
-    }
+it('logs nothing when the welcome screen was already dismissed', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_logs_nothing_when_the_welcome_screen_was_already_dismissed(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create(['company_id' => $company->id]);
+    new DismissWelcomeScreen(user: $user)->execute();
 
-        new DismissWelcomeScreen(user: $user)->execute();
+    expect($company->refresh()->is_welcome_screen_pending)->toBeFalse();
+    Queue::assertNothingPushed();
+});
 
-        $this->assertFalse($company->refresh()->is_welcome_screen_pending);
-        Queue::assertNothingPushed();
-    }
+it('leaves the other companies alone', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_leaves_the_other_companies_alone(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->welcomeScreenPending()->create(['name' => 'Dunder Mifflin']);
+    $otherCompany = Company::factory()->welcomeScreenPending()->create(['name' => 'Staples']);
+    $user = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->welcomeScreenPending()->create(['name' => 'Dunder Mifflin']);
-        $otherCompany = Company::factory()->welcomeScreenPending()->create(['name' => 'Staples']);
-        $user = User::factory()->create(['company_id' => $company->id]);
+    new DismissWelcomeScreen(user: $user)->execute();
 
-        new DismissWelcomeScreen(user: $user)->execute();
-
-        $this->assertTrue($otherCompany->refresh()->is_welcome_screen_pending);
-    }
-}
+    expect($otherCompany->refresh()->is_welcome_screen_pending)->toBeTrue();
+});

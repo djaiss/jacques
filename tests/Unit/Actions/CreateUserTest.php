@@ -2,61 +2,43 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateUser;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateUserTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates a user in the company', function () {
+    $company = Company::factory()->create();
 
-    #[Test]
-    public function it_creates_a_user_in_the_company(): void
-    {
-        $company = Company::factory()->create();
+    $user = new CreateUser(
+        company: $company,
+        email: 'jim.halpert@dundermifflin.com',
+        password: 'bearsbeatsbattlestar',
+    )->execute();
 
-        $user = new CreateUser(
-            company: $company,
-            email: 'jim.halpert@dundermifflin.com',
-            password: 'bearsbeatsbattlestar',
-        )->execute();
+    expect($user)->toBeInstanceOf(User::class);
+    $this->assertDatabaseHas('users', [
+        'id' => $user->id,
+        'company_id' => $company->id,
+        'email' => 'jim.halpert@dundermifflin.com',
+        'is_active' => true,
+    ]);
+    expect(Hash::check('bearsbeatsbattlestar', $user->password_hash))->toBeTrue();
 
-        $this->assertInstanceOf(User::class, $user);
-        $this->assertDatabaseHas('users', [
-            'id' => $user->id,
-            'company_id' => $company->id,
-            'email' => 'jim.halpert@dundermifflin.com',
-            'is_active' => true,
-        ]);
-        $this->assertTrue(Hash::check('bearsbeatsbattlestar', $user->password_hash));
+    expect($user->password_changed_at?->timestamp)->toEqualWithDelta(now()->timestamp, 2);
+});
 
-        $this->assertEqualsWithDelta(
-            now()->timestamp,
-            $user->password_changed_at?->timestamp,
-            2,
-        );
-    }
+it('creates a user without a password when they sign in through sso', function () {
+    $company = Company::factory()->create();
 
-    #[Test]
-    public function it_creates_a_user_without_a_password_when_they_sign_in_through_sso(): void
-    {
-        $company = Company::factory()->create();
+    $user = new CreateUser(
+        company: $company,
+        email: 'pam.beesly@dundermifflin.com',
+        ssoProvider: 'google',
+    )->execute();
 
-        $user = new CreateUser(
-            company: $company,
-            email: 'pam.beesly@dundermifflin.com',
-            ssoProvider: 'google',
-        )->execute();
-
-        $this->assertNull($user->password_hash);
-        $this->assertNull($user->password_changed_at);
-        $this->assertEquals('google', $user->sso_provider);
-        $this->assertTrue($user->usesSingleSignOn());
-    }
-}
+    expect($user->password_hash)->toBeNull();
+    expect($user->password_changed_at)->toBeNull();
+    expect($user->sso_provider)->toEqual('google');
+    expect($user->usesSingleSignOn())->toBeTrue();
+});

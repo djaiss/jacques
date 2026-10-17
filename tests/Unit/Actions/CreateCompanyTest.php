@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateCompany;
 use App\Enums\OnboardingStepEnum;
 use App\Enums\PermissionEnum;
@@ -12,243 +10,208 @@ use App\Jobs\CreateDefaultServices;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Role;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateCompanyTest extends TestCase
-{
-    use RefreshDatabase;
+it('queues the creation of the default catalogue', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_queues_the_creation_of_the_default_catalogue(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    Queue::assertPushedOn(
+        queue: 'high',
+        job: CreateDefaultServices::class,
+        callback: fn (CreateDefaultServices $job): bool => $job->companyId === $company->id,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'high',
-            job: CreateDefaultServices::class,
-            callback: fn (CreateDefaultServices $job): bool => $job->companyId === $company->id,
-        );
-    }
+it('creates a company and its owner', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_company_and_its_owner(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company)->toBeInstanceOf(Company::class);
+    $this->assertDatabaseHas('companies', [
+        'id' => $company->id,
+        'name' => 'Dunder Mifflin',
+        'slug' => 'dunder-mifflin',
+    ]);
+    $this->assertDatabaseHas('users', [
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-        $this->assertInstanceOf(Company::class, $company);
-        $this->assertDatabaseHas('companies', [
-            'id' => $company->id,
-            'name' => 'Dunder Mifflin',
-            'slug' => 'dunder-mifflin',
-        ]);
-        $this->assertDatabaseHas('users', [
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    $owner = $company->users()->firstOrFail();
 
-        $owner = $company->users()->firstOrFail();
+    expect(Hash::check('thatswhatshesaid', $owner->password_hash))->toBeTrue();
 
-        $this->assertTrue(Hash::check('thatswhatshesaid', $owner->password_hash));
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::CompanyCreated
+            && $job->company->id === $company->id
+            && $job->user->id === $owner->id,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::CompanyCreated
-                && $job->company->id === $company->id
-                && $job->user->id === $owner->id,
-        );
-    }
+it('creates the staff record of the owner linked to their account', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_the_staff_record_of_the_owner_linked_to_their_account(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    $owner = $company->users()->firstOrFail();
 
-        $owner = $company->users()->firstOrFail();
+    $this->assertDatabaseHas('staff', [
+        'company_id' => $company->id,
+        'user_id' => $owner->id,
+        'first_name' => 'Michael',
+        'last_name' => 'Scott',
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
+    expect($owner->staff->name)->toEqual('Michael Scott');
+});
 
-        $this->assertDatabaseHas('staff', [
-            'company_id' => $company->id,
-            'user_id' => $owner->id,
-            'first_name' => 'Michael',
-            'last_name' => 'Scott',
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
-        $this->assertEquals('Michael Scott', $owner->staff->name);
-    }
+it('gives the company the roles it starts with', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_gives_the_company_the_roles_it_starts_with(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company->roles()->pluck('slug')->sort()->values()->all())->toEqual([Role::MANAGER, Role::OWNER, Role::RECEPTIONIST, Role::STAFF]);
+});
 
-        $this->assertEquals(
-            [Role::MANAGER, Role::OWNER, Role::RECEPTIONIST, Role::STAFF],
-            $company->roles()->pluck('slug')->sort()->values()->all(),
-        );
-    }
+it('gives the first user the owner role', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_gives_the_first_user_the_owner_role(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    $owner = $company->users()->firstOrFail();
 
-        $owner = $company->users()->firstOrFail();
+    expect($owner->roles->pluck('slug')->all())->toEqual([Role::OWNER]);
+    expect($owner->permission(PermissionEnum::BillingManage)->forCompany($company)->allowed())->toBeTrue();
+});
 
-        $this->assertEquals([Role::OWNER], $owner->roles->pluck('slug')->all());
-        $this->assertTrue(
-            $owner->permission(PermissionEnum::BillingManage)->forCompany($company)->allowed(),
-        );
-    }
+it('starts the company on a trial', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_starts_the_company_on_a_trial(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company->isOnTrial())->toBeTrue();
+});
 
-        $this->assertTrue($company->isOnTrial());
-    }
+it('owes the new company the welcome screen', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_owes_the_new_company_the_welcome_screen(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company->refresh()->is_welcome_screen_pending)->toBeTrue();
+});
 
-        $this->assertTrue($company->refresh()->is_welcome_screen_pending);
-    }
+it('starts the new company on the first onboarding step', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_starts_the_new_company_on_the_first_onboarding_step(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    $company->refresh();
 
-        $company->refresh();
+    expect($company->is_onboarding_pending)->toBeTrue();
+    expect($company->onboarding_step)->toEqual(OnboardingStepEnum::Location);
+});
 
-        $this->assertTrue($company->is_onboarding_pending);
-        $this->assertEquals(OnboardingStepEnum::Location, $company->onboarding_step);
-    }
+it('writes the catalogue in english until the salon chooses its languages', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_writes_the_catalogue_in_english_until_the_salon_chooses_its_languages(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company->refresh()->languages)->toEqual(['en']);
+});
 
-        $this->assertEquals(['en'], $company->refresh()->languages);
-    }
+it('prices the catalogue in canadian dollars until the salon chooses its currencies', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_prices_the_catalogue_in_canadian_dollars_until_the_salon_chooses_its_currencies(): void
-    {
-        Queue::fake();
+    $company = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $company = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    expect($company->refresh()->currencies)->toEqual(['CAD']);
+});
 
-        $this->assertEquals(['CAD'], $company->refresh()->currencies);
-    }
+it('makes the slug unique', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_makes_the_slug_unique(): void
-    {
-        Queue::fake();
+    $first = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Michael',
+        lastName: 'Scott',
+        email: 'michael.scott@dundermifflin.com',
+        password: 'thatswhatshesaid',
+    )->execute();
 
-        $first = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Michael',
-            lastName: 'Scott',
-            email: 'michael.scott@dundermifflin.com',
-            password: 'thatswhatshesaid',
-        )->execute();
+    $second = new CreateCompany(
+        name: 'Dunder Mifflin',
+        firstName: 'Jim',
+        lastName: 'Halpert',
+        email: 'jim.halpert@dundermifflin.com',
+        password: 'bearsbeatsbattlestar',
+    )->execute();
 
-        $second = new CreateCompany(
-            name: 'Dunder Mifflin',
-            firstName: 'Jim',
-            lastName: 'Halpert',
-            email: 'jim.halpert@dundermifflin.com',
-            password: 'bearsbeatsbattlestar',
-        )->execute();
-
-        $this->assertEquals('dunder-mifflin', $first->slug);
-        $this->assertEquals('dunder-mifflin-2', $second->slug);
-    }
-}
+    expect($first->slug)->toEqual('dunder-mifflin');
+    expect($second->slug)->toEqual('dunder-mifflin-2');
+});

@@ -2,62 +2,44 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Company;
 use App\Models\Service;
 use App\Models\ServiceCategory;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ServiceCategoryTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a company', function () {
+    $company = Company::factory()->create();
+    $category = ServiceCategory::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_belongs_to_a_company(): void
-    {
-        $company = Company::factory()->create();
-        $category = ServiceCategory::factory()->create(['company_id' => $company->id]);
+    expect($category->company()->exists())->toBeTrue();
+    expect($category->company->id)->toEqual($company->id);
+});
 
-        $this->assertTrue($category->company()->exists());
-        $this->assertEquals($company->id, $category->company->id);
-    }
+it('has many services in the order of their position', function () {
+    $category = ServiceCategory::factory()->create();
+    $colour = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id, 'position' => 2]);
+    $haircut = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id, 'position' => 1]);
 
-    #[Test]
-    public function it_has_many_services_in_the_order_of_their_position(): void
-    {
-        $category = ServiceCategory::factory()->create();
-        $colour = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id, 'position' => 2]);
-        $haircut = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id, 'position' => 1]);
+    expect($category->services()->exists())->toBeTrue();
+    expect($category->services->pluck('id')->all())->toEqual([$haircut->id, $colour->id]);
+});
 
-        $this->assertTrue($category->services()->exists());
-        $this->assertEquals([$haircut->id, $colour->id], $category->services->pluck('id')->all());
-    }
+it('reads its name in the language of the interface', function () {
+    $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+    $cuts = ServiceCategory::factory()->create([
+        'company_id' => $company->id,
+        'name' => ['fr' => 'Coupes', 'en' => 'Cuts'],
+    ]);
 
-    #[Test]
-    public function it_reads_its_name_in_the_language_of_the_interface(): void
-    {
-        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
-        $cuts = ServiceCategory::factory()->create([
-            'company_id' => $company->id,
-            'name' => ['fr' => 'Coupes', 'en' => 'Cuts'],
-        ]);
+    expect($cuts->localizedName('en'))->toEqual('Cuts');
+    expect($cuts->localizedName('de_DE'))->toEqual('Coupes');
+});
 
-        $this->assertEquals('Cuts', $cuts->localizedName('en'));
-        $this->assertEquals('Coupes', $cuts->localizedName('de_DE'));
-    }
+it('lists the languages its name is missing in', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
+    $cuts = ServiceCategory::factory()->create([
+        'company_id' => $company->id,
+        'name' => ['en' => 'Cuts', 'es' => 'Algo'],
+    ]);
 
-    #[Test]
-    public function it_lists_the_languages_its_name_is_missing_in(): void
-    {
-        $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
-        $cuts = ServiceCategory::factory()->create([
-            'company_id' => $company->id,
-            'name' => ['en' => 'Cuts', 'es' => 'Algo'],
-        ]);
-
-        $this->assertEquals(['fr', 'de'], $cuts->missingLanguages());
-    }
-}
+    expect($cuts->missingLanguages())->toEqual(['fr', 'de']);
+});

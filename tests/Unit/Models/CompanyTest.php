@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
 use App\Models\Location;
@@ -12,134 +10,102 @@ use App\Models\ServiceCategory;
 use App\Models\Staff;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CompanyTest extends TestCase
-{
-    use RefreshDatabase;
+it('has many users', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    User::factory()->count(2)->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_has_many_users(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        User::factory()->count(2)->create(['company_id' => $company->id]);
+    expect($company->users()->exists())->toBeTrue();
+    expect($company->users()->get())->toHaveCount(2);
+});
 
-        $this->assertTrue($company->users()->exists());
-        $this->assertCount(2, $company->users()->get());
-    }
+it('has many staff members in the order of their position', function () {
+    $company = Company::factory()->create();
+    $dwight = Staff::factory()->create(['company_id' => $company->id, 'position' => 2]);
+    $michael = Staff::factory()->create(['company_id' => $company->id, 'position' => 1]);
 
-    #[Test]
-    public function it_has_many_staff_members_in_the_order_of_their_position(): void
-    {
-        $company = Company::factory()->create();
-        $dwight = Staff::factory()->create(['company_id' => $company->id, 'position' => 2]);
-        $michael = Staff::factory()->create(['company_id' => $company->id, 'position' => 1]);
+    expect($company->staff()->exists())->toBeTrue();
+    expect($company->staff->pluck('id')->all())->toEqual([$michael->id, $dwight->id]);
+});
 
-        $this->assertTrue($company->staff()->exists());
-        $this->assertEquals([$michael->id, $dwight->id], $company->staff->pluck('id')->all());
-    }
+it('has many locations', function () {
+    $company = Company::factory()->create();
+    Location::factory()->count(2)->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_has_many_locations(): void
-    {
-        $company = Company::factory()->create();
-        Location::factory()->count(2)->create(['company_id' => $company->id]);
+    expect($company->locations()->exists())->toBeTrue();
+    expect($company->locations()->get())->toHaveCount(2);
+});
 
-        $this->assertTrue($company->locations()->exists());
-        $this->assertCount(2, $company->locations()->get());
-    }
+it('has many service categories in the order of their position', function () {
+    $company = Company::factory()->create();
+    $colours = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 2]);
+    $cuts = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
 
-    #[Test]
-    public function it_has_many_service_categories_in_the_order_of_their_position(): void
-    {
-        $company = Company::factory()->create();
-        $colours = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 2]);
-        $cuts = ServiceCategory::factory()->create(['company_id' => $company->id, 'position' => 1]);
+    expect($company->serviceCategories()->exists())->toBeTrue();
+    expect($company->serviceCategories->pluck('id')->all())->toEqual([$cuts->id, $colours->id]);
+});
 
-        $this->assertTrue($company->serviceCategories()->exists());
-        $this->assertEquals([$cuts->id, $colours->id], $company->serviceCategories->pluck('id')->all());
-    }
+it('has many services', function () {
+    $company = Company::factory()->create();
+    Service::factory()->count(2)->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_has_many_services(): void
-    {
-        $company = Company::factory()->create();
-        Service::factory()->count(2)->create(['company_id' => $company->id]);
+    expect($company->services()->exists())->toBeTrue();
+    expect($company->services()->get())->toHaveCount(2);
+});
 
-        $this->assertTrue($company->services()->exists());
-        $this->assertCount(2, $company->services()->get());
-    }
+it('knows whether it is on trial', function () {
+    $onTrial = Company::factory()->create(['trial_ends_at' => now()->addDays(10)]);
+    $expired = Company::factory()->create(['trial_ends_at' => now()->subDay()]);
+    $never = Company::factory()->create(['trial_ends_at' => null]);
 
-    #[Test]
-    public function it_knows_whether_it_is_on_trial(): void
-    {
-        $onTrial = Company::factory()->create(['trial_ends_at' => now()->addDays(10)]);
-        $expired = Company::factory()->create(['trial_ends_at' => now()->subDay()]);
-        $never = Company::factory()->create(['trial_ends_at' => null]);
+    expect($onTrial->isOnTrial())->toBeTrue();
+    expect($expired->isOnTrial())->toBeFalse();
+    expect($never->isOnTrial())->toBeFalse();
+});
 
-        $this->assertTrue($onTrial->isOnTrial());
-        $this->assertFalse($expired->isOnTrial());
-        $this->assertFalse($never->isOnTrial());
-    }
+it('does not owe the welcome screen by default', function () {
+    $company = Company::factory()->create();
+    $pending = Company::factory()->welcomeScreenPending()->create();
 
-    #[Test]
-    public function it_does_not_owe_the_welcome_screen_by_default(): void
-    {
-        $company = Company::factory()->create();
-        $pending = Company::factory()->welcomeScreenPending()->create();
+    expect($company->refresh()->is_welcome_screen_pending)->toBeFalse();
+    expect($pending->refresh()->is_welcome_screen_pending)->toBeTrue();
+});
 
-        $this->assertFalse($company->refresh()->is_welcome_screen_pending);
-        $this->assertTrue($pending->refresh()->is_welcome_screen_pending);
-    }
+it('does not owe the onboarding by default', function () {
+    $company = Company::factory()->create();
+    $pending = Company::factory()->onboardingPending()->create();
 
-    #[Test]
-    public function it_does_not_owe_the_onboarding_by_default(): void
-    {
-        $company = Company::factory()->create();
-        $pending = Company::factory()->onboardingPending()->create();
+    expect($company->refresh()->is_onboarding_pending)->toBeFalse();
+    expect($pending->refresh()->is_onboarding_pending)->toBeTrue();
+    expect($pending->onboarding_step)->toEqual(OnboardingStepEnum::Location);
+});
 
-        $this->assertFalse($company->refresh()->is_onboarding_pending);
-        $this->assertTrue($pending->refresh()->is_onboarding_pending);
-        $this->assertEquals(OnboardingStepEnum::Location, $pending->onboarding_step);
-    }
+it('keeps its languages in the order they were chosen', function () {
+    $company = Company::factory()->create([
+        'languages' => ['fr', 'en'],
+    ]);
 
-    #[Test]
-    public function it_keeps_its_languages_in_the_order_they_were_chosen(): void
-    {
-        $company = Company::factory()->create([
-            'languages' => ['fr', 'en'],
-        ]);
+    expect($company->refresh()->languages)->toEqual(['fr', 'en']);
+});
 
-        $this->assertEquals(['fr', 'en'], $company->refresh()->languages);
-    }
+it('keeps its currencies in the order they were chosen', function () {
+    $company = Company::factory()->create([
+        'currencies' => ['USD', 'CAD'],
+    ]);
 
-    #[Test]
-    public function it_keeps_its_currencies_in_the_order_they_were_chosen(): void
-    {
-        $company = Company::factory()->create([
-            'currencies' => ['USD', 'CAD'],
-        ]);
+    expect($company->refresh()->currencies)->toEqual(['USD', 'CAD']);
+});
 
-        $this->assertEquals(['USD', 'CAD'], $company->refresh()->currencies);
-    }
+it('has not received the default catalogue by default', function () {
+    $company = Company::factory()->create();
 
-    #[Test]
-    public function it_has_not_received_the_default_catalogue_by_default(): void
-    {
-        $company = Company::factory()->create();
+    expect($company->refresh()->default_catalogue_created_at)->toBeNull();
+});
 
-        $this->assertNull($company->refresh()->default_catalogue_created_at);
-    }
+it('knows when it received the default catalogue', function () {
+    $company = Company::factory()->create([
+        'default_catalogue_created_at' => '2026-10-14 09:00:00',
+    ]);
 
-    #[Test]
-    public function it_knows_when_it_received_the_default_catalogue(): void
-    {
-        $company = Company::factory()->create([
-            'default_catalogue_created_at' => '2026-10-14 09:00:00',
-        ]);
-
-        $this->assertInstanceOf(Carbon::class, $company->refresh()->default_catalogue_created_at);
-    }
-}
+    expect($company->refresh()->default_catalogue_created_at)->toBeInstanceOf(Carbon::class);
+});

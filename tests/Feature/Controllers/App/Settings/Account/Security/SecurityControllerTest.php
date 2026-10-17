@@ -2,156 +2,126 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Security;
-
 use App\Models\Company;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class SecurityControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('shows the security screen', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'password_changed_at' => now()->subDays(2),
+    ]);
+    Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Dwight',
+        'last_name' => 'Schrute',
+        'display_name' => null,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_shows_the_security_screen(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'password_changed_at' => now()->subDays(2),
-        ]);
-        Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Dwight',
-            'last_name' => 'Schrute',
-            'display_name' => null,
-            'user_id' => $user->id,
-        ]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('Security and access', escape: false);
+    $response->assertSee('Password', escape: false);
+    $response->assertSee('Current password', escape: false);
+    $response->assertSee('Dwight Schrute', escape: false);
+    $response->assertSee('Dunder Mifflin', escape: false);
+    $response->assertSee('Last changed 2 days ago', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('Security and access', escape: false);
-        $response->assertSee('Password', escape: false);
-        $response->assertSee('Current password', escape: false);
-        $response->assertSee('Dwight Schrute', escape: false);
-        $response->assertSee('Dunder Mifflin', escape: false);
-        $response->assertSee('Last changed 2 days ago', escape: false);
-    }
+it('carries the top bar and the way back to the settings hub', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
 
-    #[Test]
-    public function it_carries_the_top_bar_and_the_way_back_to_the_settings_hub(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('id="top-bar-menu"', escape: false);
+    $response->assertSee('Dunder Mifflin', escape: false);
+    $response->assertSee(route('settings.index'), escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('id="top-bar-menu"', escape: false);
-        $response->assertSee('Dunder Mifflin', escape: false);
-        $response->assertSee(route('settings.index'), escape: false);
-    }
+it('says there are no api keys when none have been made', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_says_there_are_no_api_keys_when_none_have_been_made(): void
-    {
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('API keys', escape: false);
+    $response->assertSee('Active · no API keys', escape: false);
+    $response->assertSee('No API keys yet', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('API keys', escape: false);
-        $response->assertSee('Active · no API keys', escape: false);
-        $response->assertSee('No API keys yet', escape: false);
-    }
+it('lists the api keys', function () {
+    $user = User::factory()->create();
+    $user->createToken('Dundie awards bot');
 
-    #[Test]
-    public function it_lists_the_api_keys(): void
-    {
-        $user = User::factory()->create();
-        $user->createToken('Dundie awards bot');
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('Active · 1 API key', escape: false);
+    $response->assertSee('Dundie awards bot', escape: false);
+    $response->assertSee('never used', escape: false);
+    $response->assertDontSee('No API keys yet', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('Active · 1 API key', escape: false);
-        $response->assertSee('Dundie awards bot', escape: false);
-        $response->assertSee('never used', escape: false);
-        $response->assertDontSee('No API keys yet', escape: false);
-    }
+it('leaves out the date when the password was never changed', function () {
+    $user = User::factory()->create(['password_changed_at' => null]);
 
-    #[Test]
-    public function it_leaves_out_the_date_when_the_password_was_never_changed(): void
-    {
-        $user = User::factory()->create(['password_changed_at' => null]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertDontSee('Last changed', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertDontSee('Last changed', escape: false);
-    }
+it('says there is nothing to change when the account signs in elsewhere', function () {
+    $user = User::factory()->singleSignOn()->create();
 
-    #[Test]
-    public function it_says_there_is_nothing_to_change_when_the_account_signs_in_elsewhere(): void
-    {
-        $user = User::factory()->singleSignOn()->create();
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('You sign in through your identity provider, so there is no password to change here.', escape: false);
+    $response->assertDontSee('Current password', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('You sign in through your identity provider, so there is no password to change here.', escape: false);
-        $response->assertDontSee('Current password', escape: false);
-    }
+it('offers to turn two factor authentication on when it is off', function () {
+    $user = User::factory()->create(['two_factor_confirmed_at' => null]);
 
-    #[Test]
-    public function it_offers_to_turn_two_factor_authentication_on_when_it_is_off(): void
-    {
-        $user = User::factory()->create(['two_factor_confirmed_at' => null]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('Two factor authentication', escape: false);
+    $response->assertSee('Authenticator app', escape: false);
+    $response->assertSee('Turn it on', escape: false);
+    $response->assertDontSee('Recovery codes', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('Two factor authentication', escape: false);
-        $response->assertSee('Authenticator app', escape: false);
-        $response->assertSee('Turn it on', escape: false);
-        $response->assertDontSee('Recovery codes', escape: false);
-    }
+it('shows the recovery codes when two factor authentication is on', function () {
+    $user = User::factory()->twoFactor()->create(['two_factor_confirmed_at' => now()->subDays(3)]);
 
-    #[Test]
-    public function it_shows_the_recovery_codes_when_two_factor_authentication_is_on(): void
-    {
-        $user = User::factory()->twoFactor()->create(['two_factor_confirmed_at' => now()->subDays(3)]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('Turned on 3 days ago', escape: false);
+    $response->assertSee('Recovery codes', escape: false);
+    $response->assertSee('scranton-1', escape: false);
+    $response->assertSee('scranton-2', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('Turned on 3 days ago', escape: false);
-        $response->assertSee('Recovery codes', escape: false);
-        $response->assertSee('scranton-1', escape: false);
-        $response->assertSee('scranton-2', escape: false);
-    }
+it('says so when every recovery code has been used', function () {
+    $user = User::factory()->twoFactor()->create(['two_factor_recovery_codes' => []]);
 
-    #[Test]
-    public function it_says_so_when_every_recovery_code_has_been_used(): void
-    {
-        $user = User::factory()->twoFactor()->create(['two_factor_recovery_codes' => []]);
+    $response = $this->actingAs($user)->get(route('settings.security.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.security.index'));
+    $response->assertStatus(200);
+    $response->assertSee('You have used every code. Ask for new ones before you need them.', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('You have used every code. Ask for new ones before you need them.', escape: false);
-    }
+it('redirects a visitor who is not signed in', function () {
+    $response = $this->get(route('settings.security.index'));
 
-    #[Test]
-    public function it_redirects_a_visitor_who_is_not_signed_in(): void
-    {
-        $response = $this->get(route('settings.security.index'));
-
-        $response->assertRedirect(route('auth.signIn.new'));
-    }
-}
+    $response->assertRedirect(route('auth.signIn.new'));
+});
