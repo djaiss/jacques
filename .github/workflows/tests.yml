@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup PHP ${{ matrix.php-version }}
-        uses: $/.github/actions/setup-php
+        uses: ./.github/actions/setup-php
         with:
           php-version: ${{ matrix.php-version }}
           # gd is what the image manipulation runs on, so the photo tests need

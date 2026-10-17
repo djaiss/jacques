@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup PHP
-        uses: $/.github/actions/setup-php
+        uses: ./.github/actions/setup-php
 
       - name: Run phpstan
         run: vendor/bin/phpstan analyse
@@ -47,7 +47,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup PHP
-        uses: $/.github/actions/setup-php
+        uses: ./.github/actions/setup-php
 
       - name: Check code style
         run: vendor/bin/pint --test

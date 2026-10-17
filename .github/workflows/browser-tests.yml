@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup PHP
-        uses: $/.github/actions/setup-php
+        uses: ./.github/actions/setup-php
         with:
           extensions: mbstring, dom, fileinfo, gd, sqlite
 
