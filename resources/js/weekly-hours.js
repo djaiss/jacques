@@ -43,13 +43,15 @@ const dayError = (day, sentences) => {
 
 const dayMinutes = (day) => (day.open ? day.ranges.reduce((sum, range) => sum + rangeMinutes(range), 0) : 0);
 
+const lastEnd = (ranges) => minutes(sorted(ranges).pop()?.end ?? '08:00');
+
 /*
- * A range after the last one of the day, an hour later, as long as the day
- * allows it, and never past 22:00.
+ * A range after the last one of the day, an hour later when the day allows it,
+ * right after it otherwise, and never past 22:00, so it never overlaps.
  */
 const nextRange = (ranges, length) => {
-    const last = sorted(ranges).pop();
-    const start = Math.min(minutes(last?.end ?? '08:00') + 60, 21 * 60);
+    const end = lastEnd(ranges);
+    const start = Math.max(end, Math.min(end + 60, 21 * 60));
 
     return { start: time(start), end: time(Math.min(start + length, 22 * 60)) };
 };
@@ -74,6 +76,9 @@ const week = (config) => ({
     },
     hasErrors(days) {
         return days.some((day) => dayError(day, this.sentences) !== '');
+    },
+    canAddRange(day) {
+        return lastEnd(day.ranges) < 22 * 60;
     },
     rangeText(range) {
         return this.sentences.range.replace(':start', label(range.start)).replace(':end', label(range.end));

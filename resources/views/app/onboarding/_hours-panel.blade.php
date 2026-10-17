@@ -66,7 +66,7 @@
             <p x-show="dayError(day)" class="text-sm text-error" role="alert" x-text="dayError(day)"></p>
             <p x-show="warning(day, days[index])" class="text-sm text-warning" x-text="warning(day, days[index])"></p>
 
-            <button type="button" x-on:click="addHours(day)" class="flex cursor-pointer items-center gap-1.5 py-1 text-sm font-semibold text-body transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none">
+            <button type="button" x-show="canAddRange(day)" x-on:click="addHours(day)" class="flex cursor-pointer items-center gap-1.5 py-1 text-sm font-semibold text-body transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>
               {{ __('Add hours') }}
             </button>

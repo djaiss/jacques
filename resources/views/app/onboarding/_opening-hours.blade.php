@@ -108,7 +108,7 @@
             <p x-show="dayError(day)" class="text-sm text-error" role="alert" x-text="dayError(day)"></p>
 
             <div class="flex flex-wrap items-center gap-x-4.5 gap-y-1">
-              <button type="button" x-on:click="addRange(day)" class="{{ $textButton }}">
+              <button type="button" x-show="canAddRange(day)" x-on:click="addRange(day)" class="{{ $textButton }}">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>
                 {{ __('Add opening hours') }}
               </button>

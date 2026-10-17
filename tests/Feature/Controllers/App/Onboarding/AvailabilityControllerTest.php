@@ -142,6 +142,35 @@ class AvailabilityControllerTest extends TestCase
     }
 
     #[Test]
+    public function it_refuses_an_open_day_without_hours(): void
+    {
+        [$michael, $scranton] = $this->owner();
+        $days = $this->week();
+        $days[3] = ['open' => '1'];
+
+        $response = $this->actingAs($michael)->put(route('onboarding.availability.update'), ['days' => $days, 'use_opening_hours' => '1']);
+
+        $response->assertSessionHasErrors('days.3.ranges');
+        $this->assertFalse($scranton->openingHours()->exists());
+    }
+
+    #[Test]
+    public function it_finishes_the_onboarding_with_every_day_closed(): void
+    {
+        Queue::fake();
+
+        [$michael, $scranton, $michaelStaff] = $this->owner();
+        $days = array_map(fn (array $day): array => [...$day, 'open' => '0'], $this->week());
+
+        $response = $this->actingAs($michael)->put(route('onboarding.availability.update'), ['days' => $days, 'use_opening_hours' => '1']);
+
+        $response->assertRedirect(route('dashboard.index'));
+        $this->assertFalse($scranton->openingHours()->exists());
+        $this->assertFalse(StaffWorkingHour::query()->where('staff_id', $michaelStaff->id)->exists());
+        $this->assertFalse($michael->company->refresh()->is_onboarding_pending);
+    }
+
+    #[Test]
     public function it_unticks_the_box_when_somebody_has_custom_hours(): void
     {
         [$michael, $scranton] = $this->owner();
