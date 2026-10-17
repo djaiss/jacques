@@ -136,5 +136,8 @@ jobs:
       # with the process number appended, and migrates it. The connection user
       # therefore has to be allowed to create databases, which is why the
       # postgres step above grants CREATEDB.
+      #
+      # The browser tests need real assets and a browser, which this workflow
+      # does not have. They run in the Browser tests workflow.
       - name: Run tests
-        run: vendor/bin/pest --parallel
+        run: vendor/bin/pest --parallel --testsuite=Unit,Feature
