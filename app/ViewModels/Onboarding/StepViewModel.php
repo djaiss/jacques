@@ -47,7 +47,7 @@ class StepViewModel
                 OnboardingStepEnum::Location => 30,
                 OnboardingStepEnum::Services => 80,
                 OnboardingStepEnum::Staff => 250,
-                OnboardingStepEnum::Appointments => 310,
+                OnboardingStepEnum::Availability => 310,
             },
         ], OnboardingStepEnum::cases());
     }

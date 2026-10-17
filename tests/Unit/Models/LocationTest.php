@@ -6,6 +6,7 @@ namespace Tests\Unit\Models;
 
 use App\Models\Company;
 use App\Models\Location;
+use App\Models\LocationOpeningHour;
 use App\Models\LocationService;
 use App\Models\LocationStaff;
 use App\Models\Service;
@@ -48,6 +49,25 @@ class LocationTest extends TestCase
         LocationService::factory()->create(['location_id' => $location->id]);
 
         $this->assertTrue($location->locationServices()->exists());
+    }
+
+    #[Test]
+    public function it_has_many_opening_hours(): void
+    {
+        $location = Location::factory()->create();
+        LocationOpeningHour::factory()->create(['location_id' => $location->id]);
+
+        $this->assertTrue($location->openingHours()->exists());
+    }
+
+    #[Test]
+    public function it_tells_whether_each_staff_member_follows_its_opening_hours(): void
+    {
+        $location = Location::factory()->create();
+        $jim = Staff::factory()->create(['company_id' => $location->company_id]);
+        LocationStaff::factory()->withCustomHours()->create(['location_id' => $location->id, 'staff_id' => $jim->id]);
+
+        $this->assertFalse((bool) $location->staff->first()->pivot->follows_opening_hours);
     }
 
     #[Test]

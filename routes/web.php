@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
-use App\Http\Controllers\App\Onboarding\AppointmentController as OnboardingAppointmentController;
+use App\Http\Controllers\App\DashboardController;
+use App\Http\Controllers\App\Onboarding\Availability\StaffHoursController as OnboardingStaffHoursController;
+use App\Http\Controllers\App\Onboarding\AvailabilityController as OnboardingAvailabilityController;
 use App\Http\Controllers\App\Onboarding\Catalogue\CatalogueController as OnboardingCatalogueController;
 use App\Http\Controllers\App\Onboarding\Catalogue\CategoryController as OnboardingCategoryController;
 use App\Http\Controllers\App\Onboarding\Catalogue\CategoryPositionController as OnboardingCategoryPositionController;
@@ -88,8 +90,18 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
         Route::delete('onboarding/staff/members/{staff}', [OnboardingTeamStaffController::class, 'destroy'])->name('onboarding.staff.members.destroy');
     });
 
-    Route::get('onboarding/appointments', [OnboardingAppointmentController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.index');
-    Route::put('onboarding/appointments', [OnboardingAppointmentController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Appointments->value)->name('onboarding.appointments.update');
+    Route::get('onboarding/availability', [OnboardingAvailabilityController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->name('onboarding.availability.index');
+    Route::put('onboarding/availability', [OnboardingAvailabilityController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->name('onboarding.availability.update');
+
+    // The working hours of one team member, in the panel of step 4.
+    Route::middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->group(function (): void {
+        Route::get('onboarding/availability/staff/{staff}/edit', [OnboardingStaffHoursController::class, 'edit'])->whereNumber('staff')->name('onboarding.availability.staff.edit');
+        Route::put('onboarding/availability/staff/{staff}', [OnboardingStaffHoursController::class, 'update'])->whereNumber('staff')->name('onboarding.availability.staff.update');
+    });
+});
+
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 });
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {

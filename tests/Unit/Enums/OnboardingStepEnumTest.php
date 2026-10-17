@@ -22,7 +22,7 @@ class OnboardingStepEnumTest extends TestCase
     public function it_orders_the_four_steps(): void
     {
         $this->assertEquals(
-            ['Location', 'Services', 'Staff', 'Appointments'],
+            ['Location', 'Services', 'Staff', 'Availability'],
             array_map(fn (OnboardingStepEnum $step): string => $step->label(), OnboardingStepEnum::cases()),
         );
     }
@@ -39,7 +39,7 @@ class OnboardingStepEnumTest extends TestCase
     public function it_gives_the_step_that_follows(): void
     {
         $this->assertEquals(OnboardingStepEnum::Services, OnboardingStepEnum::Location->next());
-        $this->assertEquals(OnboardingStepEnum::Appointments, OnboardingStepEnum::Staff->next());
-        $this->assertNull(OnboardingStepEnum::Appointments->next());
+        $this->assertEquals(OnboardingStepEnum::Availability, OnboardingStepEnum::Staff->next());
+        $this->assertNull(OnboardingStepEnum::Availability->next());
     }
 }

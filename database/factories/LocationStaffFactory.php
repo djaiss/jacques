@@ -36,4 +36,14 @@ class LocationStaffFactory extends Factory
             'is_active' => false,
         ]);
     }
+
+    /**
+     * An assignment whose staff member works hours of their own.
+     */
+    public function withCustomHours(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'follows_opening_hours' => false,
+        ]);
+    }
 }

@@ -122,7 +122,7 @@ class Staff extends Model
     public function locations(): BelongsToMany
     {
         return $this->belongsToMany(Location::class, 'location_staff')
-            ->withPivot('is_active')
+            ->withPivot(['is_active', 'follows_opening_hours'])
             ->withTimestamps();
     }
 

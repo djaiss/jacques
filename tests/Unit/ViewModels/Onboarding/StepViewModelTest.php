@@ -36,7 +36,7 @@ class StepViewModelTest extends TestCase
         $this->assertCount(4, $steps);
         $this->assertEquals([true, true, false, false], array_column($steps, 'isDone'));
         $this->assertEquals([false, true, false, false], array_column($steps, 'isCurrent'));
-        $this->assertEquals(['Location', 'Services', 'Staff', 'Appointments'], array_column($steps, 'label'));
+        $this->assertEquals(['Location', 'Services', 'Staff', 'Availability'], array_column($steps, 'label'));
     }
 
     #[Test]

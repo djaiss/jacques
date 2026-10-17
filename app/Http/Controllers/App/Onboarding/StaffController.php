@@ -31,6 +31,6 @@ class StaffController extends Controller
             step: OnboardingStepEnum::Staff,
         )->execute();
 
-        return redirect()->route('onboarding.appointments.index');
+        return redirect()->route('onboarding.availability.index');
     }
 }
