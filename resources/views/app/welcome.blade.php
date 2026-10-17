@@ -32,7 +32,14 @@
 
           <!-- signature -->
           <div class="mt-7 flex items-center gap-3.5 border-t border-hairline pt-6">
-            <x-avatar-initials name="Regis" :size="44" aria-hidden="true" />
+            <img
+              class="size-11 shrink-0 rounded-full object-cover"
+              src="{{ asset('img/regis.webp') }}"
+              srcset="{{ asset('img/regis.webp') }} 1x, {{ asset('img/regis@2x.webp') }} 2x"
+              width="44"
+              height="44"
+              alt=""
+            />
 
             <div class="space-y-0.5">
               <p class="text-[17px] font-bold tracking-[-0.01em] text-ink">Regis</p>

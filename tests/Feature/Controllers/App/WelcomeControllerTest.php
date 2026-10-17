@@ -17,6 +17,7 @@ it('shows the welcome screen to a new company', function () {
     $response->assertStatus(200);
     $response->assertSee('Hi Michael, welcome to Jacques.');
     $response->assertSee('Creator of Jacques');
+    $response->assertSee(asset('img/regis.webp'));
     $response->assertSee(route('welcome.update'));
     $response->assertSee('data-turbo="true"', false);
 });
