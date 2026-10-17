@@ -68,6 +68,12 @@
       <path d="M12 7.5V12l3 2"></path>
       @break
 
+    @case('team')
+      <circle cx="9" cy="8.5" r="3"></circle>
+      <path d="M3.5 19c0-3.3 2.5-5.4 5.5-5.4s5.5 2.1 5.5 5.4"></path>
+      <path d="M15.5 5.8a3 3 0 0 1 0 5.6M17.5 13.9c1.9.7 3 2.5 3 5.1"></path>
+      @break
+
     @case('roles')
       <path d="M12 3.2 19 6v5.6c0 4.4-2.9 7.4-7 9.2-4.1-1.8-7-4.8-7-9.2V6z"></path>
       @break

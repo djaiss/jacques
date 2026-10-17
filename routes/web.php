@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
 use App\Http\Controllers\App\DashboardController;
+use App\Http\Controllers\App\Invitation\InvitationController;
+use App\Http\Controllers\App\Invitation\InvitationSignOutController;
 use App\Http\Controllers\App\Onboarding\Availability\StaffHoursController as OnboardingStaffHoursController;
 use App\Http\Controllers\App\Onboarding\AvailabilityController as OnboardingAvailabilityController;
 use App\Http\Controllers\App\Onboarding\Catalogue\CatalogueController as OnboardingCatalogueController;
@@ -13,6 +15,8 @@ use App\Http\Controllers\App\Onboarding\Catalogue\RestorationController as Onboa
 use App\Http\Controllers\App\Onboarding\Catalogue\ServiceController as OnboardingCatalogueServiceController;
 use App\Http\Controllers\App\Onboarding\Catalogue\ServiceDurationController as OnboardingServiceDurationController;
 use App\Http\Controllers\App\Onboarding\Catalogue\ServicePriceController as OnboardingServicePriceController;
+use App\Http\Controllers\App\Onboarding\CompletionController as OnboardingCompletionController;
+use App\Http\Controllers\App\Onboarding\CompletionInvitationController as OnboardingCompletionInvitationController;
 use App\Http\Controllers\App\Onboarding\LocationController as OnboardingLocationController;
 use App\Http\Controllers\App\Onboarding\OnboardingController;
 use App\Http\Controllers\App\Onboarding\ServiceController as OnboardingServiceController;
@@ -34,6 +38,10 @@ use App\Http\Controllers\App\Settings\Administration\LocationController;
 use App\Http\Controllers\App\Settings\Administration\LocationPeopleController;
 use App\Http\Controllers\App\Settings\Administration\RoleController;
 use App\Http\Controllers\App\Settings\Administration\RolePeopleController;
+use App\Http\Controllers\App\Settings\Administration\StaffInvitationController;
+use App\Http\Controllers\App\Settings\Administration\StaffInvitationRevocationController;
+use App\Http\Controllers\App\Settings\Administration\StaffInvitationSendingController;
+use App\Http\Controllers\App\Settings\Administration\TeamController;
 use App\Http\Controllers\App\Settings\SettingsController;
 use App\Http\Controllers\App\WelcomeController;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +55,13 @@ Route::get('/', function () {
 Route::middleware(['auth', 'set.locale'])->group(function (): void {
     Route::get('welcome', [WelcomeController::class, 'index'])->name('welcome.index');
     Route::put('welcome', [WelcomeController::class, 'update'])->name('welcome.update');
+});
+
+// The page a staff member reaches from their invitation email, signed in or not.
+Route::middleware(['set.locale', 'throttle:6,1'])->group(function (): void {
+    Route::get('invitations/{token}', [InvitationController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->name('invitations.show');
+    Route::post('invitations/{token}', [InvitationController::class, 'create'])->where('token', '[A-Za-z0-9]{64}')->name('invitations.create');
+    Route::post('invitations/{token}/sign-out', [InvitationSignOutController::class, 'create'])->where('token', '[A-Za-z0-9]{64}')->name('invitations.signOut.create');
 });
 
 // The four steps a new salon goes through once the welcome screen is behind it.
@@ -92,6 +107,10 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
     Route::get('onboarding/availability', [OnboardingAvailabilityController::class, 'index'])->middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->name('onboarding.availability.index');
     Route::put('onboarding/availability', [OnboardingAvailabilityController::class, 'update'])->middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->name('onboarding.availability.update');
+
+    // Outside the step gate: the onboarding is over by the time it is shown.
+    Route::get('onboarding/completion', [OnboardingCompletionController::class, 'index'])->name('onboarding.completion.index');
+    Route::post('onboarding/completion/invitations', [OnboardingCompletionInvitationController::class, 'create'])->name('onboarding.completion.invitations.create');
 
     // The working hours of one team member, in the panel of step 4.
     Route::middleware('onboarding.step:'.OnboardingStepEnum::Availability->value)->group(function (): void {
@@ -155,4 +174,10 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
     Route::post('settings/administration/locations/{location}/people', [LocationPeopleController::class, 'create'])->whereNumber('location')->name('settings.locationPeople.create');
     Route::delete('settings/administration/locations/{location}/people/{staff}', [LocationPeopleController::class, 'destroy'])->whereNumber(['location', 'staff'])->name('settings.locationPeople.destroy');
+
+    Route::get('settings/administration/team', [TeamController::class, 'index'])->name('settings.team.index');
+    Route::post('settings/administration/team/{staff}/invitation', [StaffInvitationController::class, 'create'])->whereNumber('staff')->name('settings.staffInvitations.create');
+    Route::delete('settings/administration/team/{staff}/invitation', [StaffInvitationController::class, 'destroy'])->whereNumber('staff')->name('settings.staffInvitations.destroy');
+    Route::post('settings/administration/team/{staff}/invitation/sending', [StaffInvitationSendingController::class, 'create'])->whereNumber('staff')->name('settings.staffInvitationSendings.create');
+    Route::post('settings/administration/team/{staff}/invitation/revocation', [StaffInvitationRevocationController::class, 'create'])->whereNumber('staff')->name('settings.staffInvitationRevocations.create');
 });

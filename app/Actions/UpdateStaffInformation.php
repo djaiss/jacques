@@ -17,7 +17,9 @@ use InvalidArgumentException;
  * Who may do it to whom comes from the roles of the author: a member gets
  * their own record and nobody else's, while somebody who looks after people
  * gets everybody. An email address belongs to one staff member of the company
- * at most, and removing it drops the invitation prepared for that address.
+ * at most. Removing it drops the invitation prepared for that address, and
+ * changing it stops the link already sent to the old one, so the invitation
+ * is prepared again for the new address.
  */
 class UpdateStaffInformation
 {
@@ -39,6 +41,7 @@ class UpdateStaffInformation
         $this->authorize();
         $this->sanitize();
         $this->validateEmail();
+        $this->resetInvitation();
         $this->update();
         $this->forgetInvitation();
         $this->log();
@@ -82,6 +85,19 @@ class UpdateStaffInformation
         if ($taken) {
             throw new InvalidArgumentException('Another staff member of the company already uses this email address');
         }
+    }
+
+    private function resetInvitation(): void
+    {
+        if ($this->email === null || $this->email === $this->staff->email) {
+            return;
+        }
+
+        $this->staff->invitation()->update([
+            'token_hash' => null,
+            'sent_at' => null,
+            'expires_at' => null,
+        ]);
     }
 
     private function forgetInvitation(): void

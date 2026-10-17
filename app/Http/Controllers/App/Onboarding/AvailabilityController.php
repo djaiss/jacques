@@ -72,6 +72,6 @@ class AvailabilityController extends Controller
             return back()->withErrors(['days' => __('Fix the opening hours marked in red to finish.')]);
         }
 
-        return redirect()->route('dashboard.index');
+        return redirect()->route('onboarding.completion.index');
     }
 }

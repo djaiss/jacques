@@ -142,7 +142,10 @@ it('opens the panel on a colleague with their invitation role', function () {
     expect($panel->removalQuestion())->toEqual('Dwight Schrute leaves the team and loses their services. Sure?');
     expect($panel->values()['invite'])->toBeTrue();
     expect($panel->values()['role'])->toEqual($manager->id);
-    expect($panel->preview()['subject'])->toEqual('Michael Scott invited you to join Dunder Mifflin Cuts');
+    expect($panel->preview()['subject'])->toEqual('Michael Scott has invited you to join Dunder Mifflin Cuts');
+    expect($panel->preview()['greeting'])->toEqual('Hi :first_name,');
+    expect($panel->preview()['button'])->toEqual('Accept invitation');
+    expect($panel->preview()['expiry'])->toEqual('This invitation expires in 7 days.');
 });
 
 /** @return array{0: User, 1: Location} */

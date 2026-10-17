@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\UpdateStaffInformation;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
+use App\Enums\StaffInvitationStatusEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
@@ -279,4 +280,56 @@ it('deletes the invitation when the email is removed', function () {
     )->execute();
 
     $this->assertModelMissing($invitation);
+});
+
+it('prepares the invitation again when the email changes', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $jim = Staff::factory()->create(['company_id' => $company->id, 'email' => 'jim.halpert@dundermifflin.com']);
+    $invitation = StaffInvitation::factory()->sent()->create(['staff_id' => $jim->id]);
+    $author = User::factory()->create(['company_id' => $company->id]);
+    $this->grant($author, PermissionEnum::StaffUpdate, ScopeEnum::Company);
+
+    new UpdateStaffInformation(
+        author: $author,
+        staff: $jim,
+        firstName: 'Jim',
+        lastName: 'Halpert',
+        displayName: null,
+        email: 'big.tuna@dundermifflin.com',
+        phone: null,
+        jobTitle: null,
+        bio: null,
+        isBookable: true,
+    )->execute();
+
+    $invitation->refresh();
+    expect($invitation->status())->toBe(StaffInvitationStatusEnum::Prepared);
+    expect($invitation->token_hash)->toBeNull();
+});
+
+it('keeps the link already sent when the email does not change', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $jim = Staff::factory()->create(['company_id' => $company->id, 'email' => 'jim.halpert@dundermifflin.com']);
+    $invitation = StaffInvitation::factory()->sent()->create(['staff_id' => $jim->id]);
+    $author = User::factory()->create(['company_id' => $company->id]);
+    $this->grant($author, PermissionEnum::StaffUpdate, ScopeEnum::Company);
+
+    new UpdateStaffInformation(
+        author: $author,
+        staff: $jim,
+        firstName: 'James',
+        lastName: 'Halpert',
+        displayName: null,
+        email: 'Jim.Halpert@dundermifflin.com',
+        phone: null,
+        jobTitle: null,
+        bio: null,
+        isBookable: true,
+    )->execute();
+
+    expect($invitation->refresh()->status())->toBe(StaffInvitationStatusEnum::Pending);
 });

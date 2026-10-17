@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Actions\PrepareStaffInvitationTest;
 
 use App\Actions\PrepareStaffInvitation;
+use App\Enums\StaffInvitationStatusEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
@@ -82,6 +83,40 @@ it('throws when the author may not manage roles', function () {
 
     new PrepareStaffInvitation(author: $pam, staff: $dwight, role: role($michael, Role::STAFF))->execute();
 })->throws(ModelNotFoundException::class);
+
+it('prepares a revoked invitation again from nothing', function () {
+    Queue::fake();
+
+    $michael = owner();
+    $dwight = Staff::factory()->create(['company_id' => $michael->company_id, 'email' => 'dwight@dundermifflin.com']);
+    StaffInvitation::factory()->revoked()->create(['staff_id' => $dwight->id, 'role_id' => role($michael, Role::STAFF)->id]);
+
+    $invitation = new PrepareStaffInvitation(author: $michael, staff: $dwight, role: role($michael, Role::STAFF))->execute();
+
+    expect($invitation->status())->toBe(StaffInvitationStatusEnum::Prepared);
+    expect($invitation->refresh()->revoked_at)->toBeNull();
+    expect($invitation->sent_at)->toBeNull();
+});
+
+it('keeps the link of a pending invitation when its role changes', function () {
+    Queue::fake();
+
+    $michael = owner();
+    $dwight = Staff::factory()->create(['company_id' => $michael->company_id, 'email' => 'dwight@dundermifflin.com']);
+    StaffInvitation::factory()->sent()->create(['staff_id' => $dwight->id, 'role_id' => role($michael, Role::STAFF)->id]);
+
+    $invitation = new PrepareStaffInvitation(author: $michael, staff: $dwight, role: role($michael, Role::MANAGER))->execute();
+
+    expect($invitation->status())->toBe(StaffInvitationStatusEnum::Pending);
+});
+
+it('throws when the invitation was already accepted', function () {
+    $michael = owner();
+    $dwight = Staff::factory()->create(['company_id' => $michael->company_id, 'email' => 'dwight@dundermifflin.com']);
+    StaffInvitation::factory()->accepted()->create(['staff_id' => $dwight->id, 'role_id' => role($michael, Role::STAFF)->id]);
+
+    new PrepareStaffInvitation(author: $michael, staff: $dwight, role: role($michael, Role::MANAGER))->execute();
+})->throws(InvalidArgumentException::class);
 
 function owner(): User
 {
