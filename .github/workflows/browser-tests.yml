@@ -1,0 +1,94 @@
+name: Browser tests
+
+# The tests only need to read the code they run against.
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Also on pushes to main, so anything that lands without going through a pull
+  # request is still tested.
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: Browser ${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: Browser tests
+
+    env:
+      DB_CONNECTION: sqlite
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, gd, sqlite
+          coverage: none
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer files
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-8.4-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-8.4
+            ${{ runner.os }}-composer-
+
+      - name: Install composer dependencies
+        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+
+      # Same reason as in the Static analysis workflow: the vite binary runs on
+      # node, and pinning it keeps the build stable across runner images.
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      # A browser runs the scripts and the styles for real, so the stub
+      # manifest of the Unit tests workflow is not enough here.
+      - name: Build assets
+        run: bun run build
+
+      - name: Install the browser
+        run: bunx playwright install --with-deps chromium
+
+      - name: Prepare environment
+        run: |
+          cp tests/.env.ci.sqlite .env
+          touch database/database.sqlite
+          php artisan key:generate
+
+      - name: Run browser tests
+        run: vendor/bin/pest --testsuite=Browser
+
+      - name: Upload screenshots of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-screenshots
+          path: tests/Browser/Screenshots
+          if-no-files-found: ignore
