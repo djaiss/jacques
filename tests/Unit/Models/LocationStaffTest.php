@@ -2,55 +2,37 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Location;
 use App\Models\LocationStaff;
 use App\Models\Staff;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationStaffTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a staff member', function () {
+    $staff = Staff::factory()->create();
+    $assignment = LocationStaff::factory()->create(['staff_id' => $staff->id]);
 
-    #[Test]
-    public function it_belongs_to_a_staff_member(): void
-    {
-        $staff = Staff::factory()->create();
-        $assignment = LocationStaff::factory()->create(['staff_id' => $staff->id]);
+    expect($assignment->staff()->exists())->toBeTrue();
+    expect($assignment->staff->id)->toEqual($staff->id);
+});
 
-        $this->assertTrue($assignment->staff()->exists());
-        $this->assertEquals($staff->id, $assignment->staff->id);
-    }
+it('belongs to a location', function () {
+    $location = Location::factory()->create();
+    $assignment = LocationStaff::factory()->create(['location_id' => $location->id]);
 
-    #[Test]
-    public function it_belongs_to_a_location(): void
-    {
-        $location = Location::factory()->create();
-        $assignment = LocationStaff::factory()->create(['location_id' => $location->id]);
+    expect($assignment->location()->exists())->toBeTrue();
+    expect($assignment->location->id)->toEqual($location->id);
+});
 
-        $this->assertTrue($assignment->location()->exists());
-        $this->assertEquals($location->id, $assignment->location->id);
-    }
+it('says when the staff member was assigned', function () {
+    $assignment = LocationStaff::factory()->create();
 
-    #[Test]
-    public function it_says_when_the_staff_member_was_assigned(): void
-    {
-        $assignment = LocationStaff::factory()->create();
+    expect($assignment->created_at)->not->toBeNull();
+    expect($assignment->created_at->timestamp)->toEqualWithDelta(now()->timestamp, 2);
+});
 
-        $this->assertNotNull($assignment->created_at);
-        $this->assertEqualsWithDelta(now()->timestamp, $assignment->created_at->timestamp, 2);
-    }
+it('casts is active to a boolean', function () {
+    $active = LocationStaff::factory()->create()->refresh();
+    $paused = LocationStaff::factory()->paused()->create()->refresh();
 
-    #[Test]
-    public function it_casts_is_active_to_a_boolean(): void
-    {
-        $active = LocationStaff::factory()->create()->refresh();
-        $paused = LocationStaff::factory()->paused()->create()->refresh();
-
-        $this->assertTrue($active->is_active);
-        $this->assertFalse($paused->is_active);
-    }
-}
+    expect($active->is_active)->toBeTrue();
+    expect($paused->is_active)->toBeFalse();
+});

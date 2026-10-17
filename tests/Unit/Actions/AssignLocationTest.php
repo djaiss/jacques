@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\AssignLocation;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -14,103 +12,79 @@ use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class AssignLocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('assigns somebody to a location', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_assigns_somebody_to_a_location(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
+    $dwight = Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Dwight',
+        'last_name' => 'Schrute',
+        'display_name' => null,
+    ]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $scranton = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton']);
-        $dwight = Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Dwight',
-            'last_name' => 'Schrute',
-            'display_name' => null,
-        ]);
+    $result = new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
 
-        $result = new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
+    expect($result)->toBeInstanceOf(Staff::class);
+    $this->assertDatabaseHas('location_staff', [
+        'staff_id' => $dwight->id,
+        'location_id' => $scranton->id,
+    ]);
 
-        $this->assertInstanceOf(Staff::class, $result);
-        $this->assertDatabaseHas('location_staff', [
-            'staff_id' => $dwight->id,
-            'location_id' => $scranton->id,
-        ]);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::StaffAssignedToLocation
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === [
+                'name' => 'Scranton',
+                'staff' => 'Dwight Schrute',
+            ],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::StaffAssignedToLocation
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === [
-                    'name' => 'Scranton',
-                    'staff' => 'Dwight Schrute',
-                ],
-        );
-    }
+it('changes nothing when they are already assigned', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_changes_nothing_when_they_are_already_assigned(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $dwight = Staff::factory()->create(['company_id' => $company->id]);
+    $dwight->locations()->attach($scranton);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = Staff::factory()->create(['company_id' => $company->id]);
-        $dwight->locations()->attach($scranton);
+    new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
 
-        new AssignLocation(author: $author, staff: $dwight, location: $scranton)->execute();
+    expect($dwight->locations()->count())->toEqual(1);
+});
 
-        $this->assertEquals(1, $dwight->locations()->count());
-    }
+it('throws when the author may not hand out roles', function () {
+    $company = Company::factory()->create();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $dwight = Staff::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_hand_out_roles(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new AssignLocation(author: $michael, staff: $dwight, location: $scranton)->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $dwight = Staff::factory()->create(['company_id' => $company->id]);
+it('throws when the staff member belongs to another company', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $scranton = Location::factory()->create(['company_id' => $company->id]);
+    $stranger = Staff::factory()->create();
 
-        new AssignLocation(author: $michael, staff: $dwight, location: $scranton)->execute();
-    }
+    new AssignLocation(author: $author, staff: $stranger, location: $scranton)->execute();
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_throws_when_the_staff_member_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+it('throws when the location belongs to another company', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $nashua = Location::factory()->create();
+    $dwight = Staff::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $scranton = Location::factory()->create(['company_id' => $company->id]);
-        $stranger = Staff::factory()->create();
-
-        new AssignLocation(author: $author, staff: $stranger, location: $scranton)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_location_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $nashua = Location::factory()->create();
-        $dwight = Staff::factory()->create(['company_id' => $company->id]);
-
-        new AssignLocation(author: $author, staff: $dwight, location: $nashua)->execute();
-    }
-}
+    new AssignLocation(author: $author, staff: $dwight, location: $nashua)->execute();
+})->throws(ModelNotFoundException::class);

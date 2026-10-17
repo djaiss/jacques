@@ -1,6 +1,11 @@
 <!--
 Sync Impact Report
-Version change: 1.2.0 -> 1.3.0
+Version change: 1.3.0 -> 1.4.0
+Rationale: the suite moves from PHPUnit to Pest (specs/014-pest-migration). The `tests/` constraint
+names Pest, and `.claude/rules/testing.md`, which principle III makes binding, now describes Pest
+tests, `expect()` assertions and the namespace a test file with helpers declares.
+
+Previous report (1.2.0 -> 1.3.0)
 Rationale: D3 now lets a team member exist without an account, so the matching invariant changes.
 A team member is a staff record, linked to at most one account, and is deleted only while no
 appointment mentions it.
@@ -163,7 +168,7 @@ that file first, then an amendment here.
   - `routes/`: `web.php` for the signed in application, `auth.php` for the credentials screens,
     `console.php` for scheduled work. `api.php` arrives with the public API.
   - `tests/`: `Unit` mirroring the application namespace, `Feature` for controllers, `Fixtures` for
-    any class a test needs. The suite runs on PHPUnit.
+    any class a test needs. The suite runs on Pest, and a test file declares no class.
   - `docs/specs/`: the product specification. `specs/`: the Spec Kit artifacts of each feature.
 - Data access MUST be scoped to the company the user belongs to. A request for a record of another
   company MUST fail as if the record did not exist, and that failure MUST be covered by a test.
@@ -208,4 +213,4 @@ new principle or materially expanded guidance, PATCH for wording that changes no
 A reviewer MUST be able to point at the action, the test and the translations for the change under
 review, and say which principles it had to satisfy.
 
-**Version**: 1.3.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-15
+**Version**: 1.4.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-16

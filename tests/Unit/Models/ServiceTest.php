@@ -2,182 +2,144 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceStep;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a company', function () {
+    $company = Company::factory()->create();
+    $service = Service::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_belongs_to_a_company(): void
-    {
-        $company = Company::factory()->create();
-        $service = Service::factory()->create(['company_id' => $company->id]);
+    expect($service->company()->exists())->toBeTrue();
+    expect($service->company->id)->toEqual($company->id);
+});
 
-        $this->assertTrue($service->company()->exists());
-        $this->assertEquals($company->id, $service->company->id);
-    }
+it('belongs to a category', function () {
+    $category = ServiceCategory::factory()->create();
+    $service = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id]);
 
-    #[Test]
-    public function it_belongs_to_a_category(): void
-    {
-        $category = ServiceCategory::factory()->create();
-        $service = Service::factory()->create(['company_id' => $category->company_id, 'service_category_id' => $category->id]);
+    expect($service->category()->exists())->toBeTrue();
+    expect($service->category->id)->toEqual($category->id);
+});
 
-        $this->assertTrue($service->category()->exists());
-        $this->assertEquals($category->id, $service->category->id);
-    }
+it('has no category by default', function () {
+    $service = Service::factory()->create();
 
-    #[Test]
-    public function it_has_no_category_by_default(): void
-    {
-        $service = Service::factory()->create();
+    expect($service->category)->toBeNull();
+});
 
-        $this->assertNull($service->category);
-    }
+it('has many steps in the order they are performed', function () {
+    $service = Service::factory()->create();
+    $second = ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2]);
 
-    #[Test]
-    public function it_has_many_steps_in_the_order_they_are_performed(): void
-    {
-        $service = Service::factory()->create();
-        $second = ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2]);
+    expect($service->steps()->exists())->toBeTrue();
+    expect($service->steps->pluck('position')->all())->toEqual([1, 2]);
+    expect($service->steps->last()->id)->toEqual($second->id);
+});
 
-        $this->assertTrue($service->steps()->exists());
-        $this->assertEquals([1, 2], $service->steps->pluck('position')->all());
-        $this->assertEquals($second->id, $service->steps->last()->id);
-    }
+it('has many location services', function () {
+    $locationService = LocationService::factory()->create();
 
-    #[Test]
-    public function it_has_many_location_services(): void
-    {
-        $locationService = LocationService::factory()->create();
+    expect($locationService->service->locationServices()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($locationService->service->locationServices()->exists());
-    }
+it('belongs to many locations', function () {
+    $location = Location::factory()->create();
+    $service = Service::factory()->create(['company_id' => $location->company_id]);
+    $service->locations()->attach($location->id, ['prices' => json_encode(['CAD' => 4000])]);
 
-    #[Test]
-    public function it_belongs_to_many_locations(): void
-    {
-        $location = Location::factory()->create();
-        $service = Service::factory()->create(['company_id' => $location->company_id]);
-        $service->locations()->attach($location->id, ['prices' => json_encode(['CAD' => 4000])]);
+    expect($service->locations()->exists())->toBeTrue();
+    expect(json_decode($service->locations->first()->pivot->prices, true))->toEqual(['CAD' => 4000]);
+});
 
-        $this->assertTrue($service->locations()->exists());
-        $this->assertEquals(['CAD' => 4000], json_decode($service->locations->first()->pivot->prices, true));
-    }
+it('lasts the time of its steps split into busy and free time', function () {
+    $service = Service::factory()->create();
+    $service->steps()->delete();
+    ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 1, 'duration' => 20, 'requires_staff' => true]);
+    ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2, 'duration' => 30, 'requires_staff' => false]);
+    ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 3, 'duration' => 15, 'requires_staff' => true]);
 
-    #[Test]
-    public function it_lasts_the_time_of_its_steps_split_into_busy_and_free_time(): void
-    {
-        $service = Service::factory()->create();
-        $service->steps()->delete();
-        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 1, 'duration' => 20, 'requires_staff' => true]);
-        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 2, 'duration' => 30, 'requires_staff' => false]);
-        ServiceStep::factory()->create(['service_id' => $service->id, 'position' => 3, 'duration' => 15, 'requires_staff' => true]);
+    $service->refresh();
 
-        $service->refresh();
+    expect($service->duration)->toEqual(65);
+    expect($service->busy_duration)->toEqual(35);
+    expect($service->free_duration)->toEqual(30);
+});
 
-        $this->assertEquals(65, $service->duration);
-        $this->assertEquals(35, $service->busy_duration);
-        $this->assertEquals(30, $service->free_duration);
-    }
+it('casts the prices and the active flag', function () {
+    $service = Service::factory()->inactive()->create(['prices' => ['CAD' => 3500, 'USD' => 2600]]);
 
-    #[Test]
-    public function it_casts_the_prices_and_the_active_flag(): void
-    {
-        $service = Service::factory()->inactive()->create(['prices' => ['CAD' => 3500, 'USD' => 2600]]);
+    expect($service->refresh()->prices)->toBe(['CAD' => 3500, 'USD' => 2600]);
+    expect($service->is_active)->toBeFalse();
+});
 
-        $this->assertSame(['CAD' => 3500, 'USD' => 2600], $service->refresh()->prices);
-        $this->assertFalse($service->is_active);
-    }
+it('reads its name in the language of the interface', function () {
+    $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+    $haircut = Service::factory()->create([
+        'company_id' => $company->id,
+        'name' => ['fr' => 'Coupe femme', 'en' => "Women's haircut"],
+    ]);
 
-    #[Test]
-    public function it_reads_its_name_in_the_language_of_the_interface(): void
-    {
-        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
-        $haircut = Service::factory()->create([
-            'company_id' => $company->id,
-            'name' => ['fr' => 'Coupe femme', 'en' => "Women's haircut"],
-        ]);
+    expect($haircut->localizedName('en'))->toEqual("Women's haircut");
+    expect($haircut->localizedName('de_DE'))->toEqual('Coupe femme');
+});
 
-        $this->assertEquals("Women's haircut", $haircut->localizedName('en'));
-        $this->assertEquals('Coupe femme', $haircut->localizedName('de_DE'));
-    }
+it('lists the currencies it has no price in', function () {
+    $company = Company::factory()->create(['currencies' => ['CAD', 'USD', 'EUR']]);
+    $haircut = Service::factory()->create([
+        'company_id' => $company->id,
+        'prices' => ['CAD' => 6500, 'GBP' => 3800],
+    ]);
 
-    #[Test]
-    public function it_lists_the_currencies_it_has_no_price_in(): void
-    {
-        $company = Company::factory()->create(['currencies' => ['CAD', 'USD', 'EUR']]);
-        $haircut = Service::factory()->create([
-            'company_id' => $company->id,
-            'prices' => ['CAD' => 6500, 'GBP' => 3800],
-        ]);
+    expect($haircut->missingCurrencies())->toEqual(['USD', 'EUR']);
+});
 
-        $this->assertEquals(['USD', 'EUR'], $haircut->missingCurrencies());
-    }
+it('lists the languages its name is missing in', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
+    $haircut = Service::factory()->create([
+        'company_id' => $company->id,
+        'name' => ['en' => "Women's haircut", 'es' => 'Algo'],
+    ]);
 
-    #[Test]
-    public function it_lists_the_languages_its_name_is_missing_in(): void
-    {
-        $company = Company::factory()->create(['languages' => ['en', 'fr', 'de']]);
-        $haircut = Service::factory()->create([
-            'company_id' => $company->id,
-            'name' => ['en' => "Women's haircut", 'es' => 'Algo'],
-        ]);
+    expect($haircut->missingLanguages())->toEqual(['fr', 'de']);
+});
 
-        $this->assertEquals(['fr', 'de'], $haircut->missingLanguages());
-    }
+it('lists the languages missing from its description and step names', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $colour = Service::factory()->create([
+        'company_id' => $company->id,
+        'name' => ['en' => 'Full Color', 'fr' => 'Coloration'],
+        'description' => ['en' => 'Roots and lengths'],
+    ]);
 
-    #[Test]
-    public function it_lists_the_languages_missing_from_its_description_and_step_names(): void
-    {
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $colour = Service::factory()->create([
-            'company_id' => $company->id,
-            'name' => ['en' => 'Full Color', 'fr' => 'Coloration'],
-            'description' => ['en' => 'Roots and lengths'],
-        ]);
+    expect($colour->missingLanguages())->toEqual(['fr']);
 
-        $this->assertEquals(['fr'], $colour->missingLanguages());
+    $colour->update(['description' => null]);
+    $colour->steps()->delete();
+    ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 1, 'name' => ['en' => 'Application', 'fr' => 'Application']]);
+    ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 2, 'name' => ['en' => 'Processing'], 'requires_staff' => false]);
 
-        $colour->update(['description' => null]);
-        $colour->steps()->delete();
-        ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 1, 'name' => ['en' => 'Application', 'fr' => 'Application']]);
-        ServiceStep::factory()->create(['service_id' => $colour->id, 'position' => 2, 'name' => ['en' => 'Processing'], 'requires_staff' => false]);
+    expect($colour->refresh()->missingLanguages())->toEqual(['fr']);
+    expect($colour->translatableTexts())->toHaveCount(3);
+});
 
-        $this->assertEquals(['fr'], $colour->refresh()->missingLanguages());
-        $this->assertCount(3, $colour->translatableTexts());
-    }
+it('ignores the name of a single step', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe'], 'description' => null]);
 
-    #[Test]
-    public function it_ignores_the_name_of_a_single_step(): void
-    {
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe'], 'description' => null]);
+    expect($haircut->missingLanguages())->toEqual([]);
+    expect($haircut->translatableTexts())->toHaveCount(1);
+});
 
-        $this->assertEquals([], $haircut->missingLanguages());
-        $this->assertCount(1, $haircut->translatableTexts());
-    }
+it('is bookable in a currency only with a price in it and a name in the first language', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr'], 'currencies' => ['CAD', 'USD']]);
+    $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'prices' => ['CAD' => 0]]);
+    $untitled = Service::factory()->create(['company_id' => $company->id, 'name' => ['fr' => 'Coupe'], 'prices' => ['CAD' => 3500]]);
 
-    #[Test]
-    public function it_is_bookable_in_a_currency_only_with_a_price_in_it_and_a_name_in_the_first_language(): void
-    {
-        $company = Company::factory()->create(['languages' => ['en', 'fr'], 'currencies' => ['CAD', 'USD']]);
-        $haircut = Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut'], 'prices' => ['CAD' => 0]]);
-        $untitled = Service::factory()->create(['company_id' => $company->id, 'name' => ['fr' => 'Coupe'], 'prices' => ['CAD' => 3500]]);
-
-        $this->assertTrue($haircut->isBookableIn('CAD'));
-        $this->assertFalse($haircut->isBookableIn('USD'));
-        $this->assertFalse($untitled->isBookableIn('CAD'));
-    }
-}
+    expect($haircut->isBookableIn('CAD'))->toBeTrue();
+    expect($haircut->isBookableIn('USD'))->toBeFalse();
+    expect($untitled->isBookableIn('CAD'))->toBeFalse();
+});

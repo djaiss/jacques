@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\AssignRole;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
@@ -14,154 +12,118 @@ use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class AssignRoleTest extends TestCase
-{
-    use RefreshDatabase;
+it('gives somebody a role', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_gives_somebody_a_role(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Salesman']);
+    $dwight = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'dwight.schrute@dundermifflin.com',
+    ]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $company->id, 'name' => 'Salesman']);
-        $dwight = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'dwight.schrute@dundermifflin.com',
-        ]);
+    $result = new AssignRole(author: $author, user: $dwight, role: $role)->execute();
 
-        $result = new AssignRole(author: $author, user: $dwight, role: $role)->execute();
+    expect($result)->toBeInstanceOf(User::class);
+    $this->assertDatabaseHas('user_roles', [
+        'user_id' => $dwight->id,
+        'role_id' => $role->id,
+    ]);
 
-        $this->assertInstanceOf(User::class, $result);
-        $this->assertDatabaseHas('user_roles', [
-            'user_id' => $dwight->id,
-            'role_id' => $role->id,
-        ]);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::RoleAssigned
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === [
+                'name' => 'Salesman',
+                'email' => 'dwight.schrute@dundermifflin.com',
+            ],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::RoleAssigned
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === [
-                    'name' => 'Salesman',
-                    'email' => 'dwight.schrute@dundermifflin.com',
-                ],
-        );
-    }
+it('changes nothing when they already hold the role', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_changes_nothing_when_they_already_hold_the_role(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
+    $dwight->roles()->attach($role->id);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
-        $dwight->roles()->attach($role->id);
+    new AssignRole(author: $author, user: $dwight, role: $role)->execute();
 
-        new AssignRole(author: $author, user: $dwight, role: $role)->execute();
+    expect($dwight->roles()->count())->toEqual(1);
+});
 
-        $this->assertEquals(1, $dwight->roles()->count());
-    }
+it('gives somebody the permissions of the role', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_gives_somebody_the_permissions_of_the_role(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+    RolePermission::factory()->create([
+        'role_id' => $role->id,
+        'permission' => PermissionEnum::CompanyManage,
+        'scope' => ScopeEnum::Company,
+    ]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $company->id]);
-        RolePermission::factory()->create([
-            'role_id' => $role->id,
-            'permission' => PermissionEnum::CompanyManage,
-            'scope' => ScopeEnum::Company,
-        ]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+    expect($dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed())->toBeFalse();
 
-        $this->assertFalse(
-            $dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed(),
-        );
+    new AssignRole(author: $author, user: $dwight, role: $role)->execute();
 
-        new AssignRole(author: $author, user: $dwight, role: $role)->execute();
+    expect($dwight->fresh()->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed())->toBeTrue();
+});
 
-        $this->assertTrue(
-            $dwight->fresh()->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed(),
-        );
-    }
+it('lets them through straight away', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_lets_them_through_straight_away(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+    RolePermission::factory()->create([
+        'role_id' => $role->id,
+        'permission' => PermissionEnum::CompanyManage,
+        'scope' => ScopeEnum::Company,
+    ]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $company->id]);
-        RolePermission::factory()->create([
-            'role_id' => $role->id,
-            'permission' => PermissionEnum::CompanyManage,
-            'scope' => ScopeEnum::Company,
-        ]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+    expect($dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed())->toBeFalse();
 
-        $this->assertFalse(
-            $dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed(),
-        );
+    new AssignRole(author: $author, user: $dwight, role: $role)->execute();
 
-        new AssignRole(author: $author, user: $dwight, role: $role)->execute();
+    expect($dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed())->toBeTrue();
+});
 
-        $this->assertTrue(
-            $dwight->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed(),
-        );
-    }
+it('throws when the author may not administer the company', function () {
+    $company = Company::factory()->create();
+    $member = User::factory()->create(['company_id' => $company->id]);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_administer_the_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new AssignRole(author: $member, user: $dwight, role: $role)->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $member = User::factory()->create(['company_id' => $company->id]);
-        $role = Role::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
+it('throws when the user belongs to another company', function () {
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+    $stranger = User::factory()->create();
 
-        new AssignRole(author: $member, user: $dwight, role: $role)->execute();
-    }
+    new AssignRole(author: $author, user: $stranger, role: $role)->execute();
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_throws_when_the_user_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+it('throws when the role belongs to another company', function () {
+    $dunderMifflin = Company::factory()->create();
+    $michaelScottPaperCompany = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage);
+    $role = Role::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
+    $dwight = User::factory()->create(['company_id' => $dunderMifflin->id]);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $company->id]);
-        $stranger = User::factory()->create();
-
-        new AssignRole(author: $author, user: $stranger, role: $role)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_role_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $dunderMifflin = Company::factory()->create();
-        $michaelScottPaperCompany = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $dunderMifflin->id]), PermissionEnum::RoleManage);
-        $role = Role::factory()->create(['company_id' => $michaelScottPaperCompany->id]);
-        $dwight = User::factory()->create(['company_id' => $dunderMifflin->id]);
-
-        new AssignRole(author: $author, user: $dwight, role: $role)->execute();
-    }
-}
+    new AssignRole(author: $author, user: $dwight, role: $role)->execute();
+})->throws(ModelNotFoundException::class);

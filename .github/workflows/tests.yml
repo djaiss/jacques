@@ -123,9 +123,18 @@ jobs:
       - name: Run migrations
         run: php artisan migrate --no-interaction -vvv
 
+      # A test file holds Pest functions only. A class there means a PHPUnit
+      # test came back, which the suite would still run.
+      - name: Reject test classes
+        run: |
+          if grep -rlE '^(final |abstract )?class ' tests/Unit tests/Feature; then
+            echo "Test files must not declare a class."
+            exit 1
+          fi
+
       # Paratest gives each process its own database, named after the one above
       # with the process number appended, and migrates it. The connection user
       # therefore has to be allowed to create databases, which is why the
       # postgres step above grants CREATEDB.
       - name: Run tests
-        run: php artisan test --parallel
+        run: vendor/bin/pest --parallel

@@ -2,127 +2,105 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings\Account\Logs;
-
 use App\Enums\UserActionEnum;
 use App\Models\Company;
 use App\Models\EmailSent;
 use App\Models\Log;
 use App\Models\User;
 use App\ViewModels\Settings\Account\Logs\LogsViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LogsViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('gives the logs of the user newest first', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_gives_the_logs_of_the_user_newest_first(): void
-    {
-        $user = User::factory()->create();
+    Log::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'action' => UserActionEnum::UserSignedIn->value,
+        'created_at' => now()->subDays(3),
+    ]);
+    Log::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'action' => UserActionEnum::UserPasswordUpdated->value,
+        'created_at' => now()->subDay(),
+    ]);
 
-        Log::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'action' => UserActionEnum::UserSignedIn->value,
-            'created_at' => now()->subDays(3),
-        ]);
-        Log::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'action' => UserActionEnum::UserPasswordUpdated->value,
-            'created_at' => now()->subDay(),
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
+    $logs = $viewModel->logs();
 
-        $viewModel = new LogsViewModel(user: $user);
-        $logs = $viewModel->logs();
+    expect($logs)->toHaveCount(2);
+    expect($logs[0]->action)->toEqual(UserActionEnum::UserPasswordUpdated->value);
+    expect($logs[1]->action)->toEqual(UserActionEnum::UserSignedIn->value);
+});
 
-        $this->assertCount(2, $logs);
-        $this->assertEquals(UserActionEnum::UserPasswordUpdated->value, $logs[0]->action);
-        $this->assertEquals(UserActionEnum::UserSignedIn->value, $logs[1]->action);
-    }
+it('leaves out the logs of somebody else', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $colleague = User::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_leaves_out_the_logs_of_somebody_else(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $colleague = User::factory()->create(['company_id' => $company->id]);
+    Log::factory()->create([
+        'company_id' => $company->id,
+        'user_id' => $colleague->id,
+    ]);
 
-        Log::factory()->create([
-            'company_id' => $company->id,
-            'user_id' => $colleague->id,
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
 
-        $viewModel = new LogsViewModel(user: $user);
+    expect($viewModel->logs())->toHaveCount(0);
+});
 
-        $this->assertCount(0, $viewModel->logs());
-    }
+it('gives five logs a page', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_gives_five_logs_a_page(): void
-    {
-        $user = User::factory()->create();
+    Log::factory()->count(7)->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-        Log::factory()->count(7)->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
 
-        $viewModel = new LogsViewModel(user: $user);
+    expect($viewModel->logs())->toHaveCount(5);
+    expect($viewModel->logs()->hasMorePages())->toBeTrue();
+});
 
-        $this->assertCount(5, $viewModel->logs());
-        $this->assertTrue($viewModel->logs()->hasMorePages());
-    }
+it('gives the last five emails sent newest first', function () {
+    $user = User::factory()->create();
+    EmailSent::factory()->count(6)->sequence(fn ($sequence): array => [
+        'subject' => 'Email '.$sequence->index,
+        'sent_at' => now()->subDays(6 - $sequence->index),
+    ])->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_gives_the_last_five_emails_sent_newest_first(): void
-    {
-        $user = User::factory()->create();
-        EmailSent::factory()->count(6)->sequence(fn ($sequence): array => [
-            'subject' => 'Email '.$sequence->index,
-            'sent_at' => now()->subDays(6 - $sequence->index),
-        ])->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
 
-        $viewModel = new LogsViewModel(user: $user);
+    expect($viewModel->emailsSent())->toHaveCount(5);
+    expect($viewModel->emailsSent()->first()->subject)->toEqual('Email 5');
+    expect($viewModel->hasMoreEmailsSent())->toBeTrue();
+});
 
-        $this->assertCount(5, $viewModel->emailsSent());
-        $this->assertEquals('Email 5', $viewModel->emailsSent()->first()->subject);
-        $this->assertTrue($viewModel->hasMoreEmailsSent());
-    }
+it('says there is nothing more to read when there are five emails or fewer', function () {
+    $user = User::factory()->create();
+    EmailSent::factory()->count(5)->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_says_there_is_nothing_more_to_read_when_there_are_five_emails_or_fewer(): void
-    {
-        $user = User::factory()->create();
-        EmailSent::factory()->count(5)->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
 
-        $viewModel = new LogsViewModel(user: $user);
+    expect($viewModel->hasMoreEmailsSent())->toBeFalse();
+});
 
-        $this->assertFalse($viewModel->hasMoreEmailsSent());
-    }
+it('hides the emails sent to somebody else', function () {
+    $user = User::factory()->create();
+    $colleague = User::factory()->create(['company_id' => $user->company_id]);
+    EmailSent::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $colleague->id,
+    ]);
 
-    #[Test]
-    public function it_hides_the_emails_sent_to_somebody_else(): void
-    {
-        $user = User::factory()->create();
-        $colleague = User::factory()->create(['company_id' => $user->company_id]);
-        EmailSent::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $colleague->id,
-        ]);
+    $viewModel = new LogsViewModel(user: $user);
 
-        $viewModel = new LogsViewModel(user: $user);
-
-        $this->assertCount(0, $viewModel->emailsSent());
-        $this->assertFalse($viewModel->hasMoreEmailsSent());
-    }
-}
+    expect($viewModel->emailsSent())->toHaveCount(0);
+    expect($viewModel->hasMoreEmailsSent())->toBeFalse();
+});

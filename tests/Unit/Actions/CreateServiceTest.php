@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\CreateService;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -14,337 +12,270 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class CreateServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('creates a service with its steps at the end of its category', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_service_with_its_steps_at_the_end_of_its_category(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $colours = ServiceCategory::factory()->create(['company_id' => $company->id]);
+    Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $colours->id, 'position' => 1]);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        $colours = ServiceCategory::factory()->create(['company_id' => $company->id]);
-        Service::factory()->create(['company_id' => $company->id, 'service_category_id' => $colours->id, 'position' => 1]);
+    $service = new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 3500],
+        steps: [
+            ['name' => ['en' => 'Application'], 'duration' => 20, 'requires_staff' => true],
+            ['name' => ['en' => 'Processing'], 'duration' => 30, 'requires_staff' => false],
+            ['name' => ['en' => 'Rinse'], 'duration' => 15, 'requires_staff' => true],
+        ],
+        description: ['en' => 'Roots and lengths'],
+        category: $colours,
+    )->execute();
 
-        $service = new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 3500],
-            steps: [
-                ['name' => ['en' => 'Application'], 'duration' => 20, 'requires_staff' => true],
-                ['name' => ['en' => 'Processing'], 'duration' => 30, 'requires_staff' => false],
-                ['name' => ['en' => 'Rinse'], 'duration' => 15, 'requires_staff' => true],
-            ],
-            description: ['en' => 'Roots and lengths'],
-            category: $colours,
-        )->execute();
+    expect($service)->toBeInstanceOf(Service::class);
+    $this->assertDatabaseHas('services', [
+        'id' => $service->id,
+        'company_id' => $company->id,
+        'service_category_id' => $colours->id,
+        'is_active' => true,
+        'position' => 2,
+    ]);
+    expect($service->refresh()->name)->toEqual(['en' => 'Colour']);
+    expect($service->prices)->toEqual(['CAD' => 3500]);
+    expect($service->description)->toEqual(['en' => 'Roots and lengths']);
+    $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 1, 'duration' => 20, 'requires_staff' => true]);
+    $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 2, 'duration' => 30, 'requires_staff' => false]);
+    $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 3, 'duration' => 15, 'requires_staff' => true]);
+    expect($service->steps[1]->name)->toEqual(['en' => 'Processing']);
+    expect($service->duration)->toEqual(65);
 
-        $this->assertInstanceOf(Service::class, $service);
-        $this->assertDatabaseHas('services', [
-            'id' => $service->id,
-            'company_id' => $company->id,
-            'service_category_id' => $colours->id,
-            'is_active' => true,
-            'position' => 2,
-        ]);
-        $this->assertEquals(['en' => 'Colour'], $service->refresh()->name);
-        $this->assertEquals(['CAD' => 3500], $service->prices);
-        $this->assertEquals(['en' => 'Roots and lengths'], $service->description);
-        $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 1, 'duration' => 20, 'requires_staff' => true]);
-        $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 2, 'duration' => 30, 'requires_staff' => false]);
-        $this->assertDatabaseHas('service_steps', ['service_id' => $service->id, 'position' => 3, 'duration' => 15, 'requires_staff' => true]);
-        $this->assertEquals(['en' => 'Processing'], $service->steps[1]->name);
-        $this->assertEquals(65, $service->duration);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceCreated
+            && $job->user->id === $michael->id
+            && $job->parameters === ['name' => 'Colour'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceCreated
-                && $job->user->id === $michael->id
-                && $job->parameters === ['name' => 'Colour'],
-        );
-    }
+it('creates a service without a category', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_creates_a_service_without_a_category(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $service = new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Beard trim'],
+        prices: ['CAD' => 0],
+        steps: [['duration' => 10, 'requires_staff' => true]],
+    )->execute();
 
-        $service = new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Beard trim'],
-            prices: ['CAD' => 0],
-            steps: [['duration' => 10, 'requires_staff' => true]],
-        )->execute();
+    expect($service->service_category_id)->toBeNull();
+    expect($service->position)->toEqual(1);
+});
 
-        $this->assertNull($service->service_category_id);
-        $this->assertEquals(1, $service->position);
-    }
+it('throws without a step', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-    #[Test]
-    public function it_throws_without_a_step(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    new CreateService(author: $michael, company: $company, name: ['en' => 'Colour'], prices: ['CAD' => 3500], steps: [])->execute();
+})->throws(InvalidArgumentException::class);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+it('throws when a step lasts less than a minute', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        new CreateService(author: $michael, company: $company, name: ['en' => 'Colour'], prices: ['CAD' => 3500], steps: [])->execute();
-    }
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 0, 'requires_staff' => true], ['duration' => 30, 'requires_staff' => false]],
+    )->execute();
+})->throws(InvalidArgumentException::class);
 
-    #[Test]
-    public function it_throws_when_a_step_lasts_less_than_a_minute(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+it('throws when the price is negative', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => -1],
+        steps: [['duration' => 20, 'requires_staff' => true]],
+    )->execute();
+})->throws(InvalidArgumentException::class);
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 0, 'requires_staff' => true], ['duration' => 30, 'requires_staff' => false]],
-        )->execute();
-    }
+it('stores one price per currency of the company', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_throws_when_the_price_is_negative(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    $company = Company::factory()->create(['currencies' => ['CAD', 'USD']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $service = new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 6500, 'USD' => 4800],
+        steps: [['duration' => 20, 'requires_staff' => true]],
+    )->execute();
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => -1],
-            steps: [['duration' => 20, 'requires_staff' => true]],
-        )->execute();
-    }
+    expect($service->refresh()->prices)->toEqual(['CAD' => 6500, 'USD' => 4800]);
+});
 
-    #[Test]
-    public function it_stores_one_price_per_currency_of_the_company(): void
-    {
-        Queue::fake();
+it('creates a service without a price in some currencies', function () {
+    Queue::fake();
 
-        $company = Company::factory()->create(['currencies' => ['CAD', 'USD']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $company = Company::factory()->create(['currencies' => ['CAD', 'USD']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $service = new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 6500, 'USD' => 4800],
-            steps: [['duration' => 20, 'requires_staff' => true]],
-        )->execute();
+    $service = new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 20, 'requires_staff' => true]],
+    )->execute();
 
-        $this->assertEquals(['CAD' => 6500, 'USD' => 4800], $service->refresh()->prices);
-    }
+    expect($service->missingCurrencies())->toEqual(['USD']);
+    expect($service->isBookableIn('CAD'))->toBeTrue();
+    expect($service->isBookableIn('USD'))->toBeFalse();
+});
 
-    #[Test]
-    public function it_creates_a_service_without_a_price_in_some_currencies(): void
-    {
-        Queue::fake();
+it('throws when no step requires a team member', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create(['currencies' => ['CAD', 'USD']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 20, 'requires_staff' => false]],
+    )->execute();
+})->throws(InvalidArgumentException::class, 'A service needs at least one step that requires a team member');
 
-        $service = new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 20, 'requires_staff' => true]],
-        )->execute();
+it('throws when a price is in a currency the company does not use', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $this->assertEquals(['USD'], $service->missingCurrencies());
-        $this->assertTrue($service->isBookableIn('CAD'));
-        $this->assertFalse($service->isBookableIn('USD'));
-    }
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Colour'],
+        prices: ['CAD' => 6500, 'EUR' => 4500],
+        steps: [['duration' => 20, 'requires_staff' => true]],
+    )->execute();
+})->throws(InvalidArgumentException::class, 'EUR is not a currency of the company');
 
-    #[Test]
-    public function it_throws_when_no_step_requires_a_team_member(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('A service needs at least one step that requires a team member');
+it('throws when the company already has a service of that name', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut']]);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Haircut'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 45, 'requires_staff' => true]],
+    )->execute();
+})->throws(InvalidArgumentException::class);
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 20, 'requires_staff' => false]],
-        )->execute();
-    }
+it('throws when the category belongs to another company', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-    #[Test]
-    public function it_throws_when_a_price_is_in_a_currency_the_company_does_not_use(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('EUR is not a currency of the company');
+    new CreateService(
+        author: $michael,
+        company: $company,
+        name: ['en' => 'Haircut'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 45, 'requires_staff' => true]],
+        category: ServiceCategory::factory()->create(),
+    )->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+it('throws when a manager changes the catalogue', function () {
+    $company = Company::factory()->create();
+    $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Colour'],
-            prices: ['CAD' => 6500, 'EUR' => 4500],
-            steps: [['duration' => 20, 'requires_staff' => true]],
-        )->execute();
-    }
+    new CreateService(
+        author: $dwight,
+        company: $company,
+        name: ['en' => 'Haircut'],
+        prices: ['CAD' => 3500],
+        steps: [['duration' => 45, 'requires_staff' => true]],
+    )->execute();
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_throws_when_the_company_already_has_a_service_of_that_name(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+it('writes the name in every language of the salon', function () {
+    Queue::fake();
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut']]);
+    $company = Company::factory()->create(['languages' => ['fr', 'en']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Haircut'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 45, 'requires_staff' => true]],
-        )->execute();
-    }
+    $result = new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
 
-    #[Test]
-    public function it_throws_when_the_category_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    expect($result->refresh()->name)->toEqual(['fr' => 'Coupe', 'en' => 'Haircut']);
+    expect($result->description)->toEqual(['fr' => 'Courte ou longue']);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
+    );
+});
 
-        new CreateService(
-            author: $michael,
-            company: $company,
-            name: ['en' => 'Haircut'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 45, 'requires_staff' => true]],
-            category: ServiceCategory::factory()->create(),
-        )->execute();
-    }
+it('creates a service without a name and logs it as untitled', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_throws_when_a_manager_changes_the_catalogue(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create();
-        $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::MANAGER);
+    $service = new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => ''], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
 
-        new CreateService(
-            author: $dwight,
-            company: $company,
-            name: ['en' => 'Haircut'],
-            prices: ['CAD' => 3500],
-            steps: [['duration' => 45, 'requires_staff' => true]],
-        )->execute();
-    }
+    expect($service->name)->toEqual(['fr' => 'Coupe']);
+    expect($service->missingLanguages())->toEqual(['en']);
+    expect($service->isBookableIn('CAD'))->toBeFalse();
 
-    #[Test]
-    public function it_writes_the_name_in_every_language_of_the_salon(): void
-    {
-        Queue::fake();
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Untitled'],
+    );
+});
 
-        $company = Company::factory()->create(['languages' => ['fr', 'en']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+it('throws when a text is written in a language the salon does not use', function () {
+    $company = Company::factory()->create(['languages' => ['en']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $result = new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => 'Haircut'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]], description: ['fr' => 'Courte ou longue', 'en' => null])->execute();
+    new CreateService(author: $michael, company: $company, name: ['en' => 'Haircut', 'es' => 'Corte'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
+})->throws(InvalidArgumentException::class, 'es is not a language of the company');
 
-        $this->assertEquals(['fr' => 'Coupe', 'en' => 'Haircut'], $result->refresh()->name);
-        $this->assertEquals(['fr' => 'Courte ou longue'], $result->description);
+it('allows the same name in two different languages', function () {
+    Queue::fake();
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Coupe'],
-        );
-    }
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage', 'fr' => 'Mèches']]);
 
-    #[Test]
-    public function it_creates_a_service_without_a_name_and_logs_it_as_untitled(): void
-    {
-        Queue::fake();
+    $result = new CreateService(author: $michael, company: $company, name: ['en' => 'Highlights', 'fr' => 'Balayage'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
 
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    expect($result->name)->toEqual(['en' => 'Highlights', 'fr' => 'Balayage']);
+});
 
-        $service = new CreateService(author: $michael, company: $company, name: ['fr' => 'Coupe', 'en' => ''], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
+it('throws when the name is taken in the same language', function () {
+    $company = Company::factory()->create(['languages' => ['en', 'fr']]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe']]);
 
-        $this->assertEquals(['fr' => 'Coupe'], $service->name);
-        $this->assertEquals(['en'], $service->missingLanguages());
-        $this->assertFalse($service->isBookableIn('CAD'));
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->parameters === ['name' => 'Untitled'],
-        );
-    }
-
-    #[Test]
-    public function it_throws_when_a_text_is_written_in_a_language_the_salon_does_not_use(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('es is not a language of the company');
-
-        $company = Company::factory()->create(['languages' => ['en']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-
-        new CreateService(author: $michael, company: $company, name: ['en' => 'Haircut', 'es' => 'Corte'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
-    }
-
-    #[Test]
-    public function it_allows_the_same_name_in_two_different_languages(): void
-    {
-        Queue::fake();
-
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage', 'fr' => 'Mèches']]);
-
-        $result = new CreateService(author: $michael, company: $company, name: ['en' => 'Highlights', 'fr' => 'Balayage'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
-
-        $this->assertEquals(['en' => 'Highlights', 'fr' => 'Balayage'], $result->name);
-    }
-
-    #[Test]
-    public function it_throws_when_the_name_is_taken_in_the_same_language(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('The company already has a service called Coupe');
-
-        $company = Company::factory()->create(['languages' => ['en', 'fr']]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Haircut', 'fr' => 'Coupe']]);
-
-        new CreateService(author: $michael, company: $company, name: ['en' => 'Trim', 'fr' => 'Coupe'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
-    }
-}
+    new CreateService(author: $michael, company: $company, name: ['en' => 'Trim', 'fr' => 'Coupe'], prices: ['CAD' => 3500], steps: [['duration' => 30, 'requires_staff' => true]])->execute();
+})->throws(InvalidArgumentException::class, 'The company already has a service called Coupe');

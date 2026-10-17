@@ -2,67 +2,53 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Jobs;
-
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Log;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LogUserActionTest extends TestCase
-{
-    use RefreshDatabase;
+it('logs the action of the user', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-    #[Test]
-    public function it_logs_the_action_of_the_user(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    new LogUserAction(
+        company: $company,
+        user: $user,
+        action: UserActionEnum::CompanyUpdated,
+        parameters: ['name' => 'Dunder Mifflin'],
+    )->handle();
 
-        new LogUserAction(
-            company: $company,
-            user: $user,
-            action: UserActionEnum::CompanyUpdated,
-            parameters: ['name' => 'Dunder Mifflin'],
-        )->handle();
+    $this->assertDatabaseHas('logs', [
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'user_email' => 'michael.scott@dundermifflin.com',
+        'action' => UserActionEnum::CompanyUpdated->value,
+    ]);
 
-        $this->assertDatabaseHas('logs', [
-            'company_id' => $company->id,
-            'user_id' => $user->id,
-            'user_email' => 'michael.scott@dundermifflin.com',
-            'action' => UserActionEnum::CompanyUpdated->value,
-        ]);
+    expect(Log::query()->latest()->first()->parameters)->toEqual(['name' => 'Dunder Mifflin']);
+});
 
-        $this->assertEquals(['name' => 'Dunder Mifflin'], Log::query()->latest()->first()->parameters);
-    }
+it('keeps the email of the user once they are deleted', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-    #[Test]
-    public function it_keeps_the_email_of_the_user_once_they_are_deleted(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'michael.scott@dundermifflin.com',
-        ]);
+    new LogUserAction(
+        company: $company,
+        user: $user,
+        action: UserActionEnum::UserPasswordUpdated,
+    )->handle();
 
-        new LogUserAction(
-            company: $company,
-            user: $user,
-            action: UserActionEnum::UserPasswordUpdated,
-        )->handle();
+    $user->forceDelete();
 
-        $user->forceDelete();
+    $log = Log::query()->latest()->first();
 
-        $log = Log::query()->latest()->first();
-
-        $this->assertNull($log->user_id);
-        $this->assertEquals('michael.scott@dundermifflin.com', $log->user_email);
-    }
-}
+    expect($log->user_id)->toBeNull();
+    expect($log->user_email)->toEqual('michael.scott@dundermifflin.com');
+});

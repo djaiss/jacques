@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Onboarding;
+namespace Tests\Unit\ViewModels\Onboarding\LocationViewModelTest;
 
 use App\Enums\OnboardingStepEnum;
 use App\Models\Company;
@@ -12,216 +12,178 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\ViewModels\Onboarding\LocationViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationViewModelTest extends TestCase
+it('prefills the salon name with the company name', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $form = $viewModel->form();
+
+    expect($form['name'])->toEqual('Dunder Mifflin');
+    expect($form['country'])->toEqual('');
+    expect($form['timezone'])->toEqual('');
+});
+
+it('prefills the form with the first location', function () {
+    $user = user(OnboardingStepEnum::Services);
+    Location::factory()->create([
+        'company_id' => $user->company_id,
+        'name' => 'Dunder Mifflin',
+        'city' => 'Scranton',
+        'country' => 'US',
+        'timezone' => 'America/New_York',
+        'is_headquarters' => true,
+    ]);
+
+    $viewModel = new LocationViewModel(user: $user);
+
+    $form = $viewModel->form();
+
+    expect($form['city'])->toEqual('Scranton');
+    expect($form['country'])->toEqual('US');
+    expect($form['timezone'])->toEqual('America/New_York');
+});
+
+it('lists every country by its name', function () {
+    $countries = new LocationViewModel(user: user())->countries();
+
+    expect(count($countries))->toBeGreaterThan(200);
+    expect($countries['CA'])->toEqual('Canada');
+    expect($countries['US'])->toEqual('United States');
+    expect($countries)->not->toHaveKey('??');
+});
+
+it('names the countries in the language of the user', function () {
+    app()->setLocale('fr_FR');
+
+    $countries = new LocationViewModel(user: user())->countries();
+
+    expect($countries['US'])->toEqual('États-Unis');
+});
+
+it('groups the time zones by country', function () {
+    $timezones = new LocationViewModel(user: user())->timezonesByCountry();
+
+    expect(array_column($timezones['CA'], 'value'))->toContain('America/Toronto');
+    expect(array_column($timezones['CA'], 'value'))->not->toContain('America/New_York');
+    expect($timezones['FR'])->toEqual([['value' => 'Europe/Paris', 'label' => 'Central European Time · Paris']]);
+});
+
+it('prefills the languages of the company', function () {
+    $user = user();
+    $user->company->update(['languages' => ['fr', 'en']]);
+
+    $viewModel = new LocationViewModel(user: $user);
+
+    expect($viewModel->form()['languages'])->toEqual(['fr', 'en']);
+});
+
+it('offers every catalogue language by its own name', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $languages = collect($viewModel->languages());
+
+    expect($languages->pluck('code')->all())->toEqual(['en', 'fr', 'es', 'pt', 'it', 'de', 'ar', 'zh']);
+    expect($languages->firstWhere('code', 'fr')['label'])->toEqual('Français');
+    expect($languages->firstWhere('code', 'fr')['flag'])->not->toBeEmpty();
+});
+
+it('chooses the usual languages of each country', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $languages = $viewModel->languagesByCountry();
+
+    expect($languages['CA'])->toEqual(['en', 'fr']);
+    expect($languages['CH'])->toEqual(['fr', 'de']);
+    expect($languages['US'])->toEqual(['en']);
+    expect($languages['JP'])->toEqual(['en']);
+});
+
+it('counts the languages chosen', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $counters = $viewModel->languageCounters();
+
+    expect($counters[1])->toEqual('1 language');
+    expect($counters[2])->toEqual('2 languages');
+    expect($counters)->toHaveCount(8);
+});
+
+it('lists the languages holding texts of the catalogue', function () {
+    $user = user();
+    $user->company->update(['languages' => ['en', 'fr', 'es']]);
+    ServiceCategory::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Cuts'], 'description' => ['es' => 'Cortes']]);
+    Service::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Haircut', 'fr' => '', 'de' => 'Haarschnitt']]);
+
+    $viewModel = new LocationViewModel(user: $user->refresh());
+
+    expect($viewModel->languagesWithTexts())->toEqual([
+        ['code' => 'en', 'label' => 'English'],
+        ['code' => 'es', 'label' => 'Español'],
+    ]);
+});
+
+it('prefills the currencies of the company', function () {
+    $user = user();
+    $user->company->update(['currencies' => ['USD', 'CAD']]);
+
+    $viewModel = new LocationViewModel(user: $user);
+
+    expect($viewModel->form()['currencies'])->toEqual(['USD', 'CAD']);
+});
+
+it('offers every currency by its name', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $currencies = collect($viewModel->currencies());
+
+    expect($currencies->pluck('code')->all())->toEqual(['CAD', 'USD', 'EUR', 'GBP', 'CHF']);
+    expect($currencies->firstWhere('code', 'CAD')['label'])->toEqual('Canadian dollar');
+});
+
+it('chooses the currency of each country', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $currencies = $viewModel->currenciesByCountry();
+
+    expect($currencies['CA'])->toEqual('CAD');
+    expect($currencies['US'])->toEqual('USD');
+    expect($currencies['FR'])->toEqual('EUR');
+    expect($currencies['CH'])->toEqual('CHF');
+    expect($currencies['JP'])->toEqual('CAD');
+});
+
+it('counts the currencies chosen', function () {
+    $viewModel = new LocationViewModel(user: user());
+
+    $counters = $viewModel->currencyCounters();
+
+    expect($counters[1])->toEqual('1 currency');
+    expect($counters[2])->toEqual('2 currencies');
+    expect($counters)->toHaveCount(5);
+});
+
+it('lists the currencies holding prices of the catalogue', function () {
+    $user = user();
+    $user->company->update(['currencies' => ['CAD', 'USD', 'EUR', 'CHF']]);
+    $scranton = Location::factory()->create(['company_id' => $user->company_id]);
+    $haircut = Service::factory()->create(['company_id' => $user->company_id, 'prices' => ['CAD' => 3500, 'GBP' => 2000]]);
+    LocationService::factory()->create(['location_id' => $scranton->id, 'service_id' => $haircut->id, 'prices' => ['EUR' => 2500]]);
+    LocationService::factory()->create(['prices' => ['CHF' => 3000]]);
+
+    $viewModel = new LocationViewModel(user: $user->refresh());
+
+    expect($viewModel->currenciesWithPrices())->toEqual([
+        ['code' => 'CAD', 'label' => 'Canadian dollar'],
+        ['code' => 'EUR', 'label' => 'Euro'],
+    ]);
+});
+
+function user(OnboardingStepEnum $reached = OnboardingStepEnum::Location): User
 {
-    use RefreshDatabase;
+    $company = Company::factory()->onboardingPending()->create([
+        'name' => 'Dunder Mifflin',
+        'onboarding_step' => $reached,
+    ]);
 
-    #[Test]
-    public function it_prefills_the_salon_name_with_the_company_name(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $form = $viewModel->form();
-
-        $this->assertEquals('Dunder Mifflin', $form['name']);
-        $this->assertEquals('', $form['country']);
-        $this->assertEquals('', $form['timezone']);
-    }
-
-    #[Test]
-    public function it_prefills_the_form_with_the_first_location(): void
-    {
-        $user = $this->user(OnboardingStepEnum::Services);
-        Location::factory()->create([
-            'company_id' => $user->company_id,
-            'name' => 'Dunder Mifflin',
-            'city' => 'Scranton',
-            'country' => 'US',
-            'timezone' => 'America/New_York',
-            'is_headquarters' => true,
-        ]);
-
-        $viewModel = new LocationViewModel(user: $user);
-
-        $form = $viewModel->form();
-
-        $this->assertEquals('Scranton', $form['city']);
-        $this->assertEquals('US', $form['country']);
-        $this->assertEquals('America/New_York', $form['timezone']);
-    }
-
-    #[Test]
-    public function it_lists_every_country_by_its_name(): void
-    {
-        $countries = new LocationViewModel(user: $this->user())->countries();
-
-        $this->assertGreaterThan(200, count($countries));
-        $this->assertEquals('Canada', $countries['CA']);
-        $this->assertEquals('United States', $countries['US']);
-        $this->assertArrayNotHasKey('??', $countries);
-    }
-
-    #[Test]
-    public function it_names_the_countries_in_the_language_of_the_user(): void
-    {
-        app()->setLocale('fr_FR');
-
-        $countries = new LocationViewModel(user: $this->user())->countries();
-
-        $this->assertEquals('États-Unis', $countries['US']);
-    }
-
-    #[Test]
-    public function it_groups_the_time_zones_by_country(): void
-    {
-        $timezones = new LocationViewModel(user: $this->user())->timezonesByCountry();
-
-        $this->assertContains('America/Toronto', array_column($timezones['CA'], 'value'));
-        $this->assertNotContains('America/New_York', array_column($timezones['CA'], 'value'));
-        $this->assertEquals([['value' => 'Europe/Paris', 'label' => 'Central European Time · Paris']], $timezones['FR']);
-    }
-
-    #[Test]
-    public function it_prefills_the_languages_of_the_company(): void
-    {
-        $user = $this->user();
-        $user->company->update(['languages' => ['fr', 'en']]);
-
-        $viewModel = new LocationViewModel(user: $user);
-
-        $this->assertEquals(['fr', 'en'], $viewModel->form()['languages']);
-    }
-
-    #[Test]
-    public function it_offers_every_catalogue_language_by_its_own_name(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $languages = collect($viewModel->languages());
-
-        $this->assertEquals(['en', 'fr', 'es', 'pt', 'it', 'de', 'ar', 'zh'], $languages->pluck('code')->all());
-        $this->assertEquals('Français', $languages->firstWhere('code', 'fr')['label']);
-        $this->assertNotEmpty($languages->firstWhere('code', 'fr')['flag']);
-    }
-
-    #[Test]
-    public function it_chooses_the_usual_languages_of_each_country(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $languages = $viewModel->languagesByCountry();
-
-        $this->assertEquals(['en', 'fr'], $languages['CA']);
-        $this->assertEquals(['fr', 'de'], $languages['CH']);
-        $this->assertEquals(['en'], $languages['US']);
-        $this->assertEquals(['en'], $languages['JP']);
-    }
-
-    #[Test]
-    public function it_counts_the_languages_chosen(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $counters = $viewModel->languageCounters();
-
-        $this->assertEquals('1 language', $counters[1]);
-        $this->assertEquals('2 languages', $counters[2]);
-        $this->assertCount(8, $counters);
-    }
-
-    #[Test]
-    public function it_lists_the_languages_holding_texts_of_the_catalogue(): void
-    {
-        $user = $this->user();
-        $user->company->update(['languages' => ['en', 'fr', 'es']]);
-        ServiceCategory::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Cuts'], 'description' => ['es' => 'Cortes']]);
-        Service::factory()->create(['company_id' => $user->company_id, 'name' => ['en' => 'Haircut', 'fr' => '', 'de' => 'Haarschnitt']]);
-
-        $viewModel = new LocationViewModel(user: $user->refresh());
-
-        $this->assertEquals([
-            ['code' => 'en', 'label' => 'English'],
-            ['code' => 'es', 'label' => 'Español'],
-        ], $viewModel->languagesWithTexts());
-    }
-
-    #[Test]
-    public function it_prefills_the_currencies_of_the_company(): void
-    {
-        $user = $this->user();
-        $user->company->update(['currencies' => ['USD', 'CAD']]);
-
-        $viewModel = new LocationViewModel(user: $user);
-
-        $this->assertEquals(['USD', 'CAD'], $viewModel->form()['currencies']);
-    }
-
-    #[Test]
-    public function it_offers_every_currency_by_its_name(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $currencies = collect($viewModel->currencies());
-
-        $this->assertEquals(['CAD', 'USD', 'EUR', 'GBP', 'CHF'], $currencies->pluck('code')->all());
-        $this->assertEquals('Canadian dollar', $currencies->firstWhere('code', 'CAD')['label']);
-    }
-
-    #[Test]
-    public function it_chooses_the_currency_of_each_country(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $currencies = $viewModel->currenciesByCountry();
-
-        $this->assertEquals('CAD', $currencies['CA']);
-        $this->assertEquals('USD', $currencies['US']);
-        $this->assertEquals('EUR', $currencies['FR']);
-        $this->assertEquals('CHF', $currencies['CH']);
-        $this->assertEquals('CAD', $currencies['JP']);
-    }
-
-    #[Test]
-    public function it_counts_the_currencies_chosen(): void
-    {
-        $viewModel = new LocationViewModel(user: $this->user());
-
-        $counters = $viewModel->currencyCounters();
-
-        $this->assertEquals('1 currency', $counters[1]);
-        $this->assertEquals('2 currencies', $counters[2]);
-        $this->assertCount(5, $counters);
-    }
-
-    #[Test]
-    public function it_lists_the_currencies_holding_prices_of_the_catalogue(): void
-    {
-        $user = $this->user();
-        $user->company->update(['currencies' => ['CAD', 'USD', 'EUR', 'CHF']]);
-        $scranton = Location::factory()->create(['company_id' => $user->company_id]);
-        $haircut = Service::factory()->create(['company_id' => $user->company_id, 'prices' => ['CAD' => 3500, 'GBP' => 2000]]);
-        LocationService::factory()->create(['location_id' => $scranton->id, 'service_id' => $haircut->id, 'prices' => ['EUR' => 2500]]);
-        LocationService::factory()->create(['prices' => ['CHF' => 3000]]);
-
-        $viewModel = new LocationViewModel(user: $user->refresh());
-
-        $this->assertEquals([
-            ['code' => 'CAD', 'label' => 'Canadian dollar'],
-            ['code' => 'EUR', 'label' => 'Euro'],
-        ], $viewModel->currenciesWithPrices());
-    }
-
-    private function user(OnboardingStepEnum $reached = OnboardingStepEnum::Location): User
-    {
-        $company = Company::factory()->onboardingPending()->create([
-            'name' => 'Dunder Mifflin',
-            'onboarding_step' => $reached,
-        ]);
-
-        return User::factory()->create(['company_id' => $company->id]);
-    }
+    return User::factory()->create(['company_id' => $company->id]);
 }

@@ -2,139 +2,115 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Preferences;
-
 use App\Enums\TimeFormatEnum;
 use App\Models\Company;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class PreferenceControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('shows the preferences screen', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'locale' => 'en',
+        'time_format' => TimeFormatEnum::TwentyFourHour,
+    ]);
+    Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Michael',
+        'last_name' => 'Scott',
+        'display_name' => null,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_shows_the_preferences_screen(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'locale' => 'en',
-            'time_format' => TimeFormatEnum::TwentyFourHour,
-        ]);
-        Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Michael',
-            'last_name' => 'Scott',
-            'display_name' => null,
-            'user_id' => $user->id,
-        ]);
+    $response = $this->actingAs($user)->get(route('settings.preferences.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.preferences.index'));
+    $response->assertStatus(200);
+    $response->assertSee('Preferences', escape: false);
+    $response->assertSee('Language', escape: false);
+    $response->assertSee('Time format', escape: false);
+    $response->assertSee('24-hour', escape: false);
+    $response->assertSee('Français', escape: false);
+    $response->assertSee('How the application reads to you, on every device you sign in from.', escape: false);
+    $response->assertSee('The language the interface is drawn in.', escape: false);
+    $response->assertSee('How every clock time is written. Dates are unaffected.', escape: false);
+    $response->assertSee('Michael Scott', escape: false);
+    $response->assertSee('Dunder Mifflin', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('Preferences', escape: false);
-        $response->assertSee('Language', escape: false);
-        $response->assertSee('Time format', escape: false);
-        $response->assertSee('24-hour', escape: false);
-        $response->assertSee('Français', escape: false);
-        $response->assertSee('How the application reads to you, on every device you sign in from.', escape: false);
-        $response->assertSee('The language the interface is drawn in.', escape: false);
-        $response->assertSee('How every clock time is written. Dates are unaffected.', escape: false);
-        $response->assertSee('Michael Scott', escape: false);
-        $response->assertSee('Dunder Mifflin', escape: false);
-    }
+it('writes the email address in the top bar when there is no staff record', function () {
+    $user = User::factory()->create([
+        'email' => 'accountant@vancerefrigeration.com',
+    ]);
 
-    #[Test]
-    public function it_writes_the_email_address_in_the_top_bar_when_there_is_no_staff_record(): void
-    {
-        $user = User::factory()->create([
-            'email' => 'accountant@vancerefrigeration.com',
-        ]);
+    $response = $this->actingAs($user)->get(route('settings.preferences.index'));
 
-        $response = $this->actingAs($user)->get(route('settings.preferences.index'));
+    $response->assertStatus(200);
+    $response->assertSee('accountant@vancerefrigeration.com', escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('accountant@vancerefrigeration.com', escape: false);
-    }
+it('refuses a visitor who is not signed in', function () {
+    $response = $this->get(route('settings.preferences.index'));
 
-    #[Test]
-    public function it_refuses_a_visitor_who_is_not_signed_in(): void
-    {
-        $response = $this->get(route('settings.preferences.index'));
+    $response->assertRedirect(route('auth.signIn.new'));
+});
 
-        $response->assertRedirect(route('auth.signIn.new'));
-    }
+it('saves the preferences', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_saves_the_preferences(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create([
+        'locale' => 'en',
+        'time_format' => TimeFormatEnum::TwentyFourHour,
+    ]);
 
-        $user = User::factory()->create([
-            'locale' => 'en',
-            'time_format' => TimeFormatEnum::TwentyFourHour,
-        ]);
+    $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
+        'locale' => 'fr_FR',
+        'time_format' => '12',
+    ]);
 
-        $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
-            'locale' => 'fr_FR',
-            'time_format' => '12',
-        ]);
+    $response->assertRedirect(route('settings.preferences.index'));
 
-        $response->assertRedirect(route('settings.preferences.index'));
+    $response->assertSessionHas('status', 'Vos préférences sont enregistrées.');
 
-        $response->assertSessionHas('status', 'Vos préférences sont enregistrées.');
+    $user->refresh();
 
-        $user->refresh();
+    expect($user->locale)->toEqual('fr_FR');
+    expect($user->time_format)->toEqual(TimeFormatEnum::TwelveHour);
+});
 
-        $this->assertEquals('fr_FR', $user->locale);
-        $this->assertEquals(TimeFormatEnum::TwelveHour, $user->time_format);
-    }
+it('puts the new language in the session so the screen comes back in it', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_puts_the_new_language_in_the_session_so_the_screen_comes_back_in_it(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create(['locale' => 'en']);
 
-        $user = User::factory()->create(['locale' => 'en']);
+    $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
+        'locale' => 'de_DE',
+        'time_format' => '24',
+    ]);
 
-        $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
-            'locale' => 'de_DE',
-            'time_format' => '24',
-        ]);
+    $response->assertSessionHas('locale', 'de_DE');
+});
 
-        $response->assertSessionHas('locale', 'de_DE');
-    }
+it('refuses a language we do not speak', function () {
+    $user = User::factory()->create(['locale' => 'en']);
 
-    #[Test]
-    public function it_refuses_a_language_we_do_not_speak(): void
-    {
-        $user = User::factory()->create(['locale' => 'en']);
+    $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
+        'locale' => 'kl_GL',
+        'time_format' => '24',
+    ]);
 
-        $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
-            'locale' => 'kl_GL',
-            'time_format' => '24',
-        ]);
+    $response->assertSessionHasErrors('locale');
+    expect($user->refresh()->locale)->toEqual('en');
+});
 
-        $response->assertSessionHasErrors('locale');
-        $this->assertEquals('en', $user->refresh()->locale);
-    }
+it('refuses a time format that does not exist', function () {
+    $user = User::factory()->create(['time_format' => TimeFormatEnum::TwentyFourHour]);
 
-    #[Test]
-    public function it_refuses_a_time_format_that_does_not_exist(): void
-    {
-        $user = User::factory()->create(['time_format' => TimeFormatEnum::TwentyFourHour]);
+    $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
+        'locale' => 'en',
+        'time_format' => '36',
+    ]);
 
-        $response = $this->actingAs($user)->put(route('settings.preferences.update'), [
-            'locale' => 'en',
-            'time_format' => '36',
-        ]);
-
-        $response->assertSessionHasErrors('time_format');
-        $this->assertEquals(TimeFormatEnum::TwentyFourHour, $user->refresh()->time_format);
-    }
-}
+    $response->assertSessionHasErrors('time_format');
+    expect($user->refresh()->time_format)->toEqual(TimeFormatEnum::TwentyFourHour);
+});

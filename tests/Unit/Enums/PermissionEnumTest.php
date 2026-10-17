@@ -2,99 +2,71 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Enums;
-
 use App\Enums\PermissionEnum;
 use App\Enums\PermissionGroupEnum;
 use App\Enums\ScopeEnum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class PermissionEnumTest extends TestCase
-{
-    #[Test]
-    public function it_knows_which_permissions_are_about_one_staff_member(): void
-    {
-        $this->assertTrue(PermissionEnum::StaffView->targetsStaff());
-        $this->assertTrue(PermissionEnum::StaffUpdate->targetsStaff());
-        $this->assertTrue(PermissionEnum::ScheduleView->targetsStaff());
-        $this->assertTrue(PermissionEnum::ScheduleManage->targetsStaff());
+it('knows which permissions are about one staff member', function () {
+    expect(PermissionEnum::StaffView->targetsStaff())->toBeTrue();
+    expect(PermissionEnum::StaffUpdate->targetsStaff())->toBeTrue();
+    expect(PermissionEnum::ScheduleView->targetsStaff())->toBeTrue();
+    expect(PermissionEnum::ScheduleManage->targetsStaff())->toBeTrue();
 
-        $this->assertFalse(PermissionEnum::StaffCreate->targetsStaff());
-        $this->assertFalse(PermissionEnum::StaffDelete->targetsStaff());
-        $this->assertFalse(PermissionEnum::RoleManage->targetsStaff());
-        $this->assertFalse(PermissionEnum::LocationManage->targetsStaff());
+    expect(PermissionEnum::StaffCreate->targetsStaff())->toBeFalse();
+    expect(PermissionEnum::StaffDelete->targetsStaff())->toBeFalse();
+    expect(PermissionEnum::RoleManage->targetsStaff())->toBeFalse();
+    expect(PermissionEnum::LocationManage->targetsStaff())->toBeFalse();
+});
+
+it('knows which permissions are about one location', function () {
+    expect(PermissionEnum::LocationManage->targetsLocation())->toBeTrue();
+    expect(PermissionEnum::StaffCreate->targetsLocation())->toBeTrue();
+    expect(PermissionEnum::ServiceManage->targetsLocation())->toBeTrue();
+    expect(PermissionEnum::ReportView->targetsLocation())->toBeTrue();
+
+    expect(PermissionEnum::BillingManage->targetsLocation())->toBeFalse();
+    expect(PermissionEnum::StaffView->targetsLocation())->toBeFalse();
+});
+
+it('offers no choice of scope for a company wide permission', function () {
+    expect(PermissionEnum::BillingManage->scopes())->toEqual([ScopeEnum::Company]);
+    expect(PermissionEnum::RoleManage->scopes())->toEqual([ScopeEnum::Company]);
+    expect(PermissionEnum::CompanyManage->scopes())->toEqual([ScopeEnum::Company]);
+});
+
+it('offers the locations or the company for a permission about one location', function () {
+    expect(PermissionEnum::LocationManage->scopes())->toEqual([ScopeEnum::Location, ScopeEnum::Company]);
+    expect(PermissionEnum::ReportView->scopes())->toEqual([ScopeEnum::Location, ScopeEnum::Company]);
+});
+
+it('offers no location scope for clients', function () {
+    expect(PermissionEnum::ClientView->scopes())->toEqual([ScopeEnum::Self, ScopeEnum::Company]);
+});
+
+it('offers every scope for a permission about one staff member', function () {
+    expect(PermissionEnum::StaffUpdate->scopes())->toEqual([ScopeEnum::Self, ScopeEnum::Location, ScopeEnum::Company]);
+});
+
+it('offers only the company scope for deleting a staff member', function () {
+    expect(PermissionEnum::StaffDelete->scopes())->toEqual([ScopeEnum::Company]);
+    expect(PermissionEnum::StaffDelete->group())->toEqual(PermissionGroupEnum::Team);
+    expect(PermissionEnum::StaffDelete->label())->toEqual('Delete somebody from the team');
+});
+
+it('names every permission', function () {
+    foreach (PermissionEnum::cases() as $permission) {
+        expect($permission->label())->not->toBeEmpty();
     }
+});
 
-    #[Test]
-    public function it_knows_which_permissions_are_about_one_location(): void
-    {
-        $this->assertTrue(PermissionEnum::LocationManage->targetsLocation());
-        $this->assertTrue(PermissionEnum::StaffCreate->targetsLocation());
-        $this->assertTrue(PermissionEnum::ServiceManage->targetsLocation());
-        $this->assertTrue(PermissionEnum::ReportView->targetsLocation());
-
-        $this->assertFalse(PermissionEnum::BillingManage->targetsLocation());
-        $this->assertFalse(PermissionEnum::StaffView->targetsLocation());
-    }
-
-    #[Test]
-    public function it_offers_no_choice_of_scope_for_a_company_wide_permission(): void
-    {
-        $this->assertEquals([ScopeEnum::Company], PermissionEnum::BillingManage->scopes());
-        $this->assertEquals([ScopeEnum::Company], PermissionEnum::RoleManage->scopes());
-        $this->assertEquals([ScopeEnum::Company], PermissionEnum::CompanyManage->scopes());
-    }
-
-    #[Test]
-    public function it_offers_the_locations_or_the_company_for_a_permission_about_one_location(): void
-    {
-        $this->assertEquals([ScopeEnum::Location, ScopeEnum::Company], PermissionEnum::LocationManage->scopes());
-        $this->assertEquals([ScopeEnum::Location, ScopeEnum::Company], PermissionEnum::ReportView->scopes());
-    }
-
-    #[Test]
-    public function it_offers_no_location_scope_for_clients(): void
-    {
-        $this->assertEquals([ScopeEnum::Self, ScopeEnum::Company], PermissionEnum::ClientView->scopes());
-    }
-
-    #[Test]
-    public function it_offers_every_scope_for_a_permission_about_one_staff_member(): void
-    {
-        $this->assertEquals(
-            [ScopeEnum::Self, ScopeEnum::Location, ScopeEnum::Company],
-            PermissionEnum::StaffUpdate->scopes(),
-        );
-    }
-
-    #[Test]
-    public function it_offers_only_the_company_scope_for_deleting_a_staff_member(): void
-    {
-        $this->assertEquals([ScopeEnum::Company], PermissionEnum::StaffDelete->scopes());
-        $this->assertEquals(PermissionGroupEnum::Team, PermissionEnum::StaffDelete->group());
-        $this->assertEquals('Delete somebody from the team', PermissionEnum::StaffDelete->label());
-    }
-
-    #[Test]
-    public function it_names_every_permission(): void
-    {
-        foreach (PermissionEnum::cases() as $permission) {
-            $this->assertNotEmpty($permission->label());
-        }
-    }
-
-    #[Test]
-    public function it_files_every_permission_under_a_group(): void
-    {
-        $this->assertEquals(PermissionGroupEnum::Administration, PermissionEnum::BillingManage->group());
-        $this->assertEquals(PermissionGroupEnum::Administration, PermissionEnum::RoleManage->group());
-        $this->assertEquals(PermissionGroupEnum::Locations, PermissionEnum::LocationManage->group());
-        $this->assertEquals(PermissionGroupEnum::Locations, PermissionEnum::ScheduleView->group());
-        $this->assertEquals(PermissionGroupEnum::Team, PermissionEnum::StaffCreate->group());
-        $this->assertEquals(PermissionGroupEnum::Services, PermissionEnum::ServiceManage->group());
-        $this->assertEquals(PermissionGroupEnum::Clients, PermissionEnum::ClientView->group());
-        $this->assertEquals(PermissionGroupEnum::Appointments, PermissionEnum::AppointmentManage->group());
-        $this->assertEquals(PermissionGroupEnum::Reports, PermissionEnum::ReportView->group());
-    }
-}
+it('files every permission under a group', function () {
+    expect(PermissionEnum::BillingManage->group())->toEqual(PermissionGroupEnum::Administration);
+    expect(PermissionEnum::RoleManage->group())->toEqual(PermissionGroupEnum::Administration);
+    expect(PermissionEnum::LocationManage->group())->toEqual(PermissionGroupEnum::Locations);
+    expect(PermissionEnum::ScheduleView->group())->toEqual(PermissionGroupEnum::Locations);
+    expect(PermissionEnum::StaffCreate->group())->toEqual(PermissionGroupEnum::Team);
+    expect(PermissionEnum::ServiceManage->group())->toEqual(PermissionGroupEnum::Services);
+    expect(PermissionEnum::ClientView->group())->toEqual(PermissionGroupEnum::Clients);
+    expect(PermissionEnum::AppointmentManage->group())->toEqual(PermissionGroupEnum::Appointments);
+    expect(PermissionEnum::ReportView->group())->toEqual(PermissionGroupEnum::Reports);
+});

@@ -6,10 +6,21 @@ description: Conventions for defining tests. Use when the user wants to create o
 # Tests
 
 - You MUST read and follow the testing rules in `.claude/rules/testing.md`.
-- You MUST use `use PHPUnit\Framework\Attributes\Test;` and `#[Test]` for test
-  methods, instead of `public function testX()`.
-- Test method names MUST be descriptive and use `snake_case`, like
-  `it_can_list_the_api_keys_of_the_current_user`.
+- You MUST write tests with Pest, as `it('...', function () { ... })`. A test
+  file holds no class.
+- Test descriptions MUST be descriptive sentences in lower case, like
+  `it('lists the api keys of the current user')`.
+- You MUST assert with `expect()`, keep the Laravel database and authentication
+  assertions on `$this`, and expect an exception with `->throws()`:
+
+  ```php
+  it('throws when the location belongs to another company', function () {
+      $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
+      $location = Location::factory()->create();
+
+      new ArchiveLocation(author: $author, location: $location)->execute();
+  })->throws(ModelNotFoundException::class);
+  ```
 - You MUST not test sanitization (i.e. `TextSanitizer`).
 - You MUST not test casts (Model casting).
 - You MUST test blade components: one file per component under

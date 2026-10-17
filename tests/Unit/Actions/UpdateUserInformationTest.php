@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\UpdateUserInformation;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
@@ -11,143 +9,119 @@ use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class UpdateUserInformationTest extends TestCase
-{
-    use RefreshDatabase;
+it('updates the user themselves', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_updates_the_user_themselves(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'jim.halpert@dundermifflin.com',
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'jim.halpert@dundermifflin.com',
-        ]);
+    $result = new UpdateUserInformation(
+        author: $user,
+        user: $user,
+        email: 'jim.halpert@athlead.com',
+        locale: 'fr_FR',
+    )->execute();
 
-        $result = new UpdateUserInformation(
-            author: $user,
-            user: $user,
-            email: 'jim.halpert@athlead.com',
-            locale: 'fr_FR',
-        )->execute();
+    expect($result)->toBeInstanceOf(User::class);
 
-        $this->assertInstanceOf(User::class, $result);
+    $user->refresh();
 
-        $user->refresh();
+    expect($user->email)->toEqual('jim.halpert@athlead.com');
+    expect($user->locale)->toEqual('fr_FR');
 
-        $this->assertEquals('jim.halpert@athlead.com', $user->email);
-        $this->assertEquals('fr_FR', $user->locale);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::UserInformationUpdated
+            && $job->company->id === $company->id
+            && $job->user->id === $user->id,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::UserInformationUpdated
-                && $job->company->id === $company->id
-                && $job->user->id === $user->id,
-        );
-    }
+it('lets the owner update another user', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_lets_the_owner_update_another_user(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
-        $company = Company::factory()->create();
-        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $member = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'kevin.malone@dundermifflin.com',
+    ]);
 
-        $member = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'kevin.malone@dundermifflin.com',
-        ]);
+    new UpdateUserInformation(
+        author: $owner,
+        user: $member,
+        email: 'kevin.malone@dundermifflin.co.uk',
+    )->execute();
 
-        new UpdateUserInformation(
-            author: $owner,
-            user: $member,
-            email: 'kevin.malone@dundermifflin.co.uk',
-        )->execute();
+    expect($member->refresh()->email)->toEqual('kevin.malone@dundermifflin.co.uk');
+});
 
-        $this->assertEquals('kevin.malone@dundermifflin.co.uk', $member->refresh()->email);
-    }
+it('resets the email verification when the email changes', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_resets_the_email_verification_when_the_email_changes(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'pam.beesly@dundermifflin.com',
+        'email_verified_at' => now(),
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'pam.beesly@dundermifflin.com',
-            'email_verified_at' => now(),
-        ]);
+    new UpdateUserInformation(
+        author: $user,
+        user: $user,
+        email: 'pam.halpert@dundermifflin.com',
+    )->execute();
 
-        new UpdateUserInformation(
-            author: $user,
-            user: $user,
-            email: 'pam.halpert@dundermifflin.com',
-        )->execute();
+    expect($user->refresh()->email_verified_at)->toBeNull();
+});
 
-        $this->assertNull($user->refresh()->email_verified_at);
-    }
+it('keeps the email verification when the email does not change', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_keeps_the_email_verification_when_the_email_does_not_change(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'pam.beesly@dundermifflin.com',
+        'email_verified_at' => now(),
+    ]);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create([
-            'company_id' => $company->id,
-            'email' => 'pam.beesly@dundermifflin.com',
-            'email_verified_at' => now(),
-        ]);
+    new UpdateUserInformation(
+        author: $user,
+        user: $user,
+        email: 'pam.beesly@dundermifflin.com',
+    )->execute();
 
-        new UpdateUserInformation(
-            author: $user,
-            user: $user,
-            email: 'pam.beesly@dundermifflin.com',
-        )->execute();
+    expect($user->refresh()->email_verified_at)->not->toBeNull();
+});
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
-    }
+it('throws when another member updates a user', function () {
+    $company = Company::factory()->create();
+    $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
 
-    #[Test]
-    public function it_throws_when_another_member_updates_a_user(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    $member = User::factory()->create(['company_id' => $company->id]);
+    $otherMember = User::factory()->create(['company_id' => $company->id]);
 
-        $company = Company::factory()->create();
-        $owner = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    new UpdateUserInformation(
+        author: $otherMember,
+        user: $member,
+        email: 'toby.flenderson@dundermifflin.com',
+    )->execute();
+})->throws(ModelNotFoundException::class);
 
-        $member = User::factory()->create(['company_id' => $company->id]);
-        $otherMember = User::factory()->create(['company_id' => $company->id]);
+it('throws when the author belongs to another company', function () {
+    $user = User::factory()->create();
+    $stranger = User::factory()->create();
 
-        new UpdateUserInformation(
-            author: $otherMember,
-            user: $member,
-            email: 'toby.flenderson@dundermifflin.com',
-        )->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_author_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $user = User::factory()->create();
-        $stranger = User::factory()->create();
-
-        new UpdateUserInformation(
-            author: $stranger,
-            user: $user,
-            email: 'creed.bratton@dundermifflin.com',
-        )->execute();
-    }
-}
+    new UpdateUserInformation(
+        author: $stranger,
+        user: $user,
+        email: 'creed.bratton@dundermifflin.com',
+    )->execute();
+})->throws(ModelNotFoundException::class);

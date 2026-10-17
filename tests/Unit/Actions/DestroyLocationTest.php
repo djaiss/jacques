@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\DestroyLocation;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -12,58 +10,40 @@ use App\Models\Company;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class DestroyLocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('destroys an location', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_destroys_an_location(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
+    $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
 
-        $company = Company::factory()->create();
-        $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::LocationManage);
-        $location = Location::factory()->create(['company_id' => $company->id, 'name' => 'Scranton branch']);
+    new DestroyLocation(author: $author, location: $location)->execute();
 
-        new DestroyLocation(author: $author, location: $location)->execute();
+    $this->assertModelMissing($location);
 
-        $this->assertModelMissing($location);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationDeleted
+            && $job->company->id === $company->id
+            && $job->user->id === $author->id
+            && $job->parameters === ['name' => 'Scranton branch'],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::LocationDeleted
-                && $job->company->id === $company->id
-                && $job->user->id === $author->id
-                && $job->parameters === ['name' => 'Scranton branch'],
-        );
-    }
+it('throws when the author may not change the company', function () {
+    $company = Company::factory()->create();
+    $author = User::factory()->create(['company_id' => $company->id]);
+    $location = Location::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_author_may_not_change_the_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new DestroyLocation(author: $author, location: $location)->execute();
+})->throws(ModelNotFoundException::class);
 
-        $company = Company::factory()->create();
-        $author = User::factory()->create(['company_id' => $company->id]);
-        $location = Location::factory()->create(['company_id' => $company->id]);
+it('throws when the location belongs to another company', function () {
+    $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
+    $location = Location::factory()->create();
 
-        new DestroyLocation(author: $author, location: $location)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_location_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $author = $this->grant(User::factory()->create(), PermissionEnum::LocationManage);
-        $location = Location::factory()->create();
-
-        new DestroyLocation(author: $author, location: $location)->execute();
-    }
-}
+    new DestroyLocation(author: $author, location: $location)->execute();
+})->throws(ModelNotFoundException::class);

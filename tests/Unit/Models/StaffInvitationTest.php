@@ -2,48 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\StaffInvitation;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class StaffInvitationTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a staff member', function () {
+    $invitation = StaffInvitation::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_a_staff_member(): void
-    {
-        $invitation = StaffInvitation::factory()->create();
+    expect($invitation->staff()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($invitation->staff()->exists());
-    }
+it('belongs to a role', function () {
+    $invitation = StaffInvitation::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_a_role(): void
-    {
-        $invitation = StaffInvitation::factory()->create();
+    expect($invitation->role()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($invitation->role()->exists());
-    }
+it('belongs to the user who prepared it', function () {
+    $invitation = StaffInvitation::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_the_user_who_prepared_it(): void
-    {
-        $invitation = StaffInvitation::factory()->create();
+    expect($invitation->author()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($invitation->author()->exists());
-    }
+it('keeps no author once their account is deleted', function () {
+    $invitation = StaffInvitation::factory()->create();
 
-    #[Test]
-    public function it_keeps_no_author_once_their_account_is_deleted(): void
-    {
-        $invitation = StaffInvitation::factory()->create();
+    $invitation->author->forceDelete();
 
-        $invitation->author->forceDelete();
-
-        $this->assertNull($invitation->refresh()->author_id);
-    }
-}
+    expect($invitation->refresh()->author_id)->toBeNull();
+});

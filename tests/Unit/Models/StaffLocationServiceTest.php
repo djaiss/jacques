@@ -2,36 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\LocationService;
 use App\Models\Staff;
 use App\Models\StaffLocationService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class StaffLocationServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a staff member', function () {
+    $staff = Staff::factory()->create();
+    $assignment = StaffLocationService::factory()->create(['staff_id' => $staff->id]);
 
-    #[Test]
-    public function it_belongs_to_a_staff_member(): void
-    {
-        $staff = Staff::factory()->create();
-        $assignment = StaffLocationService::factory()->create(['staff_id' => $staff->id]);
+    expect($assignment->staff()->exists())->toBeTrue();
+    expect($assignment->staff->id)->toEqual($staff->id);
+});
 
-        $this->assertTrue($assignment->staff()->exists());
-        $this->assertEquals($staff->id, $assignment->staff->id);
-    }
+it('belongs to a location service', function () {
+    $locationService = LocationService::factory()->create();
+    $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
 
-    #[Test]
-    public function it_belongs_to_a_location_service(): void
-    {
-        $locationService = LocationService::factory()->create();
-        $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
-
-        $this->assertTrue($assignment->locationService()->exists());
-        $this->assertEquals($locationService->id, $assignment->locationService->id);
-    }
-}
+    expect($assignment->locationService()->exists())->toBeTrue();
+    expect($assignment->locationService->id)->toEqual($locationService->id);
+});

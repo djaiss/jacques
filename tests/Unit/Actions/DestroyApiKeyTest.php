@@ -2,75 +2,57 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\DestroyApiKey;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class DestroyApiKeyTest extends TestCase
-{
-    use RefreshDatabase;
+it('revokes the key', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_revokes_the_key(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $apiKey = $user->createToken('Dundie awards bot')->accessToken;
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $apiKey = $user->createToken('Dundie awards bot')->accessToken;
+    new DestroyApiKey(user: $user, apiKeyId: $apiKey->id)->execute();
 
-        new DestroyApiKey(user: $user, apiKeyId: $apiKey->id)->execute();
+    $this->assertModelMissing($apiKey);
+    expect($user->tokens()->count())->toBe(0);
+});
 
-        $this->assertModelMissing($apiKey);
-        $this->assertSame(0, $user->tokens()->count());
+it('refuses a key that belongs to somebody else', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $michael = User::factory()->create(['company_id' => $company->id]);
+    $dwight = User::factory()->create(['company_id' => $company->id]);
+    $apiKey = $dwight->createToken('Beet farm sync')->accessToken;
+
+    try {
+        new DestroyApiKey(user: $michael, apiKeyId: $apiKey->id)->execute();
+    } finally {
+        $this->assertModelExists($apiKey);
     }
+})->throws(ModelNotFoundException::class);
 
-    #[Test]
-    public function it_refuses_a_key_that_belongs_to_somebody_else(): void
-    {
-        Queue::fake();
+it('logs the revocation with the name the key had', function () {
+    Queue::fake();
 
-        $company = Company::factory()->create();
-        $michael = User::factory()->create(['company_id' => $company->id]);
-        $dwight = User::factory()->create(['company_id' => $company->id]);
-        $apiKey = $dwight->createToken('Beet farm sync')->accessToken;
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $apiKey = $user->createToken('Dundie awards bot')->accessToken;
 
-        $this->expectException(ModelNotFoundException::class);
+    new DestroyApiKey(user: $user, apiKeyId: $apiKey->id)->execute();
 
-        try {
-            new DestroyApiKey(user: $michael, apiKeyId: $apiKey->id)->execute();
-        } finally {
-            $this->assertModelExists($apiKey);
-        }
-    }
-
-    #[Test]
-    public function it_logs_the_revocation_with_the_name_the_key_had(): void
-    {
-        Queue::fake();
-
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $apiKey = $user->createToken('Dundie awards bot')->accessToken;
-
-        new DestroyApiKey(user: $user, apiKeyId: $apiKey->id)->execute();
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ApiKeyDeleted
-                && $job->company->id === $company->id
-                && $job->user->id === $user->id
-                && $job->parameters === ['name' => 'Dundie awards bot'],
-        );
-    }
-}
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ApiKeyDeleted
+            && $job->company->id === $company->id
+            && $job->user->id === $user->id
+            && $job->parameters === ['name' => 'Dundie awards bot'],
+    );
+});

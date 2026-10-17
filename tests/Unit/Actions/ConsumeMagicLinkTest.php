@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
+namespace Tests\Unit\Actions\ConsumeMagicLinkTest;
 
 use App\Actions\ConsumeMagicLink;
 use App\Enums\EmailTypeEnum;
@@ -11,112 +11,84 @@ use App\Jobs\SendEmail;
 use App\Models\MagicLink;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ConsumeMagicLinkTest extends TestCase
+const TOKEN = 'aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmmnnnnoooopppp';
+
+function linkFor(User $user, array $overrides = []): MagicLink
 {
-    use RefreshDatabase;
-
-    private const TOKEN = 'aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmmnnnnoooopppp';
-
-    private function linkFor(User $user, array $overrides = []): MagicLink
-    {
-        return MagicLink::factory()->create(array_merge([
-            'user_id' => $user->id,
-            'token' => hash('sha256', self::TOKEN),
-        ], $overrides));
-    }
-
-    #[Test]
-    public function it_signs_the_owner_of_the_link_in(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->create();
-        $this->linkFor($user);
-
-        $result = new ConsumeMagicLink(token: self::TOKEN, ip: '10.0.0.1')->execute();
-
-        $this->assertInstanceOf(User::class, $result);
-        $this->assertEquals($user->id, $result->id);
-        $this->assertNotNull($user->refresh()->last_signed_in_at);
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: DetectSignInAddressChange::class,
-            callback: fn (DetectSignInAddressChange $job): bool => $job->ip === '10.0.0.1',
-        );
-    }
-
-    #[Test]
-    public function it_warns_the_user_that_somebody_got_in_without_a_password(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->create();
-        $this->linkFor($user);
-
-        new ConsumeMagicLink(token: self::TOKEN, ip: '10.0.0.1')->execute();
-
-        Queue::assertPushedOn(
-            queue: 'high',
-            job: SendEmail::class,
-            callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::MagicLinkSignIn
-                && $job->user->id === $user->id,
-        );
-    }
-
-    #[Test]
-    public function it_burns_the_link_so_it_cannot_be_used_twice(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->create();
-        $link = $this->linkFor($user);
-
-        new ConsumeMagicLink(token: self::TOKEN)->execute();
-
-        $this->assertNotNull($link->refresh()->used_at);
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new ConsumeMagicLink(token: self::TOKEN)->execute();
-    }
-
-    #[Test]
-    public function it_refuses_a_link_that_ran_out_of_time(): void
-    {
-        Queue::fake();
-
-        $this->linkFor(User::factory()->create(), ['expires_at' => now()->subMinute()]);
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new ConsumeMagicLink(token: self::TOKEN)->execute();
-    }
-
-    #[Test]
-    public function it_refuses_a_token_it_has_never_seen(): void
-    {
-        Queue::fake();
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new ConsumeMagicLink(token: self::TOKEN)->execute();
-    }
-
-    #[Test]
-    public function it_refuses_a_link_belonging_to_a_suspended_user(): void
-    {
-        Queue::fake();
-
-        $this->linkFor(User::factory()->inactive()->create());
-
-        $this->expectException(ModelNotFoundException::class);
-
-        new ConsumeMagicLink(token: self::TOKEN)->execute();
-    }
+    return MagicLink::factory()->create(array_merge([
+        'user_id' => $user->id,
+        'token' => hash('sha256', TOKEN),
+    ], $overrides));
 }
+
+it('signs the owner of the link in', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    linkFor($user);
+
+    $result = new ConsumeMagicLink(token: TOKEN, ip: '10.0.0.1')->execute();
+
+    expect($result)->toBeInstanceOf(User::class);
+    expect($result->id)->toEqual($user->id);
+    expect($user->refresh()->last_signed_in_at)->not->toBeNull();
+
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: DetectSignInAddressChange::class,
+        callback: fn (DetectSignInAddressChange $job): bool => $job->ip === '10.0.0.1',
+    );
+});
+
+it('warns the user that somebody got in without a password', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    linkFor($user);
+
+    new ConsumeMagicLink(token: TOKEN, ip: '10.0.0.1')->execute();
+
+    Queue::assertPushedOn(
+        queue: 'high',
+        job: SendEmail::class,
+        callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::MagicLinkSignIn
+            && $job->user->id === $user->id,
+    );
+});
+
+it('burns the link so it cannot be used twice', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $link = linkFor($user);
+
+    new ConsumeMagicLink(token: TOKEN)->execute();
+
+    expect($link->refresh()->used_at)->not->toBeNull();
+
+    new ConsumeMagicLink(token: TOKEN)->execute();
+})->throws(ModelNotFoundException::class);
+
+it('refuses a link that ran out of time', function () {
+    Queue::fake();
+
+    linkFor(User::factory()->create(), ['expires_at' => now()->subMinute()]);
+
+    new ConsumeMagicLink(token: TOKEN)->execute();
+})->throws(ModelNotFoundException::class);
+
+it('refuses a token it has never seen', function () {
+    Queue::fake();
+
+    new ConsumeMagicLink(token: TOKEN)->execute();
+})->throws(ModelNotFoundException::class);
+
+it('refuses a link belonging to a suspended user', function () {
+    Queue::fake();
+
+    linkFor(User::factory()->inactive()->create());
+
+    new ConsumeMagicLink(token: TOKEN)->execute();
+})->throws(ModelNotFoundException::class);

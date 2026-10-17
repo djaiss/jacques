@@ -2,114 +2,88 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings\Account\Security;
-
 use App\Models\User;
 use App\ViewModels\Settings\Account\Security\SecurityViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class SecurityViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('gives how long ago the password was changed', function () {
+    $user = User::factory()->create(['password_changed_at' => now()->subDays(2)]);
 
-    #[Test]
-    public function it_gives_how_long_ago_the_password_was_changed(): void
-    {
-        $user = User::factory()->create(['password_changed_at' => now()->subDays(2)]);
+    $viewModel = new SecurityViewModel(user: $user);
 
-        $viewModel = new SecurityViewModel(user: $user);
+    expect($viewModel->passwordChangedAt())->toEqual('2 days ago');
+});
 
-        $this->assertEquals('2 days ago', $viewModel->passwordChangedAt());
-    }
+it('gives nothing when the password was never changed', function () {
+    $user = User::factory()->create(['password_changed_at' => null]);
 
-    #[Test]
-    public function it_gives_nothing_when_the_password_was_never_changed(): void
-    {
-        $user = User::factory()->create(['password_changed_at' => null]);
+    $viewModel = new SecurityViewModel(user: $user);
 
-        $viewModel = new SecurityViewModel(user: $user);
+    expect($viewModel->passwordChangedAt())->toBeNull();
+});
 
-        $this->assertNull($viewModel->passwordChangedAt());
-    }
+it('says whether the account signs in through a provider', function () {
+    $user = User::factory()->create();
+    $viewModel = new SecurityViewModel(user: $user);
 
-    #[Test]
-    public function it_says_whether_the_account_signs_in_through_a_provider(): void
-    {
-        $user = User::factory()->create();
-        $viewModel = new SecurityViewModel(user: $user);
+    expect($viewModel->usesSingleSignOn())->toBeFalse();
 
-        $this->assertFalse($viewModel->usesSingleSignOn());
+    $singleSignOnUser = User::factory()->singleSignOn()->create();
+    $singleSignOnViewModel = new SecurityViewModel(user: $singleSignOnUser);
 
-        $singleSignOnUser = User::factory()->singleSignOn()->create();
-        $singleSignOnViewModel = new SecurityViewModel(user: $singleSignOnUser);
+    expect($singleSignOnViewModel->usesSingleSignOn())->toBeTrue();
+});
 
-        $this->assertTrue($singleSignOnViewModel->usesSingleSignOn());
-    }
+it('gives an empty list when no api key has been made', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_gives_an_empty_list_when_no_api_key_has_been_made(): void
-    {
-        $user = User::factory()->create();
+    $viewModel = new SecurityViewModel(user: $user);
 
-        $viewModel = new SecurityViewModel(user: $user);
+    expect($viewModel->apiKeys())->toBe([]);
+    expect($viewModel->apiKeysHeader())->toEqual('Active · no API keys');
+});
 
-        $this->assertSame([], $viewModel->apiKeys());
-        $this->assertEquals('Active · no API keys', $viewModel->apiKeysHeader());
-    }
+it('gives the api keys newest first', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_gives_the_api_keys_newest_first(): void
-    {
-        $user = User::factory()->create();
+    $older = $user->createToken('Beet farm sync')->accessToken;
+    $older->forceFill(['created_at' => now()->subDays(3)])->save();
 
-        $older = $user->createToken('Beet farm sync')->accessToken;
-        $older->forceFill(['created_at' => now()->subDays(3)])->save();
+    $user->createToken('Dundie awards bot');
 
-        $user->createToken('Dundie awards bot');
+    $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
 
-        $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
+    expect($apiKeys)->toHaveCount(2);
+    expect($apiKeys[0]['name'])->toEqual('Dundie awards bot');
+    expect($apiKeys[1]['name'])->toEqual('Beet farm sync');
+    expect($apiKeys[1]['createdAt'])->toEqual('3 days ago');
+});
 
-        $this->assertCount(2, $apiKeys);
-        $this->assertEquals('Dundie awards bot', $apiKeys[0]['name']);
-        $this->assertEquals('Beet farm sync', $apiKeys[1]['name']);
-        $this->assertEquals('3 days ago', $apiKeys[1]['createdAt']);
-    }
+it('gives nothing for the last use until something uses the key', function () {
+    $user = User::factory()->create();
+    $user->createToken('Dundie awards bot');
 
-    #[Test]
-    public function it_gives_nothing_for_the_last_use_until_something_uses_the_key(): void
-    {
-        $user = User::factory()->create();
-        $user->createToken('Dundie awards bot');
+    $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
 
-        $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
+    expect($apiKeys[0]['lastUsedAt'])->toBeNull();
+});
 
-        $this->assertNull($apiKeys[0]['lastUsedAt']);
-    }
+it('gives how long ago the api key was last used', function () {
+    $user = User::factory()->create();
+    $apiKey = $user->createToken('Dundie awards bot')->accessToken;
+    $apiKey->forceFill(['last_used_at' => now()->subHours(5)])->save();
 
-    #[Test]
-    public function it_gives_how_long_ago_the_api_key_was_last_used(): void
-    {
-        $user = User::factory()->create();
-        $apiKey = $user->createToken('Dundie awards bot')->accessToken;
-        $apiKey->forceFill(['last_used_at' => now()->subHours(5)])->save();
+    $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
 
-        $apiKeys = new SecurityViewModel(user: $user)->apiKeys();
+    expect($apiKeys[0]['lastUsedAt'])->toEqual('5 hours ago');
+});
 
-        $this->assertEquals('5 hours ago', $apiKeys[0]['lastUsedAt']);
-    }
+it('counts the api keys in the header', function () {
+    $user = User::factory()->create();
+    $user->createToken('Dundie awards bot');
 
-    #[Test]
-    public function it_counts_the_api_keys_in_the_header(): void
-    {
-        $user = User::factory()->create();
-        $user->createToken('Dundie awards bot');
+    expect(new SecurityViewModel(user: $user)->apiKeysHeader())->toEqual('Active · 1 API key');
 
-        $this->assertEquals('Active · 1 API key', new SecurityViewModel(user: $user)->apiKeysHeader());
+    $user->createToken('Beet farm sync');
 
-        $user->createToken('Beet farm sync');
-
-        $this->assertEquals('Active · 2 API keys', new SecurityViewModel(user: $user)->apiKeysHeader());
-    }
-}
+    expect(new SecurityViewModel(user: $user)->apiKeysHeader())->toEqual('Active · 2 API keys');
+});

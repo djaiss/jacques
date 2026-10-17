@@ -2,80 +2,58 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Service;
 use App\Models\Staff;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a location', function () {
+    $location = Location::factory()->create();
+    $locationService = LocationService::factory()->create(['location_id' => $location->id]);
 
-    #[Test]
-    public function it_belongs_to_a_location(): void
-    {
-        $location = Location::factory()->create();
-        $locationService = LocationService::factory()->create(['location_id' => $location->id]);
+    expect($locationService->location()->exists())->toBeTrue();
+    expect($locationService->location->id)->toEqual($location->id);
+});
 
-        $this->assertTrue($locationService->location()->exists());
-        $this->assertEquals($location->id, $locationService->location->id);
-    }
+it('belongs to a service of the same company', function () {
+    $locationService = LocationService::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_a_service_of_the_same_company(): void
-    {
-        $locationService = LocationService::factory()->create();
+    expect($locationService->service()->exists())->toBeTrue();
+    expect($locationService->service->company_id)->toEqual($locationService->location->company_id);
+});
 
-        $this->assertTrue($locationService->service()->exists());
-        $this->assertEquals($locationService->location->company_id, $locationService->service->company_id);
-    }
+it('belongs to many staff members', function () {
+    $locationService = LocationService::factory()->create();
+    $jim = Staff::factory()->create(['company_id' => $locationService->location->company_id]);
+    $locationService->staff()->attach($jim->id);
 
-    #[Test]
-    public function it_belongs_to_many_staff_members(): void
-    {
-        $locationService = LocationService::factory()->create();
-        $jim = Staff::factory()->create(['company_id' => $locationService->location->company_id]);
-        $locationService->staff()->attach($jim->id);
+    expect($locationService->staff()->exists())->toBeTrue();
+    expect($locationService->staff->first()->id)->toEqual($jim->id);
+});
 
-        $this->assertTrue($locationService->staff()->exists());
-        $this->assertEquals($jim->id, $locationService->staff->first()->id);
-    }
+it('charges its own price in the currencies it replaces', function () {
+    $location = Location::factory()->create();
+    $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500, 'USD' => 2600]]);
+    $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id, 'prices' => ['USD' => 3000]]);
 
-    #[Test]
-    public function it_charges_its_own_price_in_the_currencies_it_replaces(): void
-    {
-        $location = Location::factory()->create();
-        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500, 'USD' => 2600]]);
-        $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id, 'prices' => ['USD' => 3000]]);
+    expect($locationService->resolvedPrice('USD'))->toEqual(3000);
+    expect($locationService->resolvedPrice('CAD'))->toEqual(3500);
+});
 
-        $this->assertEquals(3000, $locationService->resolvedPrice('USD'));
-        $this->assertEquals(3500, $locationService->resolvedPrice('CAD'));
-    }
+it('follows the price of the service without one', function () {
+    $location = Location::factory()->create();
+    $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500]]);
+    $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id]);
 
-    #[Test]
-    public function it_follows_the_price_of_the_service_without_one(): void
-    {
-        $location = Location::factory()->create();
-        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500]]);
-        $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id]);
+    $haircut->update(['prices' => ['CAD' => 3800]]);
 
-        $haircut->update(['prices' => ['CAD' => 3800]]);
+    expect($locationService->refresh()->resolvedPrice('CAD'))->toEqual(3800);
+});
 
-        $this->assertEquals(3800, $locationService->refresh()->resolvedPrice('CAD'));
-    }
+it('has no price in a currency neither it nor the service has', function () {
+    $location = Location::factory()->create();
+    $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500]]);
+    $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id]);
 
-    #[Test]
-    public function it_has_no_price_in_a_currency_neither_it_nor_the_service_has(): void
-    {
-        $location = Location::factory()->create();
-        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'prices' => ['CAD' => 3500]]);
-        $locationService = LocationService::factory()->create(['location_id' => $location->id, 'service_id' => $haircut->id]);
-
-        $this->assertNull($locationService->resolvedPrice('EUR'));
-    }
-}
+    expect($locationService->resolvedPrice('EUR'))->toBeNull();
+});

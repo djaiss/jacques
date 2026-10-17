@@ -2,51 +2,33 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Location;
 use App\Models\StaffAbsence;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class StaffAbsenceTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a staff member', function () {
+    $absence = StaffAbsence::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_a_staff_member(): void
-    {
-        $absence = StaffAbsence::factory()->create();
+    expect($absence->staff()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($absence->staff()->exists());
-    }
+it('belongs to a location when it concerns only one', function () {
+    $absence = StaffAbsence::factory()->create(['location_id' => Location::factory()->create()->id]);
 
-    #[Test]
-    public function it_belongs_to_a_location_when_it_concerns_only_one(): void
-    {
-        $absence = StaffAbsence::factory()->create(['location_id' => Location::factory()->create()->id]);
+    expect($absence->location()->exists())->toBeTrue();
+    expect($absence->concernsEveryLocation())->toBeFalse();
+});
 
-        $this->assertTrue($absence->location()->exists());
-        $this->assertFalse($absence->concernsEveryLocation());
-    }
+it('concerns every location without one', function () {
+    $absence = StaffAbsence::factory()->create(['location_id' => null]);
 
-    #[Test]
-    public function it_concerns_every_location_without_one(): void
-    {
-        $absence = StaffAbsence::factory()->create(['location_id' => null]);
+    expect($absence->location()->exists())->toBeFalse();
+    expect($absence->concernsEveryLocation())->toBeTrue();
+});
 
-        $this->assertFalse($absence->location()->exists());
-        $this->assertTrue($absence->concernsEveryLocation());
-    }
+it('casts its dates', function () {
+    $absence = StaffAbsence::factory()->create()->refresh();
 
-    #[Test]
-    public function it_casts_its_dates(): void
-    {
-        $absence = StaffAbsence::factory()->create()->refresh();
-
-        $this->assertInstanceOf(Carbon::class, $absence->starts_at);
-        $this->assertInstanceOf(Carbon::class, $absence->ends_at);
-    }
-}
+    expect($absence->starts_at)->toBeInstanceOf(Carbon::class);
+    expect($absence->ends_at)->toBeInstanceOf(Carbon::class);
+});

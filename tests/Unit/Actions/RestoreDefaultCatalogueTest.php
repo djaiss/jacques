@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\RestoreDefaultCatalogue;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -13,55 +11,36 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class RestoreDefaultCatalogueTest extends TestCase
-{
-    use RefreshDatabase;
+it('brings back the example catalogue even after it was created once', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_brings_back_the_example_catalogue_even_after_it_was_created_once(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create(['default_catalogue_created_at' => now()]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
 
-        $company = Company::factory()->create(['default_catalogue_created_at' => now()]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    new RestoreDefaultCatalogue(author: $michael, company: $company)->execute();
 
-        new RestoreDefaultCatalogue(author: $michael, company: $company)->execute();
+    expect(ServiceCategory::query()->where('company_id', $company->id)->count())->toEqual(6);
+    expect(Service::query()->where('company_id', $company->id)->count())->toEqual(17);
 
-        $this->assertEquals(6, ServiceCategory::query()->where('company_id', $company->id)->count());
-        $this->assertEquals(17, Service::query()->where('company_id', $company->id)->count());
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::CatalogueRestored,
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::CatalogueRestored,
-        );
-    }
+it('throws when the catalogue is not empty', function () {
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    ServiceCategory::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_throws_when_the_catalogue_is_not_empty(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
+    new RestoreDefaultCatalogue(author: $michael, company: $company)->execute();
+})->throws(InvalidArgumentException::class);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        ServiceCategory::factory()->create(['company_id' => $company->id]);
+it('throws when the author belongs to another company', function () {
+    $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
 
-        new RestoreDefaultCatalogue(author: $michael, company: $company)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_author_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
-
-        new RestoreDefaultCatalogue(author: $michael, company: Company::factory()->create())->execute();
-    }
-}
+    new RestoreDefaultCatalogue(author: $michael, company: Company::factory()->create())->execute();
+})->throws(ModelNotFoundException::class);

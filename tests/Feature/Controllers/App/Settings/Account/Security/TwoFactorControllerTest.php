@@ -2,126 +2,102 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Security;
-
 use App\Models\Company;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
 use PragmaRX\Google2FA\Google2FA;
-use Tests\TestCase;
 
-class TwoFactorControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('shows the screen that pairs an authenticator app', function () {
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-    #[Test]
-    public function it_shows_the_screen_that_pairs_an_authenticator_app(): void
-    {
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    $response = $this->actingAs($user)->get(route('settings.twoFactor.new'));
 
-        $response = $this->actingAs($user)->get(route('settings.twoFactor.new'));
+    $response->assertStatus(200);
+    $response->assertSee('Pair your authenticator app', escape: false);
+    $response->assertSee('michael.scott@dundermifflin.com', escape: false);
+    $response->assertSee('<svg', escape: false);
 
-        $response->assertStatus(200);
-        $response->assertSee('Pair your authenticator app', escape: false);
-        $response->assertSee('michael.scott@dundermifflin.com', escape: false);
-        $response->assertSee('<svg', escape: false);
+    expect($user->refresh()->two_factor_secret)->not->toBeNull();
+});
 
-        $this->assertNotNull($user->refresh()->two_factor_secret);
-    }
+it('carries the top bar and the way back to the security screen', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $user = User::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
 
-    #[Test]
-    public function it_carries_the_top_bar_and_the_way_back_to_the_security_screen(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $user = User::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $response = $this->actingAs($user)->get(route('settings.twoFactor.new'));
 
-        $response = $this->actingAs($user)->get(route('settings.twoFactor.new'));
+    $response->assertStatus(200);
+    $response->assertSee('id="top-bar-menu"', escape: false);
+    $response->assertSee('Dunder Mifflin', escape: false);
+    $response->assertSee(route('settings.security.index'), escape: false);
+});
 
-        $response->assertStatus(200);
-        $response->assertSee('id="top-bar-menu"', escape: false);
-        $response->assertSee('Dunder Mifflin', escape: false);
-        $response->assertSee(route('settings.security.index'), escape: false);
-    }
+it('refuses a visitor who is not signed in', function () {
+    $response = $this->get(route('settings.twoFactor.new'));
 
-    #[Test]
-    public function it_refuses_a_visitor_who_is_not_signed_in(): void
-    {
-        $response = $this->get(route('settings.twoFactor.new'));
+    $response->assertRedirect(route('auth.signIn.new'));
+});
 
-        $response->assertRedirect(route('auth.signIn.new'));
-    }
+it('turns two factor authentication on', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_turns_two_factor_authentication_on(): void
-    {
-        Queue::fake();
+    $google2fa = new Google2FA;
+    $secret = $google2fa->generateSecretKey();
 
-        $google2fa = new Google2FA;
-        $secret = $google2fa->generateSecretKey();
+    $user = User::factory()->create([
+        'two_factor_secret' => $secret,
+        'two_factor_confirmed_at' => null,
+    ]);
 
-        $user = User::factory()->create([
-            'two_factor_secret' => $secret,
-            'two_factor_confirmed_at' => null,
-        ]);
+    $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), [
+        'code' => $google2fa->getCurrentOtp($secret),
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), [
-            'code' => $google2fa->getCurrentOtp($secret),
-        ]);
+    $response->assertRedirect(route('settings.security.index'));
+    $response->assertSessionHas('status', 'Two factor authentication is on.');
 
-        $response->assertRedirect(route('settings.security.index'));
-        $response->assertSessionHas('status', 'Two factor authentication is on.');
+    expect($user->refresh()->usesTwoFactorAuthentication())->toBeTrue();
+});
 
-        $this->assertTrue($user->refresh()->usesTwoFactorAuthentication());
-    }
+it('says so when the code is not right', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_says_so_when_the_code_is_not_right(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create([
+        'two_factor_secret' => new Google2FA()->generateSecretKey(),
+        'two_factor_confirmed_at' => null,
+    ]);
 
-        $user = User::factory()->create([
-            'two_factor_secret' => new Google2FA()->generateSecretKey(),
-            'two_factor_confirmed_at' => null,
-        ]);
+    $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), [
+        'code' => '000000',
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), [
-            'code' => '000000',
-        ]);
+    $response->assertSessionHasErrors('code');
 
-        $response->assertSessionHasErrors('code');
+    expect($user->refresh()->usesTwoFactorAuthentication())->toBeFalse();
+});
 
-        $this->assertFalse($user->refresh()->usesTwoFactorAuthentication());
-    }
+it('asks for a code', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_asks_for_a_code(): void
-    {
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), []);
 
-        $response = $this->actingAs($user)->post(route('settings.twoFactor.create'), []);
+    $response->assertSessionHasErrors('code');
+});
 
-        $response->assertSessionHasErrors('code');
-    }
+it('turns two factor authentication off', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_turns_two_factor_authentication_off(): void
-    {
-        Queue::fake();
+    $user = User::factory()->twoFactor()->create();
 
-        $user = User::factory()->twoFactor()->create();
+    $response = $this->actingAs($user)->delete(route('settings.twoFactor.destroy'));
 
-        $response = $this->actingAs($user)->delete(route('settings.twoFactor.destroy'));
+    $response->assertRedirect(route('settings.security.index'));
+    $response->assertSessionHas('status', 'Two factor authentication is off.');
 
-        $response->assertRedirect(route('settings.security.index'));
-        $response->assertSessionHas('status', 'Two factor authentication is off.');
+    $user->refresh();
 
-        $user->refresh();
-
-        $this->assertFalse($user->usesTwoFactorAuthentication());
-        $this->assertNull($user->two_factor_secret);
-    }
-}
+    expect($user->usesTwoFactorAuthentication())->toBeFalse();
+    expect($user->two_factor_secret)->toBeNull();
+});

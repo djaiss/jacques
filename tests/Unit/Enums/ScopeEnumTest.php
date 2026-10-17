@@ -2,28 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Enums;
-
 use App\Enums\ScopeEnum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class ScopeEnumTest extends TestCase
-{
-    #[Test]
-    public function it_names_every_scope_twice(): void
-    {
-        foreach (ScopeEnum::cases() as $scope) {
-            $this->assertNotEmpty($scope->label());
-            $this->assertNotEmpty($scope->shortLabel());
-        }
+it('names every scope twice', function () {
+    foreach (ScopeEnum::cases() as $scope) {
+        expect($scope->label())->not->toBeEmpty();
+        expect($scope->shortLabel())->not->toBeEmpty();
     }
+});
 
-    #[Test]
-    public function it_keeps_the_short_name_to_one_word(): void
-    {
-        $this->assertEquals('Self', ScopeEnum::Self->shortLabel());
-        $this->assertEquals('Locations', ScopeEnum::Location->shortLabel());
-        $this->assertEquals('Company', ScopeEnum::Company->shortLabel());
-    }
-}
+it('keeps the short name to one word', function () {
+    expect(ScopeEnum::Self->shortLabel())->toEqual('Self');
+    expect(ScopeEnum::Location->shortLabel())->toEqual('Locations');
+    expect(ScopeEnum::Company->shortLabel())->toEqual('Company');
+});

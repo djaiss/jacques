@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\DestroyService;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
@@ -15,73 +13,53 @@ use App\Models\Service;
 use App\Models\StaffLocationService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class DestroyServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('deletes a service with its steps offers and staff assignments', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_deletes_a_service_with_its_steps_offers_and_staff_assignments(): void
-    {
-        Queue::fake();
+    $locationService = LocationService::factory()->create();
+    $service = $locationService->service;
+    $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
+    $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
 
-        $locationService = LocationService::factory()->create();
-        $service = $locationService->service;
-        $assignment = StaffLocationService::factory()->create(['location_service_id' => $locationService->id]);
-        $michael = $this->grant(User::factory()->create(['company_id' => $service->company_id]), PermissionEnum::ServiceManage);
+    new DestroyService(author: $michael, service: $service)->execute();
 
-        new DestroyService(author: $michael, service: $service)->execute();
+    $this->assertModelMissing($service);
+    $this->assertModelMissing($locationService);
+    $this->assertModelMissing($assignment);
+    $this->assertDatabaseMissing('service_steps', ['service_id' => $service->id]);
 
-        $this->assertModelMissing($service);
-        $this->assertModelMissing($locationService);
-        $this->assertModelMissing($assignment);
-        $this->assertDatabaseMissing('service_steps', ['service_id' => $service->id]);
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceDeleted
+            && $job->parameters === ['name' => $service->name['en']],
+    );
+});
 
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::ServiceDeleted
-                && $job->parameters === ['name' => $service->name['en']],
-        );
-    }
+it('moves up the services after it', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_moves_up_the_services_after_it(): void
-    {
-        Queue::fake();
+    $company = Company::factory()->create();
+    $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
+    $shave = Service::factory()->create(['company_id' => $company->id, 'position' => 1]);
+    $trim = Service::factory()->create(['company_id' => $company->id, 'position' => 2]);
 
-        $company = Company::factory()->create();
-        $michael = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::ServiceManage);
-        $shave = Service::factory()->create(['company_id' => $company->id, 'position' => 1]);
-        $trim = Service::factory()->create(['company_id' => $company->id, 'position' => 2]);
+    new DestroyService(author: $michael, service: $shave)->execute();
 
-        new DestroyService(author: $michael, service: $shave)->execute();
+    expect($trim->refresh()->position)->toEqual(1);
+});
 
-        $this->assertEquals(1, $trim->refresh()->position);
-    }
+it('throws when a manager changes the catalogue', function () {
+    $service = Service::factory()->create();
+    $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $service->company_id]), Role::MANAGER);
 
-    #[Test]
-    public function it_throws_when_a_manager_changes_the_catalogue(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
+    new DestroyService(author: $dwight, service: $service)->execute();
+})->throws(ModelNotFoundException::class);
 
-        $service = Service::factory()->create();
-        $dwight = $this->giveDefaultRole(User::factory()->create(['company_id' => $service->company_id]), Role::MANAGER);
+it('throws when the service belongs to another company', function () {
+    $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
 
-        new DestroyService(author: $dwight, service: $service)->execute();
-    }
-
-    #[Test]
-    public function it_throws_when_the_service_belongs_to_another_company(): void
-    {
-        $this->expectException(ModelNotFoundException::class);
-
-        $michael = $this->grant(User::factory()->create(), PermissionEnum::ServiceManage);
-
-        new DestroyService(author: $michael, service: Service::factory()->create())->execute();
-    }
-}
+    new DestroyService(author: $michael, service: Service::factory()->create())->execute();
+})->throws(ModelNotFoundException::class);

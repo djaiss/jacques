@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationOpeningHour;
@@ -12,92 +10,68 @@ use App\Models\LocationStaff;
 use App\Models\Service;
 use App\Models\Staff;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a company', function () {
+    $company = Company::factory()->create();
+    $location = Location::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_belongs_to_a_company(): void
-    {
-        $company = Company::factory()->create();
-        $location = Location::factory()->create(['company_id' => $company->id]);
+    expect($location->company()->exists())->toBeTrue();
+    expect($location->company->id)->toEqual($company->id);
+});
 
-        $this->assertTrue($location->company()->exists());
-        $this->assertEquals($company->id, $location->company->id);
-    }
+it('belongs to many staff members with the state of each assignment', function () {
+    $location = Location::factory()->create();
+    $dwight = Staff::factory()->create(['company_id' => $location->company_id]);
+    LocationStaff::factory()->paused()->create(['location_id' => $location->id, 'staff_id' => $dwight->id]);
 
-    #[Test]
-    public function it_belongs_to_many_staff_members_with_the_state_of_each_assignment(): void
-    {
-        $location = Location::factory()->create();
-        $dwight = Staff::factory()->create(['company_id' => $location->company_id]);
-        LocationStaff::factory()->paused()->create(['location_id' => $location->id, 'staff_id' => $dwight->id]);
+    expect($location->staff()->exists())->toBeTrue();
+    expect($location->staff->first()->id)->toEqual($dwight->id);
+    expect((bool) $location->staff->first()->pivot->is_active)->toBeFalse();
+});
 
-        $this->assertTrue($location->staff()->exists());
-        $this->assertEquals($dwight->id, $location->staff->first()->id);
-        $this->assertFalse((bool) $location->staff->first()->pivot->is_active);
-    }
+it('has many location services', function () {
+    $location = Location::factory()->create();
+    LocationService::factory()->create(['location_id' => $location->id]);
 
-    #[Test]
-    public function it_has_many_location_services(): void
-    {
-        $location = Location::factory()->create();
-        LocationService::factory()->create(['location_id' => $location->id]);
+    expect($location->locationServices()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($location->locationServices()->exists());
-    }
+it('has many opening hours', function () {
+    $location = Location::factory()->create();
+    LocationOpeningHour::factory()->create(['location_id' => $location->id]);
 
-    #[Test]
-    public function it_has_many_opening_hours(): void
-    {
-        $location = Location::factory()->create();
-        LocationOpeningHour::factory()->create(['location_id' => $location->id]);
+    expect($location->openingHours()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($location->openingHours()->exists());
-    }
+it('tells whether each staff member follows its opening hours', function () {
+    $location = Location::factory()->create();
+    $jim = Staff::factory()->create(['company_id' => $location->company_id]);
+    LocationStaff::factory()->withCustomHours()->create(['location_id' => $location->id, 'staff_id' => $jim->id]);
 
-    #[Test]
-    public function it_tells_whether_each_staff_member_follows_its_opening_hours(): void
-    {
-        $location = Location::factory()->create();
-        $jim = Staff::factory()->create(['company_id' => $location->company_id]);
-        LocationStaff::factory()->withCustomHours()->create(['location_id' => $location->id, 'staff_id' => $jim->id]);
+    expect((bool) $location->staff->first()->pivot->follows_opening_hours)->toBeFalse();
+});
 
-        $this->assertFalse((bool) $location->staff->first()->pivot->follows_opening_hours);
-    }
+it('belongs to many services', function () {
+    $location = Location::factory()->create();
+    $haircut = Service::factory()->create(['company_id' => $location->company_id, 'name' => ['en' => 'Haircut']]);
+    $location->services()->attach($haircut->id);
 
-    #[Test]
-    public function it_belongs_to_many_services(): void
-    {
-        $location = Location::factory()->create();
-        $haircut = Service::factory()->create(['company_id' => $location->company_id, 'name' => ['en' => 'Haircut']]);
-        $location->services()->attach($haircut->id);
+    expect($location->services()->exists())->toBeTrue();
+    expect($location->services->first()->name)->toEqual(['en' => 'Haircut']);
+    expect((bool) $location->services->first()->pivot->is_active)->toBeTrue();
+});
 
-        $this->assertTrue($location->services()->exists());
-        $this->assertEquals(['en' => 'Haircut'], $location->services->first()->name);
-        $this->assertTrue((bool) $location->services->first()->pivot->is_active);
-    }
+it('knows whether it has been archived', function () {
+    $open = Location::factory()->make();
+    $closed = Location::factory()->archived()->make();
 
-    #[Test]
-    public function it_knows_whether_it_has_been_archived(): void
-    {
-        $open = Location::factory()->make();
-        $closed = Location::factory()->archived()->make();
+    expect($open->isArchived())->toBeFalse();
+    expect($closed->isArchived())->toBeTrue();
+});
 
-        $this->assertFalse($open->isArchived());
-        $this->assertTrue($closed->isArchived());
-    }
+it('casts the day it was archived and the headquarters flag', function () {
+    $location = Location::factory()->archived()->primary()->create();
 
-    #[Test]
-    public function it_casts_the_day_it_was_archived_and_the_headquarters_flag(): void
-    {
-        $location = Location::factory()->archived()->primary()->create();
-
-        $this->assertInstanceOf(Carbon::class, $location->archived_at);
-        $this->assertIsBool($location->is_headquarters);
-    }
-}
+    expect($location->archived_at)->toBeInstanceOf(Carbon::class);
+    expect($location->is_headquarters)->toBeBool();
+});

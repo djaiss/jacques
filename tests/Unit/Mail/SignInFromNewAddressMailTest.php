@@ -2,35 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Mail;
-
 use App\Mail\SignInFromNewAddressMail;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class SignInFromNewAddressMailTest extends TestCase
-{
-    #[Test]
-    public function it_has_a_subject(): void
-    {
-        config(['app.name' => 'Jacques']);
+it('has a subject', function () {
+    config(['app.name' => 'Jacques']);
 
-        $mailable = new SignInFromNewAddressMail(email: 'michael.scott@dundermifflin.com', ip: '10.0.0.1');
+    $mailable = new SignInFromNewAddressMail(email: 'michael.scott@dundermifflin.com', ip: '10.0.0.1');
 
-        $this->assertEquals(
-            'A sign-in from a new place on your Jacques account',
-            $mailable->envelope()->subject,
-        );
-    }
+    expect($mailable->envelope()->subject)->toEqual('A sign-in from a new place on your Jacques account');
+});
 
-    #[Test]
-    public function it_names_the_account_and_where_the_sign_in_came_from(): void
-    {
-        $mailable = new SignInFromNewAddressMail(email: 'michael.scott@dundermifflin.com', ip: '10.0.0.1');
+it('names the account and where the sign in came from', function () {
+    $mailable = new SignInFromNewAddressMail(email: 'michael.scott@dundermifflin.com', ip: '10.0.0.1');
 
-        $rendered = $mailable->render();
+    $rendered = $mailable->render();
 
-        $this->assertStringContainsString('michael.scott@dundermifflin.com', $rendered);
-        $this->assertStringContainsString('10.0.0.1', $rendered);
-    }
-}
+    expect($rendered)->toContain('michael.scott@dundermifflin.com');
+    expect($rendered)->toContain('10.0.0.1');
+});

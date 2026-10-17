@@ -81,8 +81,9 @@ user-scoped administration in `Api/Administration`).
 You MUST create `tests/Feature/Controllers/Api/{Resource}ControllerTest.php`,
 and you MUST follow the conventions of the existing files there (e.g.
 `CollectionControllerTest.php`) and the rules in `.claude/rules/testing.md`:
-PHPUnit classes, `#[Test]` methods named in snake_case, `use RefreshDatabase;`,
-and a shared `$jsonStructure` property.
+Pest `it('...')` tests, `expect()` assertions, and the JSON structure shared by
+the file as a `const JSON_STRUCTURE` at its top level, in the namespace the file
+then declares.
 
 - You MUST authenticate with `Sanctum::actingAs($user)`. `User::factory()`
   creates an account owner.

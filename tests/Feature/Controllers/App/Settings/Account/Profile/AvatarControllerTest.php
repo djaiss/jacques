@@ -2,304 +2,268 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\App\Settings\Account\Profile;
-
 use App\Actions\UpdateStaffAvatar;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class AvatarControllerTest extends TestCase
-{
-    use RefreshDatabase;
+it('uploads an avatar', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-    #[Test]
-    public function it_uploads_an_avatar(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
+        'avatar' => UploadedFile::fake()->image('dwight.jpg', 400, 400),
+    ]);
 
-        $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
-            'avatar' => UploadedFile::fake()->image('dwight.jpg', 400, 400),
-        ]);
+    $response->assertRedirect(route('settings.profile.index'));
+    $response->assertSessionHas('status', 'Your avatar is saved.');
 
-        $response->assertRedirect(route('settings.profile.index'));
-        $response->assertSessionHas('status', 'Your avatar is saved.');
+    $staff->refresh();
 
-        $staff->refresh();
+    expect($staff->hasAvatar())->toBeTrue();
 
-        $this->assertTrue($staff->hasAvatar());
-
-        foreach (Staff::avatarPixelSizes() as $pixels) {
-            Storage::disk('local')->assertExists($staff->avatarVariantPath($pixels));
-        }
+    foreach (Staff::avatarPixelSizes() as $pixels) {
+        Storage::disk('local')->assertExists($staff->avatarVariantPath($pixels));
     }
+});
 
-    #[Test]
-    public function it_removes_an_avatar(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('removes an avatar', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('pam.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('pam.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($user->fresh())->delete(route('settings.avatar.destroy'));
+    $response = $this->actingAs($user->fresh())->delete(route('settings.avatar.destroy'));
 
-        $response->assertRedirect(route('settings.profile.index'));
-        $response->assertSessionHas('status', 'Your avatar is removed.');
+    $response->assertRedirect(route('settings.profile.index'));
+    $response->assertSessionHas('status', 'Your avatar is removed.');
 
-        $this->assertFalse($staff->refresh()->hasAvatar());
-    }
+    expect($staff->refresh()->hasAvatar())->toBeFalse();
+});
 
-    #[Test]
-    public function it_refuses_a_file_that_is_not_an_image(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+it('refuses a file that is not an image', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
-            'avatar' => UploadedFile::fake()->create('beets.pdf', 10, 'application/pdf'),
-        ]);
+    $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
+        'avatar' => UploadedFile::fake()->create('beets.pdf', 10, 'application/pdf'),
+    ]);
 
-        $response->assertSessionHasErrors('avatar');
-    }
+    $response->assertSessionHasErrors('avatar');
+});
 
-    #[Test]
-    public function it_refuses_a_file_that_is_too_large(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+it('refuses a file that is too large', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
-            'avatar' => UploadedFile::fake()->image('creed.jpg')->size(6 * 1024),
-        ]);
+    $response = $this->actingAs($user)->post(route('settings.avatar.update'), [
+        'avatar' => UploadedFile::fake()->image('creed.jpg')->size(6 * 1024),
+    ]);
 
-        $response->assertSessionHasErrors('avatar');
-    }
+    $response->assertSessionHasErrors('avatar');
+});
 
-    #[Test]
-    public function it_redirects_a_visitor_who_is_not_signed_in(): void
-    {
-        $response = $this->post(route('settings.avatar.update'));
+it('redirects a visitor who is not signed in', function () {
+    $response = $this->post(route('settings.avatar.update'));
 
-        $response->assertRedirect(route('auth.signIn.new'));
-    }
+    $response->assertRedirect(route('auth.signIn.new'));
+});
 
-    #[Test]
-    public function it_serves_a_version_of_the_avatar(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('serves a version of the avatar', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('jim.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('jim.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($user->fresh())
-            ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 192]));
+    $response = $this->actingAs($user->fresh())
+        ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 192]));
 
-        $response->assertOk();
-        $this->assertStringContainsString('image/webp', (string) $response->headers->get('content-type'));
-    }
+    $response->assertOk();
+    expect((string) $response->headers->get('content-type'))->toContain('image/webp');
+});
 
-    #[Test]
-    public function it_serves_the_avatar_of_a_staff_member_by_their_staff_id(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('serves the avatar of a staff member by their staff id', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
-        $creed = Staff::factory()->create(['company_id' => $company->id, 'user_id' => null]);
+    $company = Company::factory()->create();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $creed = Staff::factory()->create(['company_id' => $company->id, 'user_id' => null]);
 
-        new UpdateStaffAvatar(
-            author: $michael,
-            staff: $creed,
-            file: UploadedFile::fake()->image('creed.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $michael,
+        staff: $creed,
+        file: UploadedFile::fake()->image('creed.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($michael)
-            ->get("/settings/account/profile/avatar/{$creed->id}/96");
+    $response = $this->actingAs($michael)
+        ->get("/settings/account/profile/avatar/{$creed->id}/96");
 
-        $response->assertOk();
-        $this->assertStringContainsString('image/webp', (string) $response->headers->get('content-type'));
-    }
+    $response->assertOk();
+    expect((string) $response->headers->get('content-type'))->toContain('image/webp');
+});
 
-    #[Test]
-    public function it_does_not_serve_the_avatar_of_a_staff_member_of_another_company(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('does not serve the avatar of a staff member of another company', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $michael = $this->giveDefaultRole(User::factory()->create(), Role::OWNER);
-        $nashua = Company::factory()->create();
-        $nashuaOwner = $this->giveDefaultRole(User::factory()->create(['company_id' => $nashua->id]), Role::OWNER);
-        $holly = Staff::factory()->create(['company_id' => $nashua->id, 'user_id' => null]);
+    $michael = $this->giveDefaultRole(User::factory()->create(), Role::OWNER);
+    $nashua = Company::factory()->create();
+    $nashuaOwner = $this->giveDefaultRole(User::factory()->create(['company_id' => $nashua->id]), Role::OWNER);
+    $holly = Staff::factory()->create(['company_id' => $nashua->id, 'user_id' => null]);
 
-        new UpdateStaffAvatar(
-            author: $nashuaOwner,
-            staff: $holly,
-            file: UploadedFile::fake()->image('holly.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $nashuaOwner,
+        staff: $holly,
+        file: UploadedFile::fake()->image('holly.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($michael)
-            ->get(route('settings.avatar.show', ['staff' => $holly, 'size' => 96]));
+    $response = $this->actingAs($michael)
+        ->get(route('settings.avatar.show', ['staff' => $holly, 'size' => 96]));
 
-        $response->assertNotFound();
-    }
+    $response->assertNotFound();
+});
 
-    #[Test]
-    public function it_does_not_serve_the_avatar_of_somebody_at_another_company(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('does not serve the avatar of somebody at another company', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('holly.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('holly.jpg', 400, 400),
+    )->execute();
 
-        $stranger = $this->giveDefaultRole(User::factory()->create(), Role::STAFF);
+    $stranger = $this->giveDefaultRole(User::factory()->create(), Role::STAFF);
 
-        $response = $this->actingAs($stranger)
-            ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]));
+    $response = $this->actingAs($stranger)
+        ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]));
 
-        $response->assertNotFound();
-    }
+    $response->assertNotFound();
+});
 
-    #[Test]
-    public function it_does_not_serve_the_avatar_to_somebody_who_may_not_see_the_staff_member(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('does not serve the avatar to somebody who may not see the staff member', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('kelly.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('kelly.jpg', 400, 400),
+    )->execute();
 
-        $colleagueWithNoRole = User::factory()->create(['company_id' => $company->id]);
+    $colleagueWithNoRole = User::factory()->create(['company_id' => $company->id]);
 
-        $response = $this->actingAs($colleagueWithNoRole)
-            ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]));
+    $response = $this->actingAs($colleagueWithNoRole)
+        ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]));
 
-        $response->assertNotFound();
-    }
+    $response->assertNotFound();
+});
 
-    #[Test]
-    public function it_serves_only_the_sizes_it_writes_to_disk(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('serves only the sizes it writes to disk', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('toby.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('toby.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($user->fresh())
-            ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 999]));
+    $response = $this->actingAs($user->fresh())
+        ->get(route('settings.avatar.show', ['staff' => $staff, 'size' => 999]));
 
-        $response->assertNotFound();
-    }
+    $response->assertNotFound();
+});
 
-    #[Test]
-    public function it_shows_the_avatar_at_both_densities_on_the_profile_screen(): void
-    {
-        Queue::fake();
-        Storage::fake('local');
+it('shows the avatar at both densities on the profile screen', function () {
+    Queue::fake();
+    Storage::fake('local');
 
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $staff = Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Stanley',
-            'last_name' => 'Hudson',
-            'user_id' => $user->id,
-        ]);
-        $this->giveDefaultRole($user, Role::STAFF);
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $staff = Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Stanley',
+        'last_name' => 'Hudson',
+        'user_id' => $user->id,
+    ]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        new UpdateStaffAvatar(
-            author: $user,
-            staff: $staff,
-            file: UploadedFile::fake()->image('stanley.jpg', 400, 400),
-        )->execute();
+    new UpdateStaffAvatar(
+        author: $user,
+        staff: $staff,
+        file: UploadedFile::fake()->image('stanley.jpg', 400, 400),
+    )->execute();
 
-        $response = $this->actingAs($user->fresh())->get(route('settings.profile.index'));
+    $response = $this->actingAs($user->fresh())->get(route('settings.profile.index'));
 
-        $response->assertOk();
-        $response->assertSee(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]), escape: false);
-        $response->assertSee(route('settings.avatar.show', ['staff' => $staff, 'size' => 192]), escape: false);
-        $response->assertSee('Remove the avatar');
-    }
+    $response->assertOk();
+    $response->assertSee(route('settings.avatar.show', ['staff' => $staff, 'size' => 96]), escape: false);
+    $response->assertSee(route('settings.avatar.show', ['staff' => $staff, 'size' => 192]), escape: false);
+    $response->assertSee('Remove the avatar');
+});
 
-    #[Test]
-    public function it_falls_back_to_the_initials_when_there_is_no_avatar(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        Staff::factory()->create([
-            'company_id' => $company->id,
-            'first_name' => 'Stanley',
-            'last_name' => 'Hudson',
-            'user_id' => $user->id,
-        ]);
-        $this->giveDefaultRole($user, Role::STAFF);
+it('falls back to the initials when there is no avatar', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    Staff::factory()->create([
+        'company_id' => $company->id,
+        'first_name' => 'Stanley',
+        'last_name' => 'Hudson',
+        'user_id' => $user->id,
+    ]);
+    $this->giveDefaultRole($user, Role::STAFF);
 
-        $response = $this->actingAs($user)->get(route('settings.profile.index'));
+    $response = $this->actingAs($user)->get(route('settings.profile.index'));
 
-        $response->assertOk();
-        $response->assertSee('SH');
-        $response->assertDontSee('Remove the avatar');
-    }
-}
+    $response->assertOk();
+    $response->assertSee('SH');
+    $response->assertDontSee('Remove the avatar');
+});

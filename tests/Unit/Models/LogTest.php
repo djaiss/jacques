@@ -2,112 +2,86 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Enums\UserActionEnum;
 use App\Models\Company;
 use App\Models\Log;
 use App\Models\Staff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LogTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a company', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $log = Log::factory()->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_belongs_to_a_company(): void
-    {
-        $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-        $log = Log::factory()->create(['company_id' => $company->id]);
+    expect($log->company()->exists())->toBeTrue();
+    expect($log->company->name)->toEqual('Dunder Mifflin');
+});
 
-        $this->assertTrue($log->company()->exists());
-        $this->assertEquals('Dunder Mifflin', $log->company->name);
-    }
+it('belongs to a user', function () {
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    $log = Log::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_belongs_to_a_user(): void
-    {
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
-        $log = Log::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    expect($log->user()->exists())->toBeTrue();
+    expect($log->user->email)->toEqual('michael.scott@dundermifflin.com');
+});
 
-        $this->assertTrue($log->user()->exists());
-        $this->assertEquals('michael.scott@dundermifflin.com', $log->user->email);
-    }
+it('casts the parameters to an array', function () {
+    $log = Log::factory()->create(['parameters' => ['name' => 'Dunder Mifflin']]);
 
-    #[Test]
-    public function it_casts_the_parameters_to_an_array(): void
-    {
-        $log = Log::factory()->create(['parameters' => ['name' => 'Dunder Mifflin']]);
+    expect($log->refresh()->parameters)->toEqual(['name' => 'Dunder Mifflin']);
+});
 
-        $this->assertEquals(['name' => 'Dunder Mifflin'], $log->refresh()->parameters);
-    }
+it('gives the name of whoever performed the action', function () {
+    $user = User::factory()->create();
+    Staff::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'first_name' => 'Michael',
+        'last_name' => 'Scott',
+        'display_name' => null,
+    ]);
+    $log = Log::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_gives_the_name_of_whoever_performed_the_action(): void
-    {
-        $user = User::factory()->create();
-        Staff::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'first_name' => 'Michael',
-            'last_name' => 'Scott',
-            'display_name' => null,
-        ]);
-        $log = Log::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    expect($log->author)->toEqual('Michael Scott');
+});
 
-        $this->assertEquals('Michael Scott', $log->author);
-    }
+it('falls back to the recorded email when the user is gone', function () {
+    $log = Log::factory()->create([
+        'user_id' => null,
+        'user_email' => 'michael.scott@dundermifflin.com',
+    ]);
 
-    #[Test]
-    public function it_falls_back_to_the_recorded_email_when_the_user_is_gone(): void
-    {
-        $log = Log::factory()->create([
-            'user_id' => null,
-            'user_email' => 'michael.scott@dundermifflin.com',
-        ]);
+    expect($log->author)->toEqual('michael.scott@dundermifflin.com');
+});
 
-        $this->assertEquals('michael.scott@dundermifflin.com', $log->author);
-    }
+it('describes the action with its parameters', function () {
+    $log = Log::factory()->create([
+        'action' => UserActionEnum::CompanyUpdated->value,
+        'parameters' => ['name' => 'Dunder Mifflin'],
+    ]);
 
-    #[Test]
-    public function it_describes_the_action_with_its_parameters(): void
-    {
-        $log = Log::factory()->create([
-            'action' => UserActionEnum::CompanyUpdated->value,
-            'parameters' => ['name' => 'Dunder Mifflin'],
-        ]);
+    expect($log->description)->toEqual('Updated the company called Dunder Mifflin');
+});
 
-        $this->assertEquals('Updated the company called Dunder Mifflin', $log->description);
-    }
+it('describes an action that carries no parameter', function () {
+    $log = Log::factory()->create([
+        'action' => UserActionEnum::UserSignedIn->value,
+        'parameters' => null,
+    ]);
 
-    #[Test]
-    public function it_describes_an_action_that_carries_no_parameter(): void
-    {
-        $log = Log::factory()->create([
-            'action' => UserActionEnum::UserSignedIn->value,
-            'parameters' => null,
-        ]);
+    expect($log->description)->toEqual('Signed in');
+});
 
-        $this->assertEquals('Signed in', $log->description);
-    }
+it('falls back to the raw name of an action it does not know', function () {
+    $log = Log::factory()->create([
+        'action' => 'stapler_put_in_jelly',
+        'parameters' => null,
+    ]);
 
-    #[Test]
-    public function it_falls_back_to_the_raw_name_of_an_action_it_does_not_know(): void
-    {
-        $log = Log::factory()->create([
-            'action' => 'stapler_put_in_jelly',
-            'parameters' => null,
-        ]);
-
-        $this->assertEquals('stapler_put_in_jelly', $log->description);
-    }
-}
+    expect($log->description)->toEqual('stapler_put_in_jelly');
+});

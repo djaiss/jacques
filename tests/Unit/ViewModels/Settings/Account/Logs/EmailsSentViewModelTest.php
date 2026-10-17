@@ -2,69 +2,53 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings\Account\Logs;
-
 use App\Models\EmailSent;
 use App\Models\User;
 use App\ViewModels\Settings\Account\Logs\EmailsSentViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class EmailsSentViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('gives the emails sent newest first', function () {
+    $user = User::factory()->create();
+    EmailSent::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'subject' => 'Confirm your email address',
+        'sent_at' => now()->subDays(3),
+    ]);
+    EmailSent::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+        'subject' => 'A sign-in from a new place',
+        'sent_at' => now()->subDay(),
+    ]);
 
-    #[Test]
-    public function it_gives_the_emails_sent_newest_first(): void
-    {
-        $user = User::factory()->create();
-        EmailSent::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'subject' => 'Confirm your email address',
-            'sent_at' => now()->subDays(3),
-        ]);
-        EmailSent::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'subject' => 'A sign-in from a new place',
-            'sent_at' => now()->subDay(),
-        ]);
+    $viewModel = new EmailsSentViewModel(user: $user);
 
-        $viewModel = new EmailsSentViewModel(user: $user);
+    expect($viewModel->emailsSent())->toHaveCount(2);
+    expect($viewModel->emailsSent()->first()->subject)->toEqual('A sign-in from a new place');
+});
 
-        $this->assertCount(2, $viewModel->emailsSent());
-        $this->assertEquals('A sign-in from a new place', $viewModel->emailsSent()->first()->subject);
-    }
+it('hides the emails sent to somebody else', function () {
+    $user = User::factory()->create();
+    $colleague = User::factory()->create(['company_id' => $user->company_id]);
+    EmailSent::factory()->create([
+        'company_id' => $user->company_id,
+        'user_id' => $colleague->id,
+    ]);
 
-    #[Test]
-    public function it_hides_the_emails_sent_to_somebody_else(): void
-    {
-        $user = User::factory()->create();
-        $colleague = User::factory()->create(['company_id' => $user->company_id]);
-        EmailSent::factory()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $colleague->id,
-        ]);
+    $viewModel = new EmailsSentViewModel(user: $user);
 
-        $viewModel = new EmailsSentViewModel(user: $user);
+    expect($viewModel->emailsSent())->toHaveCount(0);
+});
 
-        $this->assertCount(0, $viewModel->emailsSent());
-    }
+it('gives ten emails a page', function () {
+    $user = User::factory()->create();
+    EmailSent::factory()->count(11)->create([
+        'company_id' => $user->company_id,
+        'user_id' => $user->id,
+    ]);
 
-    #[Test]
-    public function it_gives_ten_emails_a_page(): void
-    {
-        $user = User::factory()->create();
-        EmailSent::factory()->count(11)->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-        ]);
+    $viewModel = new EmailsSentViewModel(user: $user);
 
-        $viewModel = new EmailsSentViewModel(user: $user);
-
-        $this->assertCount(10, $viewModel->emailsSent());
-        $this->assertTrue($viewModel->emailsSent()->hasMorePages());
-    }
-}
+    expect($viewModel->emailsSent())->toHaveCount(10);
+    expect($viewModel->emailsSent()->hasMorePages())->toBeTrue();
+});

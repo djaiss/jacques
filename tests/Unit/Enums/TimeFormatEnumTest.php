@@ -2,43 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Enums;
-
 use App\Enums\TimeFormatEnum;
 use Carbon\Carbon;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class TimeFormatEnumTest extends TestCase
-{
-    #[Test]
-    public function it_names_every_format(): void
-    {
-        foreach (TimeFormatEnum::cases() as $format) {
-            $this->assertNotEmpty($format->label());
-        }
+it('names every format', function () {
+    foreach (TimeFormatEnum::cases() as $format) {
+        expect($format->label())->not->toBeEmpty();
     }
+});
 
-    #[Test]
-    public function it_writes_a_time_on_a_twenty_four_hour_clock(): void
-    {
-        $time = Carbon::create(2026, 7, 31, 14, 30);
+it('writes a time on a twenty four hour clock', function () {
+    $time = Carbon::create(2026, 7, 31, 14, 30);
 
-        $this->assertEquals('14:30', TimeFormatEnum::TwentyFourHour->format($time));
-    }
+    expect(TimeFormatEnum::TwentyFourHour->format($time))->toEqual('14:30');
+});
 
-    #[Test]
-    public function it_writes_a_time_on_a_twelve_hour_clock(): void
-    {
-        $time = Carbon::create(2026, 7, 31, 14, 30);
+it('writes a time on a twelve hour clock', function () {
+    $time = Carbon::create(2026, 7, 31, 14, 30);
 
-        $this->assertEquals('2:30 PM', TimeFormatEnum::TwelveHour->format($time));
-    }
+    expect(TimeFormatEnum::TwelveHour->format($time))->toEqual('2:30 PM');
+});
 
-    #[Test]
-    public function it_shows_the_same_afternoon_hour_written_both_ways(): void
-    {
-        $this->assertEquals('14:00', TimeFormatEnum::TwentyFourHour->example());
-        $this->assertEquals('2:00 PM', TimeFormatEnum::TwelveHour->example());
-    }
-}
+it('shows the same afternoon hour written both ways', function () {
+    expect(TimeFormatEnum::TwentyFourHour->example())->toEqual('14:00');
+    expect(TimeFormatEnum::TwelveHour->example())->toEqual('2:00 PM');
+});

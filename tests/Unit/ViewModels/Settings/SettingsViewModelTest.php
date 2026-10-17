@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Settings;
-
 use App\Enums\PermissionEnum;
 use App\Models\Company;
 use App\Models\Location;
@@ -11,103 +9,79 @@ use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use App\ViewModels\Settings\SettingsViewModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class SettingsViewModelTest extends TestCase
-{
-    use RefreshDatabase;
+it('lists every setting of the account', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_lists_every_setting_of_the_account(): void
-    {
-        $user = User::factory()->create();
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    $titles = array_column($viewModel->accountRows(), 'title');
 
-        $titles = array_column($viewModel->accountRows(), 'title');
+    expect($titles)->toBe(['Profile', 'Security and access', 'Preferences', 'Logs']);
+});
 
-        $this->assertSame(['Profile', 'Security and access', 'Preferences', 'Logs'], $titles);
-    }
+it('says whether two factor authentication is on', function () {
+    $user = User::factory()->create(['two_factor_confirmed_at' => now()]);
 
-    #[Test]
-    public function it_says_whether_two_factor_authentication_is_on(): void
-    {
-        $user = User::factory()->create(['two_factor_confirmed_at' => now()]);
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect($viewModel->accountRows()[1]['value'])->toBe('Two-factor on');
+});
 
-        $this->assertSame('Two-factor on', $viewModel->accountRows()[1]['value']);
-    }
+it('says when two factor authentication is off', function () {
+    $user = User::factory()->create(['two_factor_confirmed_at' => null]);
 
-    #[Test]
-    public function it_says_when_two_factor_authentication_is_off(): void
-    {
-        $user = User::factory()->create(['two_factor_confirmed_at' => null]);
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect($viewModel->accountRows()[1]['value'])->toBe('Two-factor off');
+});
 
-        $this->assertSame('Two-factor off', $viewModel->accountRows()[1]['value']);
-    }
+it('counts the locations of the company', function () {
+    $company = Company::factory()->create();
+    $user = $this->grant(
+        User::factory()->create(['company_id' => $company->id]),
+        PermissionEnum::LocationManage,
+    );
+    Location::factory()->count(2)->create(['company_id' => $company->id]);
 
-    #[Test]
-    public function it_counts_the_locations_of_the_company(): void
-    {
-        $company = Company::factory()->create();
-        $user = $this->grant(
-            User::factory()->create(['company_id' => $company->id]),
-            PermissionEnum::LocationManage,
-        );
-        Location::factory()->count(2)->create(['company_id' => $company->id]);
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect($viewModel->companyRows()[0]['value'])->toBe('2 locations');
+});
 
-        $this->assertSame('2 locations', $viewModel->companyRows()[0]['value']);
-    }
+it('offers nothing about the company to somebody who administers none of it', function () {
+    $user = User::factory()->create();
 
-    #[Test]
-    public function it_offers_nothing_about_the_company_to_somebody_who_administers_none_of_it(): void
-    {
-        $user = User::factory()->create();
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect($viewModel->companyRows())->toBe([]);
+});
 
-        $this->assertSame([], $viewModel->companyRows());
-    }
+it('offers the locations but not the roles to a manager', function () {
+    $user = $this->giveDefaultRole(User::factory()->create(), Role::MANAGER);
 
-    #[Test]
-    public function it_offers_the_locations_but_not_the_roles_to_a_manager(): void
-    {
-        $user = $this->giveDefaultRole(User::factory()->create(), Role::MANAGER);
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect(array_column($viewModel->companyRows(), 'title'))->toEqual(['Locations']);
+});
 
-        $this->assertEquals(['Locations'], array_column($viewModel->companyRows(), 'title'));
-    }
+it('falls back to the email address when nobody works here', function () {
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.example']);
 
-    #[Test]
-    public function it_falls_back_to_the_email_address_when_nobody_works_here(): void
-    {
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.example']);
+    $viewModel = new SettingsViewModel(user: $user, staff: null);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: null);
+    expect($viewModel->name())->toBe('michael.scott@dundermifflin.example');
+});
 
-        $this->assertSame('michael.scott@dundermifflin.example', $viewModel->name());
-    }
+it('names the role of somebody', function () {
+    $company = Company::factory()->create();
+    $user = $this->grant(
+        User::factory()->create(['company_id' => $company->id]),
+        PermissionEnum::LocationManage,
+    );
+    $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
 
-    #[Test]
-    public function it_names_the_role_of_somebody(): void
-    {
-        $company = Company::factory()->create();
-        $user = $this->grant(
-            User::factory()->create(['company_id' => $company->id]),
-            PermissionEnum::LocationManage,
-        );
-        $staff = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
+    $viewModel = new SettingsViewModel(user: $user, staff: $staff);
 
-        $viewModel = new SettingsViewModel(user: $user, staff: $staff);
-
-        $this->assertSame('location.manage at company scope', $viewModel->role());
-    }
-}
+    expect($viewModel->role())->toBe('location.manage at company scope');
+});

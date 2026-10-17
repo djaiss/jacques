@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Actions;
-
 use App\Actions\AttemptSignIn;
 use App\Enums\EmailTypeEnum;
 use App\Enums\UserActionEnum;
@@ -11,190 +9,131 @@ use App\Jobs\DetectSignInAddressChange;
 use App\Jobs\LogUserAction;
 use App\Jobs\SendEmail;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class AttemptSignInTest extends TestCase
-{
-    use RefreshDatabase;
+it('signs a user in', function () {
+    Queue::fake();
 
-    #[Test]
-    public function it_signs_a_user_in(): void
-    {
-        Queue::fake();
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    $result = new AttemptSignIn(
+        email: 'michael.scott@dundermifflin.com',
+        password: 'password',
+        ip: '10.0.0.1',
+    )->execute();
 
-        $result = new AttemptSignIn(
+    expect($result)->toBeInstanceOf(User::class);
+    expect($result->id)->toEqual($user->id);
+    $this->assertAuthenticatedAs($user);
+    expect($user->refresh()->last_signed_in_at)->not->toBeNull();
+
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: DetectSignInAddressChange::class,
+        callback: fn (DetectSignInAddressChange $job): bool => $job->user->id === $user->id && $job->ip === '10.0.0.1',
+    );
+
+    Queue::assertPushedOn(
+        queue: 'low',
+        job: LogUserAction::class,
+        callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::UserSignedIn,
+    );
+});
+
+it('matches the address whatever the casing', function () {
+    Queue::fake();
+
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+
+    new AttemptSignIn(
+        email: 'Michael.Scott@DunderMifflin.com',
+        password: 'password',
+    )->execute();
+
+    $this->assertAuthenticatedAs($user);
+});
+
+it('refuses a wrong password and warns the owner', function () {
+    Queue::fake();
+
+    $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+
+    try {
+        new AttemptSignIn(
+            email: 'michael.scott@dundermifflin.com',
+            password: 'thatswhatshesaid',
+        )->execute();
+
+        $this->fail('The action should have refused.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors())->toHaveKey('email');
+    }
+
+    $this->assertGuest();
+
+    Queue::assertPushedOn(
+        queue: 'high',
+        job: SendEmail::class,
+        callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::SignInFailed
+            && $job->user->id === $user->id,
+    );
+});
+
+it('says nothing about an address that has no account', function () {
+    Queue::fake();
+
+    try {
+        new AttemptSignIn(
+            email: 'nobody@dundermifflin.com',
+            password: 'password',
+        )->execute();
+    } finally {
+        Queue::assertNotPushed(SendEmail::class);
+    }
+})->throws(ValidationException::class);
+
+it('refuses a suspended user', function () {
+    Queue::fake();
+
+    $user = User::factory()->inactive()->create(['email' => 'michael.scott@dundermifflin.com']);
+
+    try {
+        new AttemptSignIn(
             email: 'michael.scott@dundermifflin.com',
             password: 'password',
-            ip: '10.0.0.1',
         )->execute();
-
-        $this->assertInstanceOf(User::class, $result);
-        $this->assertEquals($user->id, $result->id);
-        $this->assertAuthenticatedAs($user);
-        $this->assertNotNull($user->refresh()->last_signed_in_at);
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: DetectSignInAddressChange::class,
-            callback: fn (DetectSignInAddressChange $job): bool => $job->user->id === $user->id && $job->ip === '10.0.0.1',
-        );
-
-        Queue::assertPushedOn(
-            queue: 'low',
-            job: LogUserAction::class,
-            callback: fn (LogUserAction $job): bool => $job->action === UserActionEnum::UserSignedIn,
+    } finally {
+        $this->assertGuest();
+        Queue::assertPushed(
+            SendEmail::class,
+            fn (SendEmail $job): bool => $job->user->id === $user->id,
         );
     }
+})->throws(ValidationException::class);
 
-    #[Test]
-    public function it_matches_the_address_whatever_the_casing(): void
-    {
-        Queue::fake();
+it('refuses somebody who signs in through single sign on', function () {
+    Queue::fake();
 
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    User::factory()->singleSignOn()->create(['email' => 'michael.scott@dundermifflin.com']);
 
+    try {
         new AttemptSignIn(
-            email: 'Michael.Scott@DunderMifflin.com',
+            email: 'michael.scott@dundermifflin.com',
             password: 'password',
         )->execute();
-
-        $this->assertAuthenticatedAs($user);
-    }
-
-    #[Test]
-    public function it_refuses_a_wrong_password_and_warns_the_owner(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
-
-        try {
-            new AttemptSignIn(
-                email: 'michael.scott@dundermifflin.com',
-                password: 'thatswhatshesaid',
-            )->execute();
-
-            $this->fail('The action should have refused.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('email', $exception->errors());
-        }
-
-        $this->assertGuest();
-
-        Queue::assertPushedOn(
-            queue: 'high',
-            job: SendEmail::class,
-            callback: fn (SendEmail $job): bool => $job->emailType === EmailTypeEnum::SignInFailed
-                && $job->user->id === $user->id,
-        );
-    }
-
-    #[Test]
-    public function it_says_nothing_about_an_address_that_has_no_account(): void
-    {
-        Queue::fake();
-
-        $this->expectException(ValidationException::class);
-
-        try {
-            new AttemptSignIn(
-                email: 'nobody@dundermifflin.com',
-                password: 'password',
-            )->execute();
-        } finally {
-            Queue::assertNotPushed(SendEmail::class);
-        }
-    }
-
-    #[Test]
-    public function it_refuses_a_suspended_user(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->inactive()->create(['email' => 'michael.scott@dundermifflin.com']);
-
-        $this->expectException(ValidationException::class);
-
-        try {
-            new AttemptSignIn(
-                email: 'michael.scott@dundermifflin.com',
-                password: 'password',
-            )->execute();
-        } finally {
-            $this->assertGuest();
-            Queue::assertPushed(
-                SendEmail::class,
-                fn (SendEmail $job): bool => $job->user->id === $user->id,
-            );
-        }
-    }
-
-    #[Test]
-    public function it_refuses_somebody_who_signs_in_through_single_sign_on(): void
-    {
-        Queue::fake();
-
-        User::factory()->singleSignOn()->create(['email' => 'michael.scott@dundermifflin.com']);
-
-        $this->expectException(ValidationException::class);
-
-        try {
-            new AttemptSignIn(
-                email: 'michael.scott@dundermifflin.com',
-                password: 'password',
-            )->execute();
-        } finally {
-            $this->assertGuest();
-        }
-    }
-
-    #[Test]
-    public function it_stops_trying_after_five_failures(): void
-    {
-        Queue::fake();
-
-        User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
-
-        for ($attempt = 0; $attempt < 5; $attempt++) {
-            try {
-                new AttemptSignIn(
-                    email: 'michael.scott@dundermifflin.com',
-                    password: 'wrong',
-                    ip: '10.0.0.1',
-                )->execute();
-            } catch (ValidationException) {
-            }
-        }
-
-        try {
-            new AttemptSignIn(
-                email: 'michael.scott@dundermifflin.com',
-                password: 'password',
-                ip: '10.0.0.1',
-            )->execute();
-
-            $this->fail('The action should have been rate limited.');
-        } catch (ValidationException $exception) {
-            $this->assertStringContainsString('Too many sign-in attempts', $exception->errors()['email'][0]);
-        }
-
+    } finally {
         $this->assertGuest();
     }
+})->throws(ValidationException::class);
 
-    #[Test]
-    public function it_forgets_the_failures_once_somebody_gets_in(): void
-    {
-        Queue::fake();
+it('stops trying after five failures', function () {
+    Queue::fake();
 
-        User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+    User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
 
+    for ($attempt = 0; $attempt < 5; $attempt++) {
         try {
             new AttemptSignIn(
                 email: 'michael.scott@dundermifflin.com',
@@ -203,50 +142,75 @@ class AttemptSignInTest extends TestCase
             )->execute();
         } catch (ValidationException) {
         }
+    }
 
+    try {
         new AttemptSignIn(
             email: 'michael.scott@dundermifflin.com',
             password: 'password',
             ip: '10.0.0.1',
         )->execute();
 
-        $this->assertEquals(0, RateLimiter::attempts('michael.scott@dundermifflin.com|10.0.0.1'));
+        $this->fail('The action should have been rate limited.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors()['email'][0])->toContain('Too many sign-in attempts');
     }
 
-    #[Test]
-    public function it_writes_a_remember_token_when_asked_to(): void
-    {
-        Queue::fake();
+    $this->assertGuest();
+});
 
-        User::factory()->create([
-            'email' => 'michael.scott@dundermifflin.com',
-            'remember_token' => null,
-        ]);
+it('forgets the failures once somebody gets in', function () {
+    Queue::fake();
 
-        $user = new AttemptSignIn(
+    User::factory()->create(['email' => 'michael.scott@dundermifflin.com']);
+
+    try {
+        new AttemptSignIn(
             email: 'michael.scott@dundermifflin.com',
-            password: 'password',
-            remember: true,
+            password: 'wrong',
+            ip: '10.0.0.1',
         )->execute();
-
-        $this->assertNotNull($user->refresh()->remember_token);
+    } catch (ValidationException) {
     }
 
-    #[Test]
-    public function it_leaves_no_remember_token_when_not_asked_to(): void
-    {
-        Queue::fake();
+    new AttemptSignIn(
+        email: 'michael.scott@dundermifflin.com',
+        password: 'password',
+        ip: '10.0.0.1',
+    )->execute();
 
-        User::factory()->create([
-            'email' => 'michael.scott@dundermifflin.com',
-            'remember_token' => null,
-        ]);
+    expect(RateLimiter::attempts('michael.scott@dundermifflin.com|10.0.0.1'))->toEqual(0);
+});
 
-        $user = new AttemptSignIn(
-            email: 'michael.scott@dundermifflin.com',
-            password: 'password',
-        )->execute();
+it('writes a remember token when asked to', function () {
+    Queue::fake();
 
-        $this->assertNull($user->refresh()->remember_token);
-    }
-}
+    User::factory()->create([
+        'email' => 'michael.scott@dundermifflin.com',
+        'remember_token' => null,
+    ]);
+
+    $user = new AttemptSignIn(
+        email: 'michael.scott@dundermifflin.com',
+        password: 'password',
+        remember: true,
+    )->execute();
+
+    expect($user->refresh()->remember_token)->not->toBeNull();
+});
+
+it('leaves no remember token when not asked to', function () {
+    Queue::fake();
+
+    User::factory()->create([
+        'email' => 'michael.scott@dundermifflin.com',
+        'remember_token' => null,
+    ]);
+
+    $user = new AttemptSignIn(
+        email: 'michael.scott@dundermifflin.com',
+        password: 'password',
+    )->execute();
+
+    expect($user->refresh()->remember_token)->toBeNull();
+});

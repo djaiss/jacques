@@ -2,44 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ViewModels\Auth;
-
 use App\ViewModels\Auth\RegisterViewModel;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class RegisterViewModelTest extends TestCase
-{
-    #[Test]
-    public function it_gives_a_quote(): void
-    {
-        $quote = new RegisterViewModel()->quote();
+it('gives a quote', function () {
+    $quote = new RegisterViewModel()->quote();
 
-        $this->assertArrayHasKey('text', $quote);
-        $this->assertArrayHasKey('author', $quote);
-        $this->assertArrayHasKey('source', $quote);
-    }
+    expect($quote)->toHaveKey('text');
+    expect($quote)->toHaveKey('author');
+    expect($quote)->toHaveKey('source');
+});
 
-    #[Test]
-    public function it_gives_the_languages_the_interface_speaks(): void
-    {
-        $locales = new RegisterViewModel()->locales();
+it('gives the languages the interface speaks', function () {
+    $locales = new RegisterViewModel()->locales();
 
-        $this->assertCount(4, $locales);
-        $this->assertEquals([
-            'label' => 'English',
-            'region' => 'United Kingdom',
-            'flag' => config('jacques.locales.en.flag'),
-            'code' => 'en',
-        ], $locales[0]);
-    }
+    expect($locales)->toHaveCount(4);
+    expect($locales[0])->toEqual([
+        'label' => 'English',
+        'region' => 'United Kingdom',
+        'flag' => config('jacques.locales.en.flag'),
+        'code' => 'en',
+    ]);
+});
 
-    #[Test]
-    public function it_gives_the_urls_of_the_legal_pages(): void
-    {
-        $viewModel = new RegisterViewModel;
+it('gives the urls of the legal pages', function () {
+    $viewModel = new RegisterViewModel;
 
-        $this->assertEquals(config('jacques.terms_url'), $viewModel->termsUrl());
-        $this->assertEquals(config('jacques.privacy_url'), $viewModel->privacyUrl());
-    }
-}
+    expect($viewModel->termsUrl())->toEqual(config('jacques.terms_url'));
+    expect($viewModel->privacyUrl())->toEqual(config('jacques.privacy_url'));
+});

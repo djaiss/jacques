@@ -2,30 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
-
 use App\Models\LocationOpeningHour;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-class LocationOpeningHourTest extends TestCase
-{
-    use RefreshDatabase;
+it('belongs to a location', function () {
+    $openingHour = LocationOpeningHour::factory()->create();
 
-    #[Test]
-    public function it_belongs_to_a_location(): void
-    {
-        $openingHour = LocationOpeningHour::factory()->create();
+    expect($openingHour->location()->exists())->toBeTrue();
+});
 
-        $this->assertTrue($openingHour->location()->exists());
-    }
+it('casts the day of the week to an integer', function () {
+    $openingHour = LocationOpeningHour::factory()->create(['day_of_week' => '6']);
 
-    #[Test]
-    public function it_casts_the_day_of_the_week_to_an_integer(): void
-    {
-        $openingHour = LocationOpeningHour::factory()->create(['day_of_week' => '6']);
-
-        $this->assertSame(6, $openingHour->refresh()->day_of_week);
-    }
-}
+    expect($openingHour->refresh()->day_of_week)->toBe(6);
+});
