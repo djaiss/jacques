@@ -16,6 +16,8 @@
     email: '.Js::from($values['email']).',
     bookable: '.Js::from($values['is_bookable']).',
     invite: '.Js::from($values['invite']).',
+    role: '.Js::from((string) $values['role']).',
+    roleNames: '.Js::from(collect($panel->roleOptions())->mapWithKeys(fn (array $role): array => [(string) $role['id'] => $role['name']])).',
     selected: '.Js::from(array_map(strval(...), $values['services'])).',
     everyId: '.Js::from(array_map(strval(...), $everyId)).',
     confirming: false,
@@ -112,7 +114,7 @@
 
               <div x-show="hasEmail() && invite" x-cloak class="space-y-1.5">
                 <x-label for="staff-role">{{ __('Role of the account') }}</x-label>
-                <select id="staff-role" name="role" x-bind:disabled="! (hasEmail() && invite)" class="block w-full cursor-pointer rounded-[10px] border-[1.5px] border-control bg-input px-3.25 py-2.75 text-base text-ink hover:border-ink focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none">
+                <select id="staff-role" name="role" x-model="role" x-bind:disabled="! (hasEmail() && invite)" class="block w-full cursor-pointer rounded-[10px] border-[1.5px] border-control bg-input px-3.25 py-2.75 text-base text-ink hover:border-ink focus:border-focus-ring focus:bg-canvas focus:ring-2 focus:ring-focus-ring focus:outline-none">
                   @foreach ($panel->roleOptions() as $role)
                     <option value="{{ $role['id'] }}" @selected($role['id'] === $values['role'])>{{ $role['name'] }}</option>
                   @endforeach
@@ -250,11 +252,19 @@
 
           <div class="bg-page px-4 py-6">
             <div class="mx-auto flex max-w-120 flex-col gap-4.5 rounded-xl bg-white px-6 pt-7 pb-6 text-[#17161a] ring-1 ring-hairline">
-              <p class="text-[15px] font-bold tracking-[-0.01em]">{{ $panel->salonName() }}</p>
-              <p class="text-[22px] font-bold tracking-[-0.025em]" x-text="first.trim() !== '' ? fill(@js($preview['greeting'])) : @js($preview['greetingWithoutName'])"></p>
-              <p class="text-[15px] leading-relaxed text-pretty text-[#5f5b54]" x-text="job.trim() !== '' ? fill(@js($preview['body'])) : @js($preview['bodyWithoutJob'])"></p>
+              <p class="text-[15px] font-bold tracking-[-0.01em]">{{ config('app.name') }}</p>
+              <p class="text-[22px] font-bold tracking-[-0.025em] text-balance">{{ $preview['heading'] }}</p>
+              <p class="text-[15px] leading-relaxed text-[#5f5b54]" x-text="first.trim() !== '' ? fill(@js($preview['greeting'])) : @js($preview['greetingWithoutName'])"></p>
+              <p class="text-[15px] leading-relaxed text-pretty text-[#5f5b54]">{{ $preview['body'] }}</p>
               <p class="text-[15px] leading-relaxed text-pretty text-[#5f5b54]">{{ $preview['purpose'] }}</p>
+              <dl class="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-4 gap-y-1.5 rounded-[10px] bg-[#f6f4ef] px-4 py-3 text-sm">
+                <dt class="text-[#6e6a62]">{{ $preview['salonLabel'] }}</dt>
+                <dd class="font-semibold wrap-anywhere">{{ $panel->salonName() }}</dd>
+                <dt class="text-[#6e6a62]">{{ $preview['roleLabel'] }}</dt>
+                <dd class="font-semibold wrap-anywhere" x-text="roleNames[role] ?? ''"></dd>
+              </dl>
               <span class="self-start rounded-[10px] bg-[#17161a] px-5 py-3 text-[15px] font-semibold text-white">{{ $preview['button'] }}</span>
+              <p class="text-sm leading-normal text-[#6e6a62]">{{ $preview['expiry'] }}</p>
               <p class="border-t border-[#e9e5dc] pt-4 text-xs leading-normal text-pretty text-[#6e6a62]">{{ $preview['footer'] }}</p>
             </div>
           </div>

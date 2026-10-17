@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\PermissionEnum;
+use App\Enums\StaffInvitationStatusEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Role;
@@ -16,9 +17,9 @@ use InvalidArgumentException;
 
 /**
  * Prepare the invitation for a staff member to create an account holding a
- * role, or change the role of the one already prepared. Nothing is sent:
- * sending belongs to a later feature. Only somebody who manages roles may do
- * it, since the invitation hands one out.
+ * role, or change the role of the one already prepared. Nothing is sent, and
+ * preparing over a revoked invitation starts it again from nothing. Only
+ * somebody who manages roles may do it, since the invitation hands one out.
  */
 class PrepareStaffInvitation
 {
@@ -61,6 +62,10 @@ class PrepareStaffInvitation
         if ($this->staff->user_id !== null) {
             throw new InvalidArgumentException('The staff member already has an account');
         }
+
+        if ($this->staff->invitation?->status() === StaffInvitationStatusEnum::Accepted) {
+            throw new InvalidArgumentException('The invitation was already accepted');
+        }
     }
 
     private function prepare(): void
@@ -69,6 +74,16 @@ class PrepareStaffInvitation
             ['staff_id' => $this->staff->id],
             ['role_id' => $this->role->id, 'author_id' => $this->author->id],
         );
+
+        if ($this->invitation->status() !== StaffInvitationStatusEnum::Revoked) {
+            return;
+        }
+
+        $this->invitation->token_hash = null;
+        $this->invitation->sent_at = null;
+        $this->invitation->expires_at = null;
+        $this->invitation->revoked_at = null;
+        $this->invitation->save();
     }
 
     private function log(): void

@@ -11,4 +11,5 @@ enum EmailTypeEnum: string
     case SignInFromNewAddress = 'sign_in_from_new_address';
     case MagicLinkCreated = 'magic_link_created';
     case EmailVerification = 'email_verification';
+    case StaffInvitation = 'staff_invitation';
 }

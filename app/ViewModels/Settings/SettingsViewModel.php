@@ -100,6 +100,15 @@ class SettingsViewModel
                 'hue' => 20,
                 'icon' => 'roles',
             ];
+
+            $rows[] = [
+                'title' => __('Team members'),
+                'description' => __('Who works at the salon, and the invitations sent to create their account.'),
+                'value' => trans_choice(':count person|:count people', $this->user->company->staff()->where('is_active', true)->count()),
+                'url' => route('settings.team.index'),
+                'hue' => 250,
+                'icon' => 'team',
+            ];
         }
 
         return $rows;

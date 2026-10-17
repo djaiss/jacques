@@ -77,6 +77,9 @@ enum UserActionEnum: string implements Translatable
     case StaffServicesUpdated = 'staff_services_updated';
     case StaffInvitationPrepared = 'staff_invitation_prepared';
     case StaffInvitationDeleted = 'staff_invitation_deleted';
+    case StaffInvitationSent = 'staff_invitation_sent';
+    case StaffInvitationRevoked = 'staff_invitation_revoked';
+    case StaffInvitationAccepted = 'staff_invitation_accepted';
     case LocationOpeningHoursUpdated = 'location_opening_hours_updated';
     case StaffWorkingHoursUpdated = 'staff_working_hours_updated';
 
@@ -152,6 +155,9 @@ enum UserActionEnum: string implements Translatable
             self::StaffServicesUpdated => 'Changed the services :name performs at the location called :location',
             self::StaffInvitationPrepared => 'Prepared an invitation for :name with the :role role',
             self::StaffInvitationDeleted => 'Withdrew the invitation prepared for :name',
+            self::StaffInvitationSent => 'Sent the invitation of :name',
+            self::StaffInvitationRevoked => 'Revoked the invitation of :name',
+            self::StaffInvitationAccepted => 'Accepted the invitation to join :name',
             self::LocationOpeningHoursUpdated => 'Changed the opening hours of the location called :location',
             self::StaffWorkingHoursUpdated => 'Changed the working hours of :name at the location called :location',
         };

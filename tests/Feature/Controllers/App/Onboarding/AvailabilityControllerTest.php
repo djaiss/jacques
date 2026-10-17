@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Controllers\App\Onboarding\AvailabilityControllerTest;
 
 use App\Enums\OnboardingStepEnum;
+use App\Jobs\SendEmail;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationOpeningHour;
 use App\Models\Role;
 use App\Models\Staff;
+use App\Models\StaffInvitation;
 use App\Models\StaffWorkingHour;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
@@ -52,7 +54,7 @@ it('lists the bookable team and leaves out the others', function () {
     $response->assertSee('2 team members on salon opening hours.');
 });
 
-it('stores the week ends the onboarding and opens the dashboard', function () {
+it('stores the week ends the onboarding and opens the completion screen', function () {
     Queue::fake();
 
     [$michael, $scranton, $michaelStaff] = owner();
@@ -62,7 +64,7 @@ it('stores the week ends the onboarding and opens the dashboard', function () {
         'use_opening_hours' => '1',
     ]);
 
-    $response->assertRedirect(route('dashboard.index'));
+    $response->assertRedirect(route('onboarding.completion.index'));
     expect($michael->company->refresh()->is_onboarding_pending)->toBeFalse();
     $this->assertDatabaseMissing('location_opening_hours', ['location_id' => $scranton->id, 'day_of_week' => 1]);
     $this->assertDatabaseHas('location_opening_hours', ['location_id' => $scranton->id, 'day_of_week' => 6, 'start_time' => '13:00:00', 'end_time' => '17:00:00']);
@@ -137,7 +139,7 @@ it('finishes the onboarding with every day closed', function () {
 
     $response = $this->actingAs($michael)->put(route('onboarding.availability.update'), ['days' => $days, 'use_opening_hours' => '1']);
 
-    $response->assertRedirect(route('dashboard.index'));
+    $response->assertRedirect(route('onboarding.completion.index'));
     expect($scranton->openingHours()->exists())->toBeFalse();
     expect(StaffWorkingHour::query()->where('staff_id', $michaelStaff->id)->exists())->toBeFalse();
     expect($michael->company->refresh()->is_onboarding_pending)->toBeFalse();
@@ -217,3 +219,19 @@ function week(): array
         6 => ['open' => '1', 'ranges' => [['start' => '09:00', 'end' => '12:00'], ['start' => '13:00', 'end' => '17:00']]],
     ];
 }
+
+it('sends no invitation when the onboarding ends', function () {
+    Queue::fake();
+
+    [$michael, $scranton] = owner();
+    $jim = member($scranton, 'Jim');
+    StaffInvitation::factory()->create(['staff_id' => $jim->id]);
+
+    $this->actingAs($michael)->put(route('onboarding.availability.update'), [
+        'days' => week(),
+        'use_opening_hours' => '1',
+    ]);
+
+    Queue::assertNotPushed(SendEmail::class);
+    expect($jim->invitation->refresh()->sent_at)->toBeNull();
+});

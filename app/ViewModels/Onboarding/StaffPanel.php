@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ViewModels\Onboarding;
 
+use App\Helpers\StaffInvitationCopy;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
@@ -164,29 +165,37 @@ class StaffPanel
     }
 
     /**
-     * The sentences of the email preview, each with placeholders the page fills
-     * in from what is typed, since the preview follows the form before it is
-     * saved.
+     * The sentences of the email preview, read from the copy of the email
+     * itself. The first name is left as a placeholder the page fills in from
+     * what is typed, since the preview follows the form before it is saved.
      *
      * @return array<string, string>
      */
     public function preview(): array
     {
         $inviter = $this->author->staff->name ?? $this->author->email;
+        $copy = new StaffInvitationCopy(
+            inviter: $inviter,
+            salon: $this->salonName,
+            days: (int) config('jacques.staff_invitation_duration_days'),
+        );
 
         return [
             'title' => __('The invitation :first_name will receive'),
             'titleWithoutName' => __('The invitation they will receive'),
             'from' => "{$this->salonName} <".config('mail.from.address').'>',
-            'subject' => __(':inviter invited you to join :salon', ['inviter' => $inviter, 'salon' => $this->salonName]),
-            'greeting' => __('Hi :first_name,'),
+            'subject' => $copy->subject(),
+            'heading' => $copy->title(),
+            'greeting' => $copy->greeting(':first_name'),
             'greetingWithoutName' => __('Hello,'),
-            'body' => __(':inviter added you to the team at :salon as :job_title. Create your account to get started.', ['inviter' => $inviter, 'salon' => $this->salonName]),
-            'bodyWithoutJob' => __(':inviter added you to the team at :salon. Create your account to get started.', ['inviter' => $inviter, 'salon' => $this->salonName]),
-            'purpose' => __('Your account lets you see your appointments, set your working hours and say when you are away.'),
-            'button' => __('Create my account'),
-            'footer' => __('You received this email because :inviter added this address to the team at :salon. If you were not expecting it, you can ignore it and no account will be created.', ['inviter' => $inviter, 'salon' => $this->salonName]),
-            'when' => __('Not sent yet. Invitations go out once sending is available.'),
+            'body' => $copy->body(),
+            'purpose' => $copy->purpose(),
+            'salonLabel' => $copy->salonLabel(),
+            'roleLabel' => $copy->roleLabel(),
+            'button' => $copy->button(),
+            'expiry' => $copy->expiry(),
+            'footer' => $copy->footer(),
+            'when' => __('Not sent yet. You send invitations once the onboarding is finished, or later from Settings.'),
         ];
     }
 }

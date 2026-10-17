@@ -163,6 +163,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Staff invitation
+    |--------------------------------------------------------------------------
+    |
+    | How many days the link emailed to a staff member stays valid. Sending the
+    | invitation again draws a new link and starts the period again.
+    |
+    */
+
+    'staff_invitation_duration_days' => env('JACQUES_STAFF_INVITATION_DURATION_DAYS', 7),
+
+    /*
+    |--------------------------------------------------------------------------
     | Screenshot link
     |--------------------------------------------------------------------------
     |
