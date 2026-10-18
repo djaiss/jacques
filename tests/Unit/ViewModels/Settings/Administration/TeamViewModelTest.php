@@ -131,6 +131,13 @@ it('offers an owner to remove the account of somebody else', function () {
     expect($panel['canSave'])->toBeTrue();
 });
 
+it('selects no role for an account that holds none', function () {
+    $michael = owner();
+    $jim = Staff::factory()->create(['company_id' => $michael->company_id, 'user_id' => User::factory()->create(['company_id' => $michael->company_id])->id]);
+
+    expect(panelOf($michael, $jim)['roleId'])->toBeNull();
+});
+
 it('never offers to remove the account of the viewer', function () {
     $michael = owner();
 

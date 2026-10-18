@@ -109,7 +109,9 @@ class TeamViewModel
             'permissions' => $this->roles()->mapWithKeys(fn (Role $role): array => [
                 $role->id => $this->permissions($role),
             ])->all(),
-            'roleId' => $this->role($member)->id ?? $this->defaultRole()?->id,
+            'roleId' => $member->user_id === null
+                ? $this->role($member)->id ?? $this->defaultRole()?->id
+                : $this->role($member)?->id,
             'isSoleOwner' => $isSoleOwner,
             'canSave' => $member->user_id !== null || $member->invitation !== null,
             'roleUrl' => route('settings.teamRoles.update', $member->id),
