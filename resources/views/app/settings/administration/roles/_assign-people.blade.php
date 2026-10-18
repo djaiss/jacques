@@ -25,7 +25,7 @@
     </h2>
 
     <p class="mt-1.5 text-[15px] leading-relaxed text-pretty text-body">
-      {{ __('Pick who holds it. Handing a role out is written to the logs, on both sides.') }}
+      {{ __('Pick who holds it. It replaces the role they hold today, and the change is written to the logs.') }}
     </p>
 
     <div class="mt-5 -mx-2">
@@ -44,6 +44,10 @@
 
               @if ($person['email'] !== $person['name'])
                 <span class="block text-sm wrap-anywhere text-muted">{{ $person['email'] }}</span>
+              @endif
+
+              @if ($person['currentRole'] !== null)
+                <span class="block text-sm wrap-anywhere text-muted">{{ __('Holds :role today', ['role' => $person['currentRole']]) }}</span>
               @endif
             </span>
 

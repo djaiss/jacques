@@ -38,7 +38,7 @@ it('sends the invitation', function () {
 
     $response = $this->actingAs($michael)->post(route('settings.staffInvitationSendings.create', $jim->id));
 
-    $response->assertRedirect(route('settings.team.index'));
+    $response->assertRedirect(route('settings.team.show', $jim->id));
     $response->assertSessionHas('status', 'The invitation is on its way.');
     expect($jim->invitation->refresh()->status())->toBe(StaffInvitationStatusEnum::Pending);
     Queue::assertPushedOn('high', SendEmail::class);
@@ -69,7 +69,33 @@ it('explains why a revoked invitation cannot be sent', function () {
 
     $this->actingAs($michael)
         ->post(route('settings.staffInvitationSendings.create', $jim->id))
-        ->assertSessionHasErrors('invitation');
+        ->assertSessionHasErrors('panel');
+});
+
+it('prepares and sends an invitation with the chosen role', function () {
+    Queue::fake();
+
+    $michael = owner();
+    $toby = Staff::factory()->create(['company_id' => $michael->company_id, 'email' => 'toby@dundermifflin.com']);
+    $manager = Role::query()->where('company_id', $michael->company_id)->where('slug', Role::MANAGER)->firstOrFail();
+
+    $response = $this->actingAs($michael)->post(route('settings.staffInvitationSendings.create', $toby->id), [
+        'role_id' => $manager->id,
+    ]);
+
+    $response->assertRedirect(route('settings.team.show', $toby->id));
+    expect($toby->refresh()->invitation->role_id)->toBe($manager->id);
+    expect($toby->invitation->status())->toBe(StaffInvitationStatusEnum::Pending);
+    Queue::assertPushedOn('high', SendEmail::class);
+});
+
+it('does not find a role of another company', function () {
+    $michael = owner();
+    $jim = invitedJim($michael);
+
+    $this->actingAs($michael)
+        ->post(route('settings.staffInvitationSendings.create', $jim->id), ['role_id' => Role::factory()->create()->id])
+        ->assertNotFound();
 });
 
 it('refuses somebody who may not manage roles', function () {

@@ -13,8 +13,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Give somebody a role. A role only ever reaches the people of the company it
- * belongs to, and giving somebody a role they already hold changes nothing.
+ * Give somebody their role, which replaces the one they held (D4). A role only
+ * ever reaches the people of the company it belongs to, and the last active
+ * owner keeps the Owner role, so a company always keeps somebody who can do
+ * everything.
  */
 class AssignRole
 {
@@ -51,11 +53,30 @@ class AssignRole
         if ($this->user->company_id !== $this->role->company_id) {
             throw new ModelNotFoundException('User not found');
         }
+
+        if ($this->role->slug === Role::OWNER) {
+            return;
+        }
+
+        $owner = $this->user->roles()->where('slug', Role::OWNER)->first();
+
+        if ($owner === null) {
+            return;
+        }
+
+        $otherActiveOwners = $owner->users()
+            ->where('users.id', '!=', $this->user->id)
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $otherActiveOwners) {
+            throw new ModelNotFoundException('Role not found');
+        }
     }
 
     private function assign(): void
     {
-        $this->user->roles()->syncWithoutDetaching([$this->role->id]);
+        $this->user->roles()->sync([$this->role->id]);
         $this->user->forgetGrants();
     }
 

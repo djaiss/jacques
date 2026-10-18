@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
 {
     protected function grant(User $user, PermissionEnum $permission, ScopeEnum $scope = ScopeEnum::Company): User
     {
-        $role = Role::query()->create([
+        $role = $user->roles()->first() ?? Role::query()->create([
             'company_id' => $user->company_id,
             'name' => $permission->value.' at '.$scope->value.' scope',
             'slug' => Str::slug($permission->value.'-'.$scope->value),
@@ -31,7 +31,8 @@ abstract class TestCase extends BaseTestCase
             'scope' => $scope,
         ]);
 
-        $user->roles()->attach($role->id);
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        $user->forgetGrants();
 
         return $user;
     }
@@ -46,7 +47,7 @@ abstract class TestCase extends BaseTestCase
 
         $role = $company->roles()->where('slug', $slug)->firstOrFail();
 
-        $user->roles()->attach($role->id);
+        $user->roles()->sync([$role->id]);
         $user->forgetGrants();
 
         return $user;

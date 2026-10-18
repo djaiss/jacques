@@ -95,7 +95,7 @@ class CreateCompany
             ->where('slug', Role::OWNER)
             ->firstOrFail();
 
-        $this->owner->roles()->attach($owner->id);
+        $this->owner->roles()->sync([$owner->id]);
         $this->owner->forgetGrants();
     }
 

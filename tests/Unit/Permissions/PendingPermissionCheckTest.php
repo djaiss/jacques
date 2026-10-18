@@ -177,24 +177,6 @@ it('says whether a permission is held at any scope', function () {
     expect($user->permission(PermissionEnum::ReportView)->anywhere()->allowed())->toBeFalse();
 });
 
-it('adds up the grants of several roles', function () {
-    $company = Company::factory()->create();
-    $angela = Staff::factory()->create(['company_id' => $company->id]);
-    $oscar = Staff::factory()->create(['company_id' => $company->id]);
-
-    $user = userWith($company, PermissionEnum::StaffUpdate, ScopeEnum::Self, $angela);
-
-    $accountant = Role::factory()->create(['company_id' => $company->id]);
-    RolePermission::factory()->create([
-        'role_id' => $accountant->id,
-        'permission' => PermissionEnum::StaffUpdate,
-        'scope' => ScopeEnum::Company,
-    ]);
-    $user->roles()->attach($accountant->id);
-
-    expect($user->permission(PermissionEnum::StaffUpdate)->forStaff($oscar)->allowed())->toBeTrue();
-});
-
 it('allows a company wide permission the role grants', function () {
     $company = Company::factory()->create();
     $user = userWith($company, PermissionEnum::CompanyManage, ScopeEnum::Company);

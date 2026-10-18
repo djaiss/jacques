@@ -58,7 +58,7 @@ it('shows who holds the role', function () {
 
     $response->assertOk();
     $response->assertSee('pam@dundermifflin.com');
-    $response->assertSee('They keep whatever their other roles grant. Anything only this role gave them, they lose.');
+    $response->assertSee('They are left without a role, and lose every permission it gave them.');
 });
 
 it('does not find somebody from another company', function () {
@@ -107,4 +107,24 @@ it('refuses a request that names nobody', function () {
     $response = $this->actingAs($user)->post(route('settings.rolePeople.create', $role->id), []);
 
     $response->assertSessionHasErrors('user');
+});
+
+it('replaces the role somebody held when it hands out another', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $this->grant($user, PermissionEnum::RoleManage);
+
+    $dwight = User::factory()->create(['company_id' => $company->id]);
+    $salesman = Role::factory()->create(['company_id' => $company->id]);
+    $dwight->roles()->attach($salesman->id);
+    $assistant = Role::factory()->create(['company_id' => $company->id]);
+
+    $this->actingAs($user)->post(route('settings.rolePeople.create', $assistant->id), [
+        'user' => $dwight->id,
+    ]);
+
+    $this->assertDatabaseMissing('user_roles', ['user_id' => $dwight->id, 'role_id' => $salesman->id]);
+    $this->assertDatabaseHas('user_roles', ['user_id' => $dwight->id, 'role_id' => $assistant->id]);
 });

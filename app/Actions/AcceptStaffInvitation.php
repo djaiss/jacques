@@ -118,7 +118,7 @@ class AcceptStaffInvitation
         $staff->user_id = $this->user->id;
         $staff->save();
 
-        $this->user->roles()->syncWithoutDetaching([$this->invitation->role_id]);
+        $this->user->roles()->sync([$this->invitation->role_id]);
         $this->user->forgetGrants();
 
         $this->invitation->accepted_at = now();

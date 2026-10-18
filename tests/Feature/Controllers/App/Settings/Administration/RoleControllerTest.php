@@ -300,7 +300,7 @@ it('refuses to delete a role somebody holds', function () {
     $this->grant($user, PermissionEnum::RoleManage);
 
     $role = Role::factory()->create(['company_id' => $company->id]);
-    $user->roles()->attach($role->id);
+    User::factory()->create(['company_id' => $company->id])->roles()->attach($role->id);
 
     $response = $this->actingAs($user)->delete(route('settings.roles.destroy', $role->id));
 

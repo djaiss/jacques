@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\AssignRole;
+use App\Actions\CreateDefaultRoles;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Enums\UserActionEnum;
@@ -127,3 +128,40 @@ it('throws when the role belongs to another company', function () {
 
     new AssignRole(author: $author, user: $dwight, role: $role)->execute();
 })->throws(ModelNotFoundException::class);
+
+it('replaces the role somebody held', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $author = $this->grant(User::factory()->create(['company_id' => $company->id]), PermissionEnum::RoleManage);
+    $staff = Role::factory()->create(['company_id' => $company->id, 'name' => 'Staff']);
+    $manager = Role::factory()->create(['company_id' => $company->id, 'name' => 'Manager']);
+    $jim = User::factory()->create(['company_id' => $company->id]);
+    $jim->roles()->attach($staff->id);
+
+    new AssignRole(author: $author, user: $jim, role: $manager)->execute();
+
+    expect($jim->roles()->pluck('roles.id')->all())->toBe([$manager->id]);
+});
+
+it('throws when the last active owner would lose the owner role', function () {
+    $company = Company::factory()->create();
+    new CreateDefaultRoles(company: $company)->execute();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+
+    new AssignRole(author: $michael, user: $michael, role: $company->roles()->where('slug', Role::STAFF)->firstOrFail())->execute();
+})->throws(ModelNotFoundException::class);
+
+it('lets an owner become staff when another owner remains', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    new CreateDefaultRoles(company: $company)->execute();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $staff = $company->roles()->where('slug', Role::STAFF)->firstOrFail();
+
+    new AssignRole(author: $michael, user: $michael, role: $staff)->execute();
+
+    expect($michael->roles()->pluck('roles.id')->all())->toBe([$staff->id]);
+});

@@ -71,7 +71,7 @@
       :title="__('Take the role back from :name?', ['name' => $person['name']])"
       :cancel="__('Keep it')"
     >
-      {{ __('They keep whatever their other roles grant. Anything only this role gave them, they lose.') }}
+      {{ __('They are left without a role, and lose every permission it gave them.') }}
 
       <x-slot:actions>
         <x-form method="delete" :action="$person['removeUrl']">

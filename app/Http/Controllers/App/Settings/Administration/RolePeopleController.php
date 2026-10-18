@@ -26,7 +26,7 @@ class RolePeopleController extends Controller
 
         return redirect()->route('settings.roles.show', [$role, 'people'])
             ->with('status', __('The role is handed out.'))
-            ->with('status_description', __(':email is covered by it from now on.', ['email' => $user->email]));
+            ->with('status_description', __(':email holds it from now on, in place of their previous role.', ['email' => $user->email]));
     }
 
     public function destroy(Request $request, int $role, int $user): RedirectResponse
@@ -39,6 +39,6 @@ class RolePeopleController extends Controller
 
         return redirect()->route('settings.roles.show', [$role, 'people'])
             ->with('status', __('The role is taken back.'))
-            ->with('status_description', __(':email keeps whatever their other roles grant.', ['email' => $user->email]));
+            ->with('status_description', __(':email holds no role any more.', ['email' => $user->email]));
     }
 }
