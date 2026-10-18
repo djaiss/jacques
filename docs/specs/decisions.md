@@ -71,14 +71,15 @@ Conséquence : une personne qui quitte le salon est désactivée. Sa fiche ne pe
 être supprimée que tant qu'aucun rendez-vous ne la mentionne, sinon l'historique
 des rendez-vous perd son auteur.
 
-### D4. Quatre rôles par défaut, modifiables et cumulables
+### D4. Quatre rôles par défaut, modifiables, un seul par personne
 
 Chaque salon démarre avec quatre rôles : propriétaire, responsable, personnel,
 réceptionniste. Le salon peut les modifier et en créer d'autres depuis l'écran
 d'administration des droits, qui reste en place.
 
-Une personne en porte plusieurs. Dans un salon de trois à huit personnes, la
-propriétaire coiffe, et la réceptionniste prend les rendez-vous.
+Une personne porte un seul rôle. Lui en donner un autre remplace le premier.
+Quand une personne a besoin des droits de deux rôles, le salon crée un rôle qui
+les réunit.
 
 Le rôle propriétaire donne tous les droits et seul lui distribue les rôles. Un
 salon garde toujours au moins un propriétaire actif.
@@ -443,6 +444,11 @@ Annulées le 14 octobre 2026, à la définition des rôles par défaut.
   est affecté à des établissements précis.
 - Rôles fixes et sans écran d'administration des droits (ancienne D4),
   remplacée parce que l'éditeur de rôles existant est conservé.
+
+Annulée le 18 octobre 2026, à la refonte de l'écran des membres de l'équipe.
+
+- Rôles cumulables (ancienne D4), remplacée parce que cet écran choisit un seul
+  rôle par personne.
 
 Annulée le 14 octobre 2026, à la définition du catalogue.
 

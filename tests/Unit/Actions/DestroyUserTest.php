@@ -7,6 +7,8 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\Company;
 use App\Models\Role;
+use App\Models\Staff;
+use App\Models\StaffInvitation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Queue;
@@ -24,7 +26,7 @@ it('destroys a user of the company', function () {
         user: $member,
     )->execute();
 
-    $this->assertSoftDeleted($member);
+    $this->assertModelMissing($member);
 
     Queue::assertPushedOn(
         queue: 'low',
@@ -70,3 +72,20 @@ it('throws when the user belongs to another company', function () {
         user: $stranger,
     )->execute();
 })->throws(ModelNotFoundException::class);
+
+it('keeps the staff record bookable and frees it for a new invitation', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $account = User::factory()->create(['company_id' => $company->id]);
+    $jim = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $account->id, 'is_bookable' => true]);
+    StaffInvitation::factory()->accepted()->create(['staff_id' => $jim->id]);
+
+    new DestroyUser(author: $michael, user: $account)->execute();
+
+    $jim->refresh();
+    expect($jim->user_id)->toBeNull();
+    expect($jim->is_bookable)->toBeTrue();
+    expect($jim->invitation)->toBeNull();
+});

@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 use App\Actions\CreateDefaultRoles;
 use App\Enums\PermissionEnum;
-use App\Enums\ScopeEnum;
 use App\Models\Company;
-use App\Models\Location;
 use App\Models\Role;
-use App\Models\Staff;
 use App\Models\User;
 
 it('creates the four roles a company starts with', function () {
@@ -112,23 +109,4 @@ it('keeps the subscription and the roles to the owner', function () {
         expect($user->permission(PermissionEnum::RoleManage)->forCompany($company)->allowed())->toBeFalse();
         expect($user->permission(PermissionEnum::CompanyManage)->forCompany($company)->allowed())->toBeFalse();
     }
-});
-
-it('adds up staff and receptionist for somebody who holds both', function () {
-    $company = Company::factory()->create();
-    $scranton = Location::factory()->create(['company_id' => $company->id]);
-    $jimAccount = User::factory()->create(['company_id' => $company->id]);
-    $jim = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $jimAccount->id]);
-    $jim->locations()->attach($scranton);
-
-    $user = User::factory()->create(['company_id' => $company->id]);
-    $pam = Staff::factory()->create(['company_id' => $company->id, 'user_id' => $user->id]);
-    $pam->locations()->attach($scranton);
-    $this->giveDefaultRole($user, Role::STAFF);
-    $this->giveDefaultRole($user, Role::RECEPTIONIST);
-
-    expect($user->permission(PermissionEnum::StaffUpdate)->forStaff($pam)->allowed())->toBeTrue();
-    expect($user->permission(PermissionEnum::StaffUpdate)->forStaff($jim)->allowed())->toBeFalse();
-    expect($user->permission(PermissionEnum::ScheduleView)->forStaff($jim)->allowed())->toBeTrue();
-    expect($user->grants()[PermissionEnum::AppointmentManage->value])->toEqual([ScopeEnum::Self, ScopeEnum::Location]);
 });

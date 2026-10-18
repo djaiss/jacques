@@ -62,9 +62,9 @@ it('does not offer somebody from another company', function () {
 
 it('shows that everybody holds the role when nobody is left to assign', function () {
     $user = User::factory()->create();
-    $this->grant($user, PermissionEnum::RoleManage);
     $role = Role::factory()->create(['company_id' => $user->company_id, 'name' => 'Salesperson']);
     $user->roles()->attach($role->id);
+    $this->grant($user, PermissionEnum::RoleManage);
     $this->actingAs($user);
 
     $page = visit(route('settings.roles.show', [$role->id, 'people']));

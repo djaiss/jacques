@@ -209,23 +209,39 @@ class RolesViewModel
             ->all();
     }
 
-    /** @return array<int, array{id: int, name: string, email: string, staff: Staff|null}> */
+    /**
+     * The people who can be given the role, each with the role it replaces.
+     * The last active owner is left out of every other role, since they keep
+     * the Owner role.
+     *
+     * @return array<int, array{id: int, name: string, email: string, staff: Staff|null, currentRole: string|null}>
+     */
     public function assignable(): array
     {
         if ($this->role === null) {
             return [];
         }
 
+        $activeOwners = $this->user->company->users()
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($query) => $query->where('slug', Role::OWNER))
+            ->pluck('id');
+
         return $this->user->company->users()
             ->whereDoesntHave('roles', fn ($query) => $query->where('roles.id', $this->role->id))
-            ->with('staff')
+            ->with(['staff', 'roles'])
             ->get()
+            ->reject(fn (User $user): bool => $this->role->slug !== Role::OWNER
+                && $activeOwners->count() === 1
+                && $activeOwners->contains($user->id))
             ->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->staff->name ?? $user->email,
                 'email' => $user->email,
                 'staff' => $user->staff,
+                'currentRole' => $user->roles->first()?->name,
             ])
+            ->values()
             ->all();
     }
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\CreateDefaultRoles;
 use App\Enums\PermissionEnum;
 use App\Enums\ScopeEnum;
 use App\Models\Company;
@@ -301,4 +302,28 @@ it('keeps the last owner from being taken off the owner role', function () {
 
     expect($people[0]['isRemovable'])->toBeTrue();
     expect($people[1]['isRemovable'])->toBeTrue();
+});
+
+it('names the role each assignable person holds today', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $jim = User::factory()->create(['company_id' => $company->id]);
+    $jim->roles()->attach(Role::factory()->create(['company_id' => $company->id, 'name' => 'Salesman'])->id);
+    $role = Role::factory()->create(['company_id' => $company->id]);
+
+    $assignable = collect(new RolesViewModel(user: $user, role: $role)->assignable())->keyBy('id');
+
+    expect($assignable[$jim->id]['currentRole'])->toBe('Salesman');
+    expect($assignable[$user->id]['currentRole'])->toBeNull();
+});
+
+it('leaves the last active owner out of every other role', function () {
+    $company = Company::factory()->create();
+    new CreateDefaultRoles(company: $company)->execute();
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $staff = $company->roles()->where('slug', Role::STAFF)->firstOrFail();
+
+    $assignable = new RolesViewModel(user: $michael, role: $staff)->assignable();
+
+    expect(collect($assignable)->pluck('id')->all())->not->toContain($michael->id);
 });

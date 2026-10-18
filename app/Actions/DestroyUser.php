@@ -8,10 +8,14 @@ use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Delete a user. Only an owner of the company may do so, and an owner cannot
- * delete themselves, so the company always keeps at least one owner.
+ * delete themselves, so the company always keeps at least one owner. The user
+ * is deleted for good, which frees their address. The staff record linked to
+ * the account stays with its appointments and loses its invitation, so the
+ * person can be invited again.
  */
 class DestroyUser
 {
@@ -54,6 +58,9 @@ class DestroyUser
 
     private function destroy(): void
     {
-        $this->user->delete();
+        DB::transaction(function (): void {
+            $this->user->staff?->invitation()->delete();
+            $this->user->forceDelete();
+        });
     }
 }

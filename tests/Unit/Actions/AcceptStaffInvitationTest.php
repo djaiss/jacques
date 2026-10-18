@@ -72,6 +72,18 @@ it('links the account signed in when it uses the invited address', function () {
     expect($pam->refresh()->user_id)->toBe($account->id);
 });
 
+it('leaves the account with the invited role only', function () {
+    Queue::fake();
+
+    [$pam, $invitation] = invitedPam();
+    $account = User::factory()->create(['company_id' => $pam->company_id, 'email' => 'pam@dundermifflin.com']);
+    $account->roles()->attach(Role::factory()->create(['company_id' => $pam->company_id])->id);
+
+    new AcceptStaffInvitation(token: TOKEN, user: $account)->execute();
+
+    expect($account->roles()->pluck('roles.id')->all())->toBe([$invitation->role_id]);
+});
+
 it('throws when the same link is accepted twice', function () {
     Queue::fake();
 

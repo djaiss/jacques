@@ -34,7 +34,7 @@ it('prepares an invitation with a role', function () {
         'role_id' => role($michael, Role::STAFF)->id,
     ]);
 
-    $response->assertRedirect(route('settings.team.index'));
+    $response->assertRedirect(route('settings.team.show', $kevin->id));
     $response->assertSessionHas('status', 'The invitation is ready.');
     $this->assertDatabaseHas('staff_invitations', ['staff_id' => $kevin->id, 'role_id' => role($michael, Role::STAFF)->id]);
 });
@@ -62,8 +62,20 @@ it('cancels a prepared invitation', function () {
 
     $response = $this->actingAs($michael)->delete(route('settings.staffInvitations.destroy', $kevin->id));
 
-    $response->assertRedirect(route('settings.team.index'));
+    $response->assertRedirect(route('settings.team.show', $kevin->id));
     $response->assertSessionHas('status', 'The invitation is cancelled.');
+    $this->assertModelMissing($invitation);
+});
+
+it('cancels an invitation already sent', function () {
+    Queue::fake();
+
+    $michael = owner();
+    $kevin = Staff::factory()->create(['company_id' => $michael->company_id, 'email' => 'kevin@dundermifflin.com']);
+    $invitation = StaffInvitation::factory()->sent()->create(['staff_id' => $kevin->id]);
+
+    $this->actingAs($michael)->delete(route('settings.staffInvitations.destroy', $kevin->id));
+
     $this->assertModelMissing($invitation);
 });
 

@@ -28,11 +28,11 @@ class StaffInvitationController extends Controller
                 role: $request->user()->company->roles()->findOrFail($validated['role_id']),
             )->execute();
         } catch (InvalidArgumentException) {
-            return redirect()->route('settings.team.index')
-                ->withErrors(['invitation' => __('An invitation cannot be prepared for :name.', ['name' => $staff->name])]);
+            return redirect()->route('settings.team.show', $staff->id)
+                ->withErrors(['panel' => __('An invitation cannot be prepared for :name.', ['name' => $staff->name])]);
         }
 
-        return redirect()->route('settings.team.index')
+        return redirect()->route('settings.team.show', $staff->id)
             ->with('status', __('The invitation is ready.'))
             ->with('status_description', __('Send it to :name when you are ready.', ['name' => $staff->name]));
     }
@@ -46,7 +46,7 @@ class StaffInvitationController extends Controller
             staff: $staff,
         )->execute();
 
-        return redirect()->route('settings.team.index')
+        return redirect()->route('settings.team.show', $staff->id)
             ->with('status', __('The invitation is cancelled.'))
             ->with('status_description', __(':name stays on the team without an account.', ['name' => $staff->name]));
     }
