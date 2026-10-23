@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Models\Company;
 use App\Models\Role;
+use App\Models\Service;
 use App\Models\User;
 
 it('adds an empty category to the catalogue', function () {
     $company = Company::factory()->create(['languages' => ['en'], 'currencies' => ['CAD']]);
     $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    Service::factory()->create(['company_id' => $company->id, 'name' => ['en' => 'Balayage']]);
     $this->actingAs($michael);
 
     $page = visit(route('services.index'));

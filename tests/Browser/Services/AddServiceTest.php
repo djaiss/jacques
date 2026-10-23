@@ -33,6 +33,7 @@ it('adds a service from its category, done by one person at one salon', function
 
     $page->click('a:has-text("Add a service in Haircuts")')
         ->assertPathIs('/service-categories/'.$haircuts->id.'/services/new')
+        ->waitForEvent('networkidle')
         ->type('#service-name-en', 'Beard Trim')
         ->type('#service-price-CAD', '15')
         ->type('#service-price-USD', '12')

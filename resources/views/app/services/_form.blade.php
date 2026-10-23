@@ -17,14 +17,14 @@
   x-data="{
     language: {{ Js::from($first) }},
     steps: {{ Js::from($viewModel->steps()) }},
-    names: {{ Js::from($viewModel->names()) }},
+    languages: {{ Js::from($viewModel->languages()) }},
     processingName: {{ Js::from($viewModel->processingName()) }},
     salons: {{ Js::from((object) $salonState) }},
     total() { return this.steps.reduce((sum, step) => sum + (Number(step.duration) || 0), 0) },
     busy() { return this.steps.filter((step) => step.requires_staff).reduce((sum, step) => sum + (Number(step.duration) || 0), 0) },
     breakUp() {
       this.steps = [
-        { name: { ...this.names }, duration: Number(this.steps[0].duration) || 30, requires_staff: true },
+        { name: Object.fromEntries(this.languages.map((code) => [code, document.getElementById(`service-name-${code}`).value])), duration: Number(this.steps[0].duration) || 30, requires_staff: true },
         { name: { ...this.processingName }, duration: 15, requires_staff: false },
       ]
     },
@@ -85,7 +85,7 @@
         @foreach ($viewModel->names() as $code => $name)
           <div class="space-y-1.5" x-show="language === @js($code)" @if (! $loop->first) x-cloak @endif>
             <x-label for="service-name-{{ $code }}">{{ $viewModel->hasSeveralLanguages() ? __('Name (:language)', ['language' => $viewModel->languageLabel($code)]) : __('Name') }}</x-label>
-            <input id="service-name-{{ $code }}" type="text" name="name[{{ $code }}]" x-model="names[@js($code)]" maxlength="255" placeholder="{{ __("Men's Haircut") }}" class="{{ $field }}" @error("name.{$code}") aria-invalid="true" aria-describedby="service-name-{{ $code }}-error" @enderror />
+            <input id="service-name-{{ $code }}" type="text" name="name[{{ $code }}]" value="{{ $name }}" maxlength="255" placeholder="{{ __("Men's Haircut") }}" class="{{ $field }}" @error("name.{$code}") aria-invalid="true" aria-describedby="service-name-{{ $code }}-error" @enderror />
             @error("name.{$code}")
               <p id="service-name-{{ $code }}-error" class="text-sm text-error">{{ $message }}</p>
             @enderror

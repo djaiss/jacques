@@ -24,6 +24,8 @@ it('renames a category, then removes it and keeps its service', function () {
         ->assertSee('The category is saved.')
         ->assertSee('Make-up')
         ->click('a[aria-label="Edit the category Make-up"]')
+        ->assertPathIs('/service-categories/'.$makeup->id.'/edit')
+        ->waitForEvent('networkidle')
         ->click('button:has-text("Remove this category")')
         ->assertSee('Remove Make-up?')
         ->click('[role="dialog"] button:has-text("Remove the category")')
