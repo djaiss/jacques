@@ -18,3 +18,13 @@ dataset('phones', [
     'national number without country' => ['(570) 555-0100', null, null],
     'too short' => ['12', 'US', null],
 ]);
+
+it('writes a stored phone the way people read it', function (string $phone, string $displayed) {
+    expect(PhoneNumber::display($phone))->toBe($displayed);
+})->with('stored phones');
+
+dataset('stored phones', [
+    'number in the united states' => ['+15705550100', '+1 570-555-0100'],
+    'number in france' => ['+33612345678', '+33 6 12 34 56 78'],
+    'number that cannot be parsed' => ['abc', 'abc'],
+]);

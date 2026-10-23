@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
+use App\Http\Controllers\App\Clients\ClientController;
+use App\Http\Controllers\App\Clients\ClientNotRebookedController;
+use App\Http\Controllers\App\Clients\ClientSegmentController;
 use App\Http\Controllers\App\DashboardCalendarController;
 use App\Http\Controllers\App\DashboardController;
 use App\Http\Controllers\App\Invitation\InvitationController;
@@ -201,6 +204,10 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 });
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
+    Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
+    Route::get('clients/segments/{segment}', [ClientSegmentController::class, 'show'])->name('clientSegments.show');
+    Route::get('clients/not-rebooked', [ClientNotRebookedController::class, 'index'])->name('clientsNotRebooked.index');
+
     Route::get('services', [ServiceController::class, 'index'])->name('services.index');
     Route::get('services/locations/{location}', [ServiceLocationController::class, 'index'])->whereNumber('location')->name('serviceLocations.index');
     Route::get('services/new', [ServiceController::class, 'new'])->name('services.new');

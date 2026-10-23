@@ -7,6 +7,7 @@ namespace App\Helpers;
 use App\Enums\ClientSegmentEnum;
 use App\Models\Appointment;
 use App\Models\Client;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class ClientIndicators
@@ -118,13 +119,20 @@ class ClientIndicators
 
     public function segment(): ClientSegmentEnum
     {
-        $lastVisit = $this->lastVisit();
+        return self::segmentOf($this->visitCount(), $this->lastVisit()?->starts_at);
+    }
 
-        if ($lastVisit !== null && $lastVisit->starts_at->lessThan(now()->subMonths(self::INACTIVE_AFTER_MONTHS))) {
+    /**
+     * The rule behind segment(), for a list that already counted the visits of
+     * many clients at once.
+     */
+    public static function segmentOf(int $visitCount, ?CarbonInterface $lastVisitAt): ClientSegmentEnum
+    {
+        if ($lastVisitAt !== null && $lastVisitAt->lessThan(now()->subMonths(self::INACTIVE_AFTER_MONTHS))) {
             return ClientSegmentEnum::Inactive;
         }
 
-        if ($this->visitCount() < self::NEW_CLIENT_VISIT_LIMIT) {
+        if ($visitCount < self::NEW_CLIENT_VISIT_LIMIT) {
             return ClientSegmentEnum::New;
         }
 

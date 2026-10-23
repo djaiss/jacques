@@ -5,6 +5,7 @@
   @var string $companyName
   @var string $name
   @var \App\Models\Staff|null $staff
+  @var string|null $clientsUrl
   @var string|null $servicesUrl
   @var string|null $teamUrl
 --}}
@@ -26,7 +27,7 @@
       class="min-h-screen pb-22.5"
     >
       <div class="px-4 sm:px-8">
-        <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" :services-url="$servicesUrl" :team-url="$teamUrl" />
+        <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" :clients-url="$clientsUrl" :services-url="$servicesUrl" :team-url="$teamUrl" />
       </div>
 
       <div @class(['mx-auto px-4 sm:px-8', 'max-w-265' => ! $wide])>

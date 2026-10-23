@@ -10,6 +10,7 @@ use App\Helpers\ClientIndicators;
 use App\Models\Appointment;
 use App\Models\AppointmentService;
 use App\Models\Client;
+use Carbon\Carbon;
 
 function appointment(Client $client, string $startsAt, string $service = "Men's Haircut", int $price = 3500, string $currency = 'CAD', AppointmentStatusEnum $status = AppointmentStatusEnum::Scheduled): Appointment
 {
@@ -139,3 +140,16 @@ it('calls a client without visit for six months inactive', function () {
 
     expect(new ClientIndicators(client: $michael)->segment())->toBe(ClientSegmentEnum::Inactive);
 });
+
+it('gives the segment of counted visits', function (int $visitCount, ?string $lastVisitAt, ClientSegmentEnum $segment) {
+    $this->travelTo('2026-04-01 12:00:00');
+
+    expect(ClientIndicators::segmentOf($visitCount, $lastVisitAt === null ? null : Carbon::parse($lastVisitAt)))->toBe($segment);
+})->with('counted visits');
+
+dataset('counted visits', [
+    'no visit' => [0, null, ClientSegmentEnum::New],
+    'one recent visit' => [1, '2026-03-30 10:00:00', ClientSegmentEnum::New],
+    'three visits last week' => [3, '2026-03-25 10:00:00', ClientSegmentEnum::Regular],
+    'five visits seven months ago' => [5, '2025-09-01 10:00:00', ClientSegmentEnum::Inactive],
+]);
