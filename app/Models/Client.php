@@ -45,6 +45,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon|null $anonymized_at
  * @property Carbon $created_at
  * @property Carbon|null $updated_at
+ *
+ * The clients list counts these in the same query as the clients, and they
+ * are null anywhere else.
+ * @property-read int|null $visit_count
+ * @property-read int|null $last_visit_id
+ * @property-read Carbon|null $last_visit_at
+ * @property-read int|null $next_appointment_id
  */
 class Client extends Model
 {

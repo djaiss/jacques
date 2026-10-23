@@ -26,10 +26,10 @@ it('opens and closes the menu', function () {
         ->assertNoJavaScriptErrors();
 });
 
-it('stays where it is when a part has no screen yet', function () {
+it('stays where it is when a part is not open to the person', function () {
     $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
-    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
-    $this->actingAs($michael);
+    $toby = User::factory()->create(['company_id' => $company->id]);
+    $this->actingAs($toby);
 
     $page = visit(route('dashboard.index'));
 
@@ -38,5 +38,18 @@ it('stays where it is when a part has no screen yet', function () {
 
     $page->assertPathIs('/dashboard')
         ->assertVisible('#top-bar-menu')
+        ->assertNoJavaScriptErrors();
+});
+
+it('leads to the clients', function () {
+    $company = Company::factory()->create(['name' => 'Dunder Mifflin']);
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $company->id]), Role::OWNER);
+    $this->actingAs($michael);
+
+    $page = visit(route('dashboard.index'));
+
+    $page->click('button:has-text("Dunder Mifflin")')
+        ->click('#top-bar-menu a:has-text("Clients")')
+        ->assertPathIs('/clients')
         ->assertNoJavaScriptErrors();
 });

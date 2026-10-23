@@ -3,6 +3,7 @@
   @var string $companyName
   @var string $name
   @var \App\Models\Staff|null $staff
+  @var string|null $clientsUrl
   @var string|null $servicesUrl
   @var string|null $teamUrl
 --}}
@@ -10,6 +11,7 @@
   'companyName',
   'name',
   'staff' => null,
+  'clientsUrl' => null,
   'servicesUrl' => null,
   'teamUrl' => null,
 ])
@@ -32,7 +34,7 @@
       'label' => __('Clients'),
       'shortcut' => '^2',
       'hue' => 30,
-      'url' => null,
+      'url' => $clientsUrl,
       'icon' => '<rect x="3.5" y="5" width="17" height="14" rx="2"></rect><circle cx="9" cy="11" r="2.2"></circle><path d="M5.8 16.2c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4"></path><path d="M14.5 10h3.5"></path><path d="M14.5 13.5h3.5"></path>',
     ],
     [

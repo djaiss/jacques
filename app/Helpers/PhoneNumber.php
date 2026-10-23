@@ -31,4 +31,19 @@ class PhoneNumber
 
         return $utility->format($number, PhoneNumberFormat::E164);
     }
+
+    /**
+     * Get a stored phone written the way people read it, its international
+     * format with spaces, or the phone unchanged when it cannot be parsed.
+     */
+    public static function display(string $phone): string
+    {
+        $utility = PhoneNumberUtil::getInstance();
+
+        try {
+            return $utility->format($utility->parse($phone), PhoneNumberFormat::INTERNATIONAL);
+        } catch (NumberParseException) {
+            return $phone;
+        }
+    }
 }
