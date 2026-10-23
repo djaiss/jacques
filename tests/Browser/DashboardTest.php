@@ -41,7 +41,7 @@ it('asks before cancelling an appointment', function () {
 
     $page = visit(route('dashboard.show', ['date' => '2026-10-26']));
 
-    $page->click('button:has-text("Hugo Moreau")')
+    $page->click('button:has-text("Tom Girard")')
         ->assertSee('Cancel this appointment')
         ->click('Cancel this appointment')
         ->assertSee('The appointment leaves the agenda and the slot becomes free again. Are you sure?')
@@ -60,7 +60,7 @@ it('books a free slot until the page reloads', function () {
 
     $page->click('button[aria-label^="Book at 10:00"][aria-label$="with Amélie"]')
         ->assertSee('New appointment')
-        ->assertAttribute('button:has-text("Add the appointment")', 'disabled', '')
+        ->assertAttribute('button:has-text("Add the appointment")', 'disabled', 'disabled')
         ->type('#appointment-client', 'Pam Beesly')
         ->click('Add the appointment')
         ->assertSee('Pam Beesly')
