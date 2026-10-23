@@ -6,6 +6,7 @@ namespace App\ViewModels\Onboarding;
 
 use App\Enums\OnboardingStepEnum;
 use App\Helpers\CatalogueText;
+use App\Helpers\CurrencySymbols;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
@@ -52,27 +53,10 @@ class ServicesViewModel extends StepViewModel
         );
     }
 
-    /**
-     * The currencies of the salon, each with a symbol nobody can mistake for
-     * another currency's, since a salon may price in two kinds of dollars.
-     *
-     * @return list<array{code: string, symbol: string, name: string}>
-     */
+    /** @return list<array{code: string, symbol: string, name: string}> */
     public function currencies(): array
     {
-        $currencies = [
-            'CAD' => ['symbol' => 'CA$', 'name' => __('Canadian dollar')],
-            'USD' => ['symbol' => 'US$', 'name' => __('US dollar')],
-            'EUR' => ['symbol' => '€', 'name' => __('Euro')],
-            'GBP' => ['symbol' => '£', 'name' => __('Pound sterling')],
-            'CHF' => ['symbol' => 'CHF', 'name' => __('Swiss franc')],
-        ];
-
-        return array_map(fn (string $code): array => [
-            'code' => $code,
-            'symbol' => $currencies[$code]['symbol'] ?? $code,
-            'name' => $currencies[$code]['name'] ?? $code,
-        ], $this->user->company->currencies);
+        return CurrencySymbols::describe($this->user->company->currencies);
     }
 
     public function hasCatalogue(): bool

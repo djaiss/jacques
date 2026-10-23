@@ -22,6 +22,12 @@ use App\Http\Controllers\App\Onboarding\OnboardingController;
 use App\Http\Controllers\App\Onboarding\ServiceController as OnboardingServiceController;
 use App\Http\Controllers\App\Onboarding\StaffController as OnboardingStaffController;
 use App\Http\Controllers\App\Onboarding\Team\StaffController as OnboardingTeamStaffController;
+use App\Http\Controllers\App\Services\CategoryServiceController;
+use App\Http\Controllers\App\Services\ServiceArchiveController;
+use App\Http\Controllers\App\Services\ServiceCatalogueController;
+use App\Http\Controllers\App\Services\ServiceCategoryController;
+use App\Http\Controllers\App\Services\ServiceController;
+use App\Http\Controllers\App\Services\ServiceLocationController;
 use App\Http\Controllers\App\Settings\Account\Logs\EmailSentController;
 use App\Http\Controllers\App\Settings\Account\Logs\LogController;
 use App\Http\Controllers\App\Settings\Account\Preferences\PreferenceController;
@@ -189,4 +195,24 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
     Route::post('settings/administration/team/{staff}/invitation', [StaffInvitationController::class, 'create'])->whereNumber('staff')->name('settings.staffInvitations.create');
     Route::delete('settings/administration/team/{staff}/invitation', [StaffInvitationController::class, 'destroy'])->whereNumber('staff')->name('settings.staffInvitations.destroy');
     Route::post('settings/administration/team/{staff}/invitation/sending', [StaffInvitationSendingController::class, 'create'])->whereNumber('staff')->name('settings.staffInvitationSendings.create');
+});
+
+Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
+    Route::get('services', [ServiceController::class, 'index'])->name('services.index');
+    Route::get('services/locations/{location}', [ServiceLocationController::class, 'index'])->whereNumber('location')->name('serviceLocations.index');
+    Route::get('services/new', [ServiceController::class, 'new'])->name('services.new');
+    Route::post('services', [ServiceController::class, 'create'])->name('services.create');
+    Route::post('services/catalogue', [ServiceCatalogueController::class, 'create'])->name('serviceCatalogues.create');
+    Route::get('services/{service}', [ServiceController::class, 'show'])->whereNumber('service')->name('services.show');
+    Route::get('services/{service}/edit', [ServiceController::class, 'edit'])->whereNumber('service')->name('services.edit');
+    Route::put('services/{service}', [ServiceController::class, 'update'])->whereNumber('service')->name('services.update');
+    Route::post('services/{service}/archive', [ServiceArchiveController::class, 'create'])->whereNumber('service')->name('serviceArchives.create');
+    Route::delete('services/{service}/archive', [ServiceArchiveController::class, 'destroy'])->whereNumber('service')->name('serviceArchives.destroy');
+
+    Route::get('service-categories/new', [ServiceCategoryController::class, 'new'])->name('serviceCategories.new');
+    Route::post('service-categories', [ServiceCategoryController::class, 'create'])->name('serviceCategories.create');
+    Route::get('service-categories/{category}/edit', [ServiceCategoryController::class, 'edit'])->whereNumber('category')->name('serviceCategories.edit');
+    Route::put('service-categories/{category}', [ServiceCategoryController::class, 'update'])->whereNumber('category')->name('serviceCategories.update');
+    Route::delete('service-categories/{category}', [ServiceCategoryController::class, 'destroy'])->whereNumber('category')->name('serviceCategories.destroy');
+    Route::get('service-categories/{category}/services/new', [CategoryServiceController::class, 'new'])->whereNumber('category')->name('categoryServices.new');
 });

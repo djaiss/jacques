@@ -4,6 +4,7 @@
   @var string $companyName
   @var string $name
   @var \App\Models\Staff|null $staff
+  @var string|null $servicesUrl
   @var string|null $teamUrl
 --}}
 <!DOCTYPE html>
@@ -24,7 +25,7 @@
       class="min-h-screen pb-22.5"
     >
       <div class="px-4 sm:px-8">
-        <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" :team-url="$teamUrl" />
+        <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" :services-url="$servicesUrl" :team-url="$teamUrl" />
       </div>
 
       <div class="mx-auto max-w-265 px-4 sm:px-8">
