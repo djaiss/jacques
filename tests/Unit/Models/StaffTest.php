@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Appointment;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationService;
@@ -16,6 +17,13 @@ it('belongs to a company', function () {
 
     expect($staff->company()->exists())->toBeTrue();
     expect($staff->company->name)->toEqual('Dunder Mifflin');
+});
+
+it('has many appointments', function () {
+    $jim = Staff::factory()->create();
+    Appointment::factory()->create(['company_id' => $jim->company_id, 'staff_id' => $jim->id]);
+
+    expect($jim->appointments()->exists())->toBeTrue();
 });
 
 it('belongs to a user', function () {

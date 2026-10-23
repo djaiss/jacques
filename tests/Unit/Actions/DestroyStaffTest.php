@@ -6,6 +6,7 @@ use App\Actions\DestroyStaff;
 use App\Enums\PermissionEnum;
 use App\Enums\UserActionEnum;
 use App\Jobs\LogUserAction;
+use App\Models\Appointment;
 use App\Models\Location;
 use App\Models\LocationService;
 use App\Models\Role;
@@ -16,6 +17,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 it('deletes a staff member and everything attached to them', function () {
     Queue::fake();
@@ -59,6 +61,14 @@ it('deletes the avatar files', function () {
     Storage::disk((string) config('filesystems.default'))->assertMissing('avatars/1/stanley_96.webp');
     Storage::disk((string) config('filesystems.default'))->assertMissing('avatars/1/stanley_192.webp');
 });
+
+it('refuses to delete a staff member with appointments', function () {
+    $jim = Staff::factory()->create(['first_name' => 'Jim']);
+    Appointment::factory()->create(['company_id' => $jim->company_id, 'staff_id' => $jim->id]);
+    $michael = $this->giveDefaultRole(User::factory()->create(['company_id' => $jim->company_id]), Role::OWNER);
+
+    new DestroyStaff(author: $michael, staff: $jim)->execute();
+})->throws(ValidationException::class, 'This person has appointments and cannot be deleted. Deactivate them instead.');
 
 it('throws when a manager deletes a staff member', function () {
     $ryan = Staff::factory()->create();
