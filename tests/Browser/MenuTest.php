@@ -15,11 +15,11 @@ it('opens and closes the menu', function () {
 
     $page->click('button:has-text("Dunder Mifflin")')
         ->assertVisible('#top-bar-menu')
-        ->keys('body', 'Escape')
+        ->keys('#top-bar-menu input', 'Escape')
         ->assertMissing('#top-bar-menu')
-        ->keys('body', 'g')
+        ->keys('#main', 'g')
         ->assertVisible('#top-bar-menu')
-        ->type('#top-bar-menu input', 'g')
+        ->keys('#top-bar-menu input', 'g')
         ->assertVisible('#top-bar-menu')
         ->click('#top-bar-menu a:has-text("Team")')
         ->assertPathIs('/settings/administration/team')
@@ -33,9 +33,10 @@ it('stays where it is when a part has no screen yet', function () {
 
     $page = visit(route('dashboard.index'));
 
-    $page->click('button:has-text("Dunder Mifflin")')
-        ->click('#top-bar-menu button:has-text("Clients")')
-        ->assertPathIs('/dashboard')
+    $page->click('button:has-text("Dunder Mifflin")');
+    $page->script('document.querySelector(\'#top-bar-menu button[aria-disabled="true"]\').click()');
+
+    $page->assertPathIs('/dashboard')
         ->assertVisible('#top-bar-menu')
         ->assertNoJavaScriptErrors();
 });
