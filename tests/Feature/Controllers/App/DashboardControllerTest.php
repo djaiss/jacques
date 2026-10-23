@@ -36,6 +36,7 @@ it('offers the parts of the salon in the menu', function () {
     $response->assertSee('Type to go to a client, a service, or a person…');
     $response->assertSee('href="'.route('dashboard.index').'"', escape: false);
     $response->assertSee('href="'.route('settings.team.index').'"', escape: false);
+    $response->assertSee('href="'.route('services.index').'"', escape: false);
     $response->assertDontSee('Licences');
     $response->assertDontSee('Software');
 });
@@ -47,5 +48,6 @@ it('draws the parts without a screen as unavailable', function () {
 
     $response->assertSee('Team');
     $response->assertDontSee('href="'.route('settings.team.index').'"', escape: false);
+    $response->assertDontSee('href="'.route('services.index').'"', escape: false);
     expect(substr_count($response->getContent(), 'aria-disabled="true"'))->toBe(3);
 });

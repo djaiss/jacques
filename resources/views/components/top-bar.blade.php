@@ -3,12 +3,14 @@
   @var string $companyName
   @var string $name
   @var \App\Models\Staff|null $staff
+  @var string|null $servicesUrl
   @var string|null $teamUrl
 --}}
 @props([
   'companyName',
   'name',
   'staff' => null,
+  'servicesUrl' => null,
   'teamUrl' => null,
 ])
 
@@ -37,7 +39,7 @@
       'label' => __('Services'),
       'shortcut' => '^3',
       'hue' => 80,
-      'url' => null,
+      'url' => $servicesUrl,
       'icon' => '<circle cx="6.5" cy="7" r="2.5"></circle><circle cx="6.5" cy="17" r="2.5"></circle><path d="M8.6 8.4 20 17"></path><path d="M8.6 15.6 20 7"></path>',
     ],
     [

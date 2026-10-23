@@ -23,6 +23,9 @@ class TopBarLayout extends Component
             'companyName' => $user->company->name,
             'name' => $user->staff->name ?? $user->email,
             'staff' => $user->staff,
+            'servicesUrl' => $user->permission(PermissionEnum::ServiceView)->anywhere()->allowed()
+                ? route('services.index')
+                : null,
             'teamUrl' => $user->permission(PermissionEnum::RoleManage)->forCompany($user->company)->allowed()
                 ? route('settings.team.index')
                 : null,
