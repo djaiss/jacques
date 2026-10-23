@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
+use App\Enums\PermissionEnum;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Component;
 use Illuminate\View\View;
@@ -22,6 +23,9 @@ class TopBarLayout extends Component
             'companyName' => $user->company->name,
             'name' => $user->staff->name ?? $user->email,
             'staff' => $user->staff,
+            'teamUrl' => $user->permission(PermissionEnum::RoleManage)->forCompany($user->company)->allowed()
+                ? route('settings.team.index')
+                : null,
         ]);
     }
 }
