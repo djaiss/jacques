@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
+use App\Models\Appointment;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\Service;
@@ -51,6 +53,20 @@ it('has many services', function () {
 
     expect($company->services()->exists())->toBeTrue();
     expect($company->services()->get())->toHaveCount(2);
+});
+
+it('has many clients', function () {
+    $company = Company::factory()->create();
+    Client::factory()->count(2)->create(['company_id' => $company->id]);
+
+    expect($company->clients()->exists())->toBeTrue();
+    expect($company->clients()->get())->toHaveCount(2);
+});
+
+it('has many appointments', function () {
+    $appointment = Appointment::factory()->create();
+
+    expect($appointment->company->appointments()->exists())->toBeTrue();
 });
 
 it('knows whether it is on trial', function () {

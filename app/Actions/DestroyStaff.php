@@ -10,12 +10,14 @@ use App\Jobs\LogUserAction;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Delete a staff member for good, with their location assignments, the
  * services they performed, their working hours, their absences and their
  * avatar. The account they signed in with, if any, stays. Somebody who leaves
- * is deactivated instead; deleting is for a record created by mistake.
+ * is deactivated instead; deleting is for a record created by mistake, and is
+ * refused once an appointment mentions them.
  */
 class DestroyStaff
 {
@@ -27,6 +29,7 @@ class DestroyStaff
     public function execute(): void
     {
         $this->authorize();
+        $this->validate();
         $this->destroy();
         $this->log();
     }
@@ -37,6 +40,15 @@ class DestroyStaff
             ->permission(PermissionEnum::StaffDelete)
             ->forCompany($this->staff->company)
             ->authorize();
+    }
+
+    private function validate(): void
+    {
+        if ($this->staff->appointments()->exists()) {
+            throw ValidationException::withMessages([
+                'staff' => __('This person has appointments and cannot be deleted. Deactivate them instead.'),
+            ]);
+        }
     }
 
     private function destroy(): void

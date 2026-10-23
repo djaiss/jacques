@@ -141,6 +141,26 @@ class Company extends Model
     }
 
     /**
+     * Get the clients of the company.
+     *
+     * @return HasMany<Client, $this>
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
+    }
+
+    /**
+     * Get the appointments booked with the company.
+     *
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    /**
      * Get whether the company is still within its trial period.
      */
     public function isOnTrial(): bool

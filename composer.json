@@ -12,6 +12,7 @@
         "php": "^8.4",
         "bacon/bacon-qr-code": "^3.1",
         "erag/laravel-disposable-email": "^5.2",
+        "giggsey/libphonenumber-for-php-lite": "^9.0",
         "intervention/image": "^4.0",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.3",

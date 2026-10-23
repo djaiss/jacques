@@ -147,6 +147,16 @@ class Staff extends Model
     }
 
     /**
+     * Get the appointments the staff member performs.
+     *
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    /**
      * Get the invitation to create an account prepared for the staff member,
      * when there is one.
      *
