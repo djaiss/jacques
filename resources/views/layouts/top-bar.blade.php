@@ -1,6 +1,7 @@
 {{-- The shell of a screen that carries its navigation across the top rather than down the side. --}}
 {{--
   @var string|null $title
+  @var bool $wide
   @var string $companyName
   @var string $name
   @var \App\Models\Staff|null $staff
@@ -28,7 +29,7 @@
         <x-top-bar :company-name="$companyName" :name="$name" :staff="$staff" :services-url="$servicesUrl" :team-url="$teamUrl" />
       </div>
 
-      <div class="mx-auto max-w-265 px-4 sm:px-8">
+      <div @class(['mx-auto px-4 sm:px-8', 'max-w-265' => ! $wide])>
         <main id="main" tabindex="-1" class="focus:outline-none">
           {{ $slot }}
         </main>

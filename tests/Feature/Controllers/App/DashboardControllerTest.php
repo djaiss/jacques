@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Role;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 
 it('shows the dashboard', function () {
     $michael = User::factory()->create();
@@ -50,4 +51,45 @@ it('draws the parts without a screen as unavailable', function () {
     $response->assertDontSee('href="'.route('settings.team.index').'"', escape: false);
     $response->assertDontSee('href="'.route('services.index').'"', escape: false);
     expect(substr_count($response->getContent(), 'aria-disabled="true"'))->toBe(3);
+});
+
+it('shows the agenda of today', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-26 10:30'));
+    $michael = User::factory()->create();
+
+    $response = $this->actingAs($michael)->get(route('dashboard.index'));
+
+    $response->assertOk();
+    $response->assertSee('Monday 26 October 2026');
+    $response->assertSee('Today, 32 appointments in total');
+    $response->assertSee('Hugo Moreau');
+    $response->assertSeeInOrder(['Amélie', 'Sammy', 'Charlotte', 'Alexandra', 'Lucas']);
+});
+
+it('shows the agenda of another day', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-23 10:30'));
+    $michael = User::factory()->create();
+
+    $response = $this->actingAs($michael)->get(route('dashboard.show', ['date' => '2026-10-26']));
+
+    $response->assertOk();
+    $response->assertSee('Monday 26 October 2026');
+    $response->assertSee('32 appointments in total');
+    $response->assertDontSee('Today, 32 appointments in total');
+});
+
+it('shows the salon closed on a sunday', function () {
+    $michael = User::factory()->create();
+
+    $response = $this->actingAs($michael)->get(route('dashboard.show', ['date' => '2026-10-25']));
+
+    $response->assertOk();
+    $response->assertSee('The salon is closed that day');
+    $response->assertDontSee('Book an appointment');
+});
+
+it('does not find a day that does not exist', function () {
+    $michael = User::factory()->create();
+
+    $this->actingAs($michael)->get('/dashboard/2026-02-30')->assertNotFound();
 });

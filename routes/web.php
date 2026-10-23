@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\OnboardingStepEnum;
+use App\Http\Controllers\App\DashboardCalendarController;
 use App\Http\Controllers\App\DashboardController;
 use App\Http\Controllers\App\Invitation\InvitationController;
 use App\Http\Controllers\App\Invitation\InvitationSignOutController;
@@ -131,6 +132,8 @@ Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): 
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    Route::get('dashboard/{date}', [DashboardController::class, 'show'])->where('date', '\d{4}-\d{2}-\d{2}')->name('dashboard.show');
+    Route::get('dashboard/{date}/calendar/{month}', [DashboardCalendarController::class, 'show'])->where(['date' => '\d{4}-\d{2}-\d{2}', 'month' => '\d{4}-\d{2}'])->name('dashboard.calendar.show');
 });
 
 Route::middleware(['auth', 'set.locale', 'welcome.screen'])->group(function (): void {

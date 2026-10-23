@@ -5,6 +5,7 @@ import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 import morph from '@alpinejs/morph';
 import ajax from '@imacrayon/alpine-ajax';
+import { dayAgenda } from './day-agenda';
 import { openingHoursEditor, workingHoursPanel } from './weekly-hours';
 
 window.Turbo = Turbo;
@@ -29,6 +30,7 @@ Alpine.plugin(ajax);
  */
 ajax.configure({ mergeStrategy: 'morph' });
 
+Alpine.data('dayAgenda', dayAgenda);
 Alpine.data('openingHoursEditor', openingHoursEditor);
 Alpine.data('workingHoursPanel', workingHoursPanel);
 
