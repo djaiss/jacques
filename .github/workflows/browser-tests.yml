@@ -58,8 +58,7 @@ jobs:
         run: bun run build
 
       # The browser binary weighs about 150 MB and only changes when Playwright
-      # does, so it is kept between runs. The system libraries it needs are not
-      # part of the cache and are installed every time.
+      # does, so it is kept between runs.
       - name: Cache the browser
         id: browser-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -69,11 +68,37 @@ jobs:
 
       - name: Install the browser
         if: steps.browser-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install --with-deps chromium
+        run: bunx playwright install chromium
+
+      # The system libraries the browser needs come from the Ubuntu mirror,
+      # which can take ten minutes to send 26 MB. The packages are kept between
+      # runs and handed to apt, which then downloads nothing. They depend on the
+      # runner image as well as on Playwright, so the image version is in the key.
+      - name: Read the runner image version
+        run: echo "RUNNER_IMAGE_VERSION=$ImageVersion" >> "$GITHUB_ENV"
+
+      - name: Restore the browser dependencies
+        id: browser-dependencies-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-dependencies
+          key: ${{ runner.os }}-${{ env.RUNNER_IMAGE_VERSION }}-playwright-dependencies-${{ hashFiles('bun.lock') }}
 
       - name: Install the browser dependencies
-        if: steps.browser-cache.outputs.cache-hit == 'true'
-        run: bunx playwright install-deps chromium
+        run: |
+          mkdir -p ~/.cache/playwright-dependencies
+          sudo cp ~/.cache/playwright-dependencies/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          bunx playwright install-deps chromium
+          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-dependencies/ 2>/dev/null || true
+
+      # Saved straight away rather than at the end of the job, so a run whose
+      # tests fail still spares the next one the download.
+      - name: Save the browser dependencies
+        if: steps.browser-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-dependencies
+          key: ${{ steps.browser-dependencies-cache.outputs.cache-primary-key }}
 
       - name: Prepare environment
         run: |
